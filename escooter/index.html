@@ -112,9 +112,10 @@
           <span><kbd>W</kbd> <kbd>↑</kbd></span><span>Beschleunigen</span>
           <span><kbd>S</kbd> <kbd>↓</kbd></span><span>Bremsen / Rückwärts</span>
           <span><kbd>A</kbd> <kbd>←</kbd> <kbd>D</kbd> <kbd>→</kbd></span><span>Lenken</span>
-          <span><kbd>Shift</kbd></span><span>Boost / Turbo</span>
+          <span><kbd>Shift</kbd></span><span>Turbo (bis 100 km/h)</span>
+          <span><kbd>Maus</kbd></span><span>Lenken · links Gas · rechts Bremse</span>
           <span><kbd>Leertaste</kbd></span><span>Stark bremsen</span>
-          <span><kbd>C</kbd></span><span>Kamera (hinten / Ego)</span>
+          <span><kbd>C</kbd></span><span>Kamera: hinten / Ego-Perspektive</span>
           <span><kbd>R</kbd></span><span>Reset auf die Straße</span>
           <span><kbd>L</kbd> <kbd>B</kbd></span><span>Licht · Klingel</span>
           <span><kbd>T</kbd> <kbd>M</kbd></span><span>Tageszeit +3 h · Ton an/aus</span>
@@ -136,6 +137,10 @@
           <input id="optFlow" type="checkbox" checked />
           <label for="optWet">Nasse Straße (Reflexionen)</label>
           <input id="optWet" type="checkbox" />
+          <label for="optCam">Kamera (C)</label>
+          <select id="optCam"><option value="tp">Hinter dem Roller</option><option value="fp">Ego-Perspektive (Cockpit)</option></select>
+          <label for="optMouse">Maus-Lenkung (Klick ins Spiel)</label>
+          <input id="optMouse" type="checkbox" checked />
           <label for="optVol">Lautstärke</label>
           <input id="optVol" type="range" min="0" max="1" step="0.05" value="0.7" />
         </div>
@@ -164,6 +169,7 @@
   <div id="mapbox">
     <div class="ring"><canvas id="map" width="356" height="356"></canvas></div>
     <div id="clock" class="panel">☀ 10:00</div>
+    <button id="camBtn" class="ghost" style="pointer-events:auto;margin-top:8px;padding:6px 12px;font-size:12px">📷 Kamera wechseln (C)</button>
   </div>
   <div id="speedo">
     <svg viewBox="0 0 230 150">
@@ -181,7 +187,7 @@
     <div class="odo"><span>Fahrt <b id="tripTxt">0.00</b> km</span><span>Gesamt <b id="odoTxt">0.0</b> km</span></div>
   </div>
   <div id="hints" class="panel">
-    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fahren · <kbd>Shift</kbd> Turbo</div>
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fahren · <kbd>Shift</kbd> Turbo · Maus lenkt</div>
     <div><kbd>␣</kbd> Vollbremsung · <kbd>C</kbd> Kamera · <kbd>R</kbd> Reset</div>
     <div><kbd>L</kbd> Licht · <kbd>B</kbd> Klingel · <kbd>Esc</kbd> Menü</div>
   </div>

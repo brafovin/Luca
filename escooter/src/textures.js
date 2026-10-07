@@ -287,6 +287,59 @@ function facade(kind, rnd) {
   return { m, o, e };
 }
 
+
+function signAtlas() {
+  const C = 128;
+  const c = cv(C * 4, C * 2), x = c.getContext('2d');
+  x.clearRect(0, 0, C * 4, C * 2);
+  const circ = (i, j, fill, ring, ringW) => {
+    x.beginPath(); x.arc(i * C + C / 2, j * C + C / 2, C / 2 - 3, 0, 6.283);
+    x.fillStyle = fill; x.fill();
+    if (ring) { x.lineWidth = ringW; x.strokeStyle = ring; x.stroke(); }
+  };
+  const txt = (t, i, j, size, col, dy = 0) => { x.fillStyle = col; x.font = `800 ${size}px Arial, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, i * C + C / 2, j * C + C / 2 + dy); };
+  // 30 km/h
+  circ(0, 0, '#fff', '#d3121c', 14); txt('30', 0, 0, 54, '#111', 3);
+  // parking
+  x.fillStyle = '#1e5aa8'; x.fillRect(C + 4, 4, C - 8, C - 8); x.strokeStyle = '#fff'; x.lineWidth = 4; x.strokeRect(C + 8, 8, C - 16, C - 16); txt('P', 1, 0, 84, '#fff', 4);
+  // pedestrian crossing
+  x.fillStyle = '#1e5aa8'; x.fillRect(2 * C + 4, 4, C - 8, C - 8);
+  x.fillStyle = '#fff'; x.beginPath(); x.moveTo(2 * C + 64, 14); x.lineTo(2 * C + 112, 108); x.lineTo(2 * C + 16, 108); x.closePath(); x.fill();
+  x.fillStyle = '#111'; x.beginPath(); x.arc(2 * C + 64, 48, 8, 0, 6.283); x.fill(); x.fillRect(2 * C + 58, 56, 12, 28); x.fillRect(2 * C + 50, 84, 10, 16); x.fillRect(2 * C + 68, 84, 10, 16);
+  // give way
+  x.fillStyle = '#d3121c'; x.beginPath(); x.moveTo(3 * C + 8, 14); x.lineTo(3 * C + 120, 14); x.lineTo(3 * C + 64, 116); x.closePath(); x.fill();
+  x.fillStyle = '#fff'; x.beginPath(); x.moveTo(3 * C + 24, 28); x.lineTo(3 * C + 104, 28); x.lineTo(3 * C + 64, 98); x.closePath(); x.fill();
+  // bus stop
+  circ(0, 1, '#f2c200', '#2b7a3a', 8); txt('H', 0, 1, 72, '#2b7a3a', 4);
+  // one way
+  x.fillStyle = '#1e5aa8'; x.fillRect(C + 4, C + 24, C - 8, C - 48);
+  x.fillStyle = '#fff'; x.fillRect(C + 22, C + 58, 56, 14); x.beginPath(); x.moveTo(C + 76, C + 40); x.lineTo(C + 108, C + 65); x.lineTo(C + 76, C + 90); x.closePath(); x.fill();
+  // priority road
+  x.save(); x.translate(2 * C + C / 2, C + C / 2); x.rotate(Math.PI / 4);
+  x.fillStyle = '#fff'; x.fillRect(-42, -42, 84, 84); x.fillStyle = '#f2c200'; x.fillRect(-34, -34, 68, 68); x.restore();
+  // no stopping
+  circ(3, 1, '#1e5aa8', '#d3121c', 10); x.strokeStyle = '#d3121c'; x.lineWidth = 10; x.beginPath(); x.moveTo(3 * C + 28, C + 28); x.lineTo(3 * C + 100, C + 100); x.moveTo(3 * C + 100, C + 28); x.lineTo(3 * C + 28, C + 100); x.stroke();
+  return c;
+}
+function posterAtlas(rnd) {
+  const W = 256, H = 512;
+  const c = cv(W * 4, H), x = c.getContext('2d');
+  const titles = [['ZIRKUS', 'ROLLI'], ['KINO', 'NACHT'], ['KONZERT', 'LIVE'], ['SALE', '-50%'], ['THEATER', 'PREMIERE'], ['FESTIVAL', 'JULI']];
+  const pal = [['#c42a2a', '#f4d24a'], ['#1f3a63', '#f2f2f2'], ['#2f8a4a', '#fbe9a0'], ['#f0a020', '#1b1b1b'], ['#6a2a8a', '#f4f4f4'], ['#e8e8e4', '#c42a2a']];
+  for (let i = 0; i < 4; i++) {
+    const t = titles[(i + Math.floor(rnd() * 3)) % titles.length], p = pal[(i * 2 + Math.floor(rnd() * 2)) % pal.length];
+    x.fillStyle = p[0]; x.fillRect(i * W, 0, W, H);
+    x.fillStyle = p[1]; x.fillRect(i * W + 14, 14, W - 28, 6);
+    x.beginPath(); x.arc(i * W + W / 2, 150, 70, 0, 6.283); x.fill();
+    x.fillStyle = p[0]; x.beginPath(); x.arc(i * W + W / 2 + 18, 140, 56, 0, 6.283); x.fill();
+    x.fillStyle = p[1]; x.font = '800 44px Arial, sans-serif'; x.textAlign = 'center';
+    x.fillText(t[0], i * W + W / 2, 300); x.font = '700 30px Arial, sans-serif'; x.fillText(t[1], i * W + W / 2, 350);
+    x.fillRect(i * W + 30, 390, W - 60, 4); x.font = '600 18px Arial'; x.fillText('Karten an der Abendkasse', i * W + W / 2, 430);
+    x.fillRect(i * W + 30, 450, W - 60, 40);
+  }
+  return c;
+}
+
 export function makeTextures(renderer) {
   const rnd = mulberry32(1337);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -303,6 +356,8 @@ export function makeTextures(renderer) {
   T.pool = mk(pool(), { repeat: false });
   T.beam = mk(beam(), { repeat: false });
   T.beam.wrapT = THREE.ClampToEdgeWrapping;
+  T.signs = mk(signAtlas(), { aniso, repeat: false });
+  T.poster = mk(posterAtlas(rnd), { aniso });
   T.facade = {};
   for (const k of ['plaster', 'brick', 'panel', 'glass']) {
     const f = facade(k, rnd);
