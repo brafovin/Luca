@@ -11,6 +11,7 @@ export const CURB = 0.12;
 export const RC = 4; // corner radius of the raised block
 export const FLOOR = 3.2;
 /** VESC shop: interaction point on the pavement in front of the door (world coords) */
+import { isTrackChunk, buildTrackChunk, inTrackZone } from './track.js';
 export const SHOP = { x: P + LOT0 + 24, z: 7.5 };
 
 /* ------------------------------------------------------------------ terrain */
@@ -27,6 +28,7 @@ function bumpProfile(t) {
   return a < 1 ? 0.07 : a < 1.6 ? 0.07 * (1.6 - a) / 0.6 : 0;
 }
 export function groundHeight(x, z) {
+  if (inTrackZone(x, z)) return 0;
   const ci = Math.floor((x + RH) / P), cj = Math.floor((z + RH) / P);
   const lx = x - ci * P, lz = z - cj * P;
   if (lx > RH - 0.2 && lz > RH - 0.2) {
@@ -1115,11 +1117,12 @@ const MESHDEF = {
   glass: ['glass', 0, 1], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
+  trackAsphalt: ['asphalt', 0, 1], trackGround: ['runoff', 0, 1], grassT: ['grassT', 0, 1],
 };
 
 /** Pure data generation (runs in a worker or on the main thread). */
 export function generateChunk(ci, cj) {
-  const cb = new ChunkBuilder(ci, cj).build();
+  const cb = isTrackChunk(ci, cj) ? buildTrackChunk(ci, cj) : new ChunkBuilder(ci, cj).build();
   const batches = {};
   const transfer = [];
   for (const [name, b] of Object.entries(cb.S.b)) {
@@ -1217,6 +1220,11 @@ export class World {
     }
     this.instantiate(d);
     if (this.onChunk) this.onChunk();
+  }
+  /** build all chunks around (x, z) right now (used when teleporting to the race track) */
+  preload(x, z) {
+    const [ci, cj] = this.chunkAt(x, z);
+    for (let i = ci - this.radius; i <= ci + this.radius; i++) for (let j = cj - this.radius; j <= cj + this.radius; j++) if (!this.chunks.has(this.key(i, j))) this.buildChunkSync(i, j);
   }
   buildChunkSync(ci, cj) {
     const { data } = generateChunk(ci, cj);

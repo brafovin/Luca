@@ -26,6 +26,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
 | `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). In der Nähe des VESC-Shops 🛒 kauft `E` den Umbau (500 €) |
+| `V` | **Rennstrecke** ↔ Stadt (auch Menü-Button „🏁 Rennstrecke“) |
 | `K` | **Polizei** an/aus (auch per Button unter der Minimap oder im Menü) |
 | `X` | Roller wechseln (auch im Pausenmenü → „Roller“) |
 | `Enter` | Chat (Multiplayer) |
@@ -78,6 +79,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Lime-Federbeinen, Akku-Pods, Heckflügel und Turbinen-Düse. Normal 200 km/h, Turbo 300 km/h. **Mit VESC 350 km/h normal und 500 km/h Turbo.**
   (Bei dem Tempo lädt die Stadt weiter voraus; Hindernisse bei 500 km/h = Sturz.)
 * `X` oder das Menü (Pause → „Roller“) wechselt zwischen den gekauften Rollern.
+
+## Rennstrecke 🏁
+
+* Rundkurs mit **~30,7 km** (6 km lange Start-/Zielgerade, zwei große Kurven, S-Kurven auf der Gegengeraden), **32 m breit**, Curbs,
+  Auslaufzonen, Zielportal mit Zielflagge und Tribüne, Kilometer-Tafeln. **Kein Verkehr, keine Fußgänger, keine Polizei, keine Hindernisse.**
+* `V` oder Menü-Button teleportiert dich vor die Ziellinie (und wieder zurück in die Stadt). Zeit startet beim Überfahren der Ziellinie;
+  Abkürzen macht die Runde ungültig. Pro Runde **+300 €** (Bestzeit **+600 €**), Bestzeit wird gespeichert. `R` setzt dich auf die Strecke.
+* Auf dem Weped Sonic (500 km/h) brauchst du für eine Runde etwa 4–5 Minuten – in den Kurven musst du vom Gas.
 
 ## Polizei 🚓
 

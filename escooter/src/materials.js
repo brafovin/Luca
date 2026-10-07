@@ -10,6 +10,8 @@ export function createMaterials(T) {
   M.paver2 = M.paver.clone();
   M.paver2.polygonOffset = true; M.paver2.polygonOffsetFactor = -3; M.paver2.polygonOffsetUnits = -3;
   M.grass = std({ map: T.grass, roughness: 1, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  M.grassT = std({ map: T.grass, roughness: 1, vertexColors: true });
+  M.runoff = std({ roughness: 0.96, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   M.mark = std({ color: 0xffffff, vertexColors: true, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   M.generic = std({ vertexColors: true, roughness: 0.78, metalness: 0.05 });
   M.plain = std({ vertexColors: true, roughness: 0.92, metalness: 0 });

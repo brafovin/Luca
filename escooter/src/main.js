@@ -12,6 +12,7 @@ import { Net } from './net.js';
 import { Scooter } from './scooter.js';
 import { GameAudio } from './audio.js';
 import { Traffic } from './traffic.js';
+import { TRACK, trackProject, trackAt, trackNear, trackXZ, TRACK_W } from './track.js';
 import { Pedestrians } from './peds.js';
 import { Rain } from './weather.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
@@ -116,7 +117,7 @@ const st = {
   score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
-  wanted: 0, copCool: 0, bustT: 0, fines: 0,
+  wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
   mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), model: store.get('model', 'g4'),
 };
 
@@ -227,6 +228,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyU': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9) buySonic(); break;
     case 'KeyX': switchModel(); break;
     case 'KeyK': setPolice(!cfg.police); break;
+    case 'KeyV': toggleTrack(); break;
     case 'KeyF': toggleMount(); break;
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
@@ -339,12 +341,19 @@ function applyWet(force) {
 
 /* ------------------------------------------------------------------ gameplay: reset, missions */
 function teleportStart() {
+  if (st.track) { leaveTrack(); return; }
   scooter.reset(30, 1.75, Math.PI / 2);
   camYaw = scooter.heading;
   startMission(true);
 }
 function resetOnRoad() {
   const s = scooter;
+  if (st.track) {
+    const pr = trackProject(s.x, s.z, trk.idx), c = trackAt(pr.s);
+    s.reset(c.x, c.z, c.h); camYaw = c.h;
+    toast('Zurückgesetzt', 'auf die Strecke gestellt', 1100);
+    return;
+  }
   const rz = Math.round(s.z / P) * P, rx = Math.round(s.x / P) * P;
   const dz = Math.abs(s.z - rz), dx = Math.abs(s.x - rx);
   const fx = Math.sin(s.heading), fz = Math.cos(s.heading);
@@ -375,6 +384,7 @@ function pickCheckpoint() {
   return { gi: gi + 3, gj: gj, x: (gi + 3) * P, z: gj * P, man: 3 * P };
 }
 function startMission(fresh) {
+  if (st.track) { mis.active = false; beacon.visible = false; $('arrowwrap').style.opacity = 0; return; }
   if (cfg.mode !== 'mission') {
     mis.active = false; beacon.visible = false;
     $('mission').innerHTML = '<b>Freie Fahrt</b> · erkunde die Stadt';
@@ -430,6 +440,63 @@ function missionUpdate(dt) {
   beacon.userData.c1.rotation.y += dt * 0.5;
 }
 
+/* ------------------------------------------------------------------ race track */
+const trk = { idx: -1, s: 0, lastS: 0, running: false, t: 0, lap: 0, bits: 0, best: store.get('bestLap', 0), last: 0, sector: 0 };
+const fmtLap = (t) => { const m = Math.floor(t / 60); return `${m}:${(t - m * 60).toFixed(2).padStart(5, '0')}`; };
+function enterTrack() {
+  if (st.mode === 'walk') { st.mode = 'ride'; scooter.parked = false; scooter.rider.visible = true; walker.setVisible(false); }
+  st.track = true; st.wanted = 0; st.bustT = 0; traffic.pursuit.active = false; audio.siren(0);
+  for (const c of traffic.cars) { c.active = false; c.group.visible = false; c.turn = null; }
+  mis.active = false; beacon.visible = false; $('arrowwrap').style.opacity = 0;
+  const c = trackAt(TRACK.len - 60);
+  scooter.reset(c.x, c.z, c.h); scooter.v = 0; camYaw = c.h;
+  world.radius = QUALITY[cfg.quality].radius;
+  world.update(c.x, c.z, 0); world.preload(c.x, c.z);
+  Object.assign(trk, { idx: -1, running: false, t: 0, lap: 0, bits: 0, sector: 0 });
+  trackUpdate(0);
+  $('btnTrack').textContent = '🏙️ Zurück in die Stadt';
+  toast('🏁 Rennstrecke', `${(TRACK.len / 1000).toFixed(1)} km · frei von Verkehr · fahre über die Ziellinie, um die Zeit zu starten`, 4200);
+}
+function leaveTrack() {
+  st.track = false;
+  scooter.reset(30, 1.75, Math.PI / 2); scooter.v = 0; camYaw = scooter.heading;
+  world.update(30, 1.75, 0); world.preload(30, 1.75);
+  startMission(true);
+  $('btnTrack').textContent = '🏁 Rennstrecke';
+  toast('Zurück in der Stadt', '', 1600);
+}
+function toggleTrack() { if (st.track) leaveTrack(); else enterTrack(); }
+$('btnTrack').onclick = () => { toggleTrack(); if (st.started && st.paused) $('btnStart').click(); else if (!st.started) $('btnStart').click(); };
+function trackUpdate(dt) {
+  const pr = trackProject(me.x, me.z, trk.idx);
+  trk.idx = pr.idx; trk.lat = pr.lat; trk.d = pr.d;
+  const prev = trk.s; trk.s = pr.s;
+  if (dt <= 0) return;
+  const L = TRACK.len;
+  if (trk.running) trk.t += dt;
+  const sec = Math.floor((pr.s / L) * 10);
+  if (trk.running) trk.bits |= 1 << Math.min(9, sec);
+  // finish line crossed forward (wrap-around of s)
+  if (prev > L * 0.8 && pr.s < L * 0.2 && trk.d < TRACK_W) {
+    if (!trk.running) { trk.running = true; trk.t = 0; trk.bits = 0; trk.lap = 1; toast('🏁 Los!', 'Runde 1', 1400); audio.chime([523, 784]); }
+    else if (trk.bits === 1023) {
+      const t = trk.t; trk.last = t;
+      const rec = !trk.best || t < trk.best;
+      if (rec) { trk.best = t; store.set('bestLap', t); }
+      earn(rec ? 600 : 300); st.score += 1000;
+      audio.chime([523, 659, 784, 1046]);
+      toast(rec ? `🏆 Rekord! ${fmtLap(t)}` : `Runde ${trk.lap}: ${fmtLap(t)}`, rec ? '+600 € · neue Bestzeit' : '+300 €', 3200);
+      trk.lap++; trk.t = 0; trk.bits = 0;
+    } else { toast('Runde ungültig', 'du hast die Strecke abgekürzt', 2200); trk.t = 0; trk.bits = 0; }
+  }
+}
+function trackHud() {
+  const html = trk.running
+    ? `<b>🏁 Runde ${trk.lap}</b> · <span class="t">${fmtLap(trk.t)}</span><br>Bestzeit ${trk.best ? fmtLap(trk.best) : '–'}${trk.last ? ' · zuletzt ' + fmtLap(trk.last) : ''}<br>${(trk.s / 1000).toFixed(1)} / ${(TRACK.len / 1000).toFixed(1)} km · <kbd>V</kbd> Stadt`
+    : `<b>🏁 Rennstrecke</b> · ${(TRACK.len / 1000).toFixed(1)} km<br>Zeit startet an der Ziellinie<br>Bestzeit ${trk.best ? fmtLap(trk.best) : '–'} · <kbd>V</kbd> Stadt`;
+  if (cache.mission !== html) { cache.mission = html; $('mission').innerHTML = html; }
+}
+
 /* ------------------------------------------------------------------ on foot, shop, money */
 function setPolice(on) {
   cfg.police = !!on; store.set('police', cfg.police);
@@ -447,7 +514,7 @@ const WANTED_TIME = 25;
 /** police only chase the player after a wheelie; their top speed is 100 km/h */
 function updatePolice(dt) {
   const pu = traffic.pursuit;
-  if (!cfg.police) { pu.active = false; return; }
+  if (!cfg.police || st.track) { pu.active = false; st.wanted = 0; audio.siren(0); return; }
   st.copCool = Math.max(0, st.copCool - dt);
   const riding = st.mode === 'ride';
   if (riding && scooter.wheelie > 0.3 && st.copCool <= 0) {
@@ -677,26 +744,37 @@ function setText(id, v) { if (cache[id] !== v) { cache[id] = v; $(id).textConten
 const arcLen = 90 * Math.PI * 1.5; // 270° arc
 const mapCtx = $('map').getContext('2d');
 let mapT = 0;
+const trkTmp = [];
 const BLOCK_COL = { perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56', vescshop: '#b3601c' };
 function drawMap() {
   const c = mapCtx, W = 356, s = 0.9; // px per metre (retina 2x of 178)
   c.setTransform(1, 0, 0, 1, 0, 0);
-  c.fillStyle = '#262c36'; c.fillRect(0, 0, W, W);
+  c.fillStyle = st.track ? '#2e4a30' : '#262c36'; c.fillRect(0, 0, W, W);
   const sx = me.x, sz = me.z, psi = me.heading;
   const co = Math.cos(psi), si = Math.sin(psi);
   // world -> map: dx,dz relative to the player
   const A = -co * s, B = -si * s, C = si * s, D = -co * s;
   c.setTransform(A, B, C, D, W / 2, W / 2 + 40);
   const R = 220;
+  if (st.track) {
+    const idxs = trackNear(sx, sz, R, trkTmp);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const [w, col] of [[TRACK_W + 10, '#c9b98c'], [TRACK_W, '#4a4d55']]) {
+      c.strokeStyle = col; c.lineWidth = w; c.beginPath();
+      idxs.forEach((i, k) => { const [x, z] = trackXZ(i); if (k === 0 || Math.abs(i - idxs[k - 1]) > 40) c.moveTo(x - sx, z - sz); else c.lineTo(x - sx, z - sz); });
+      c.stroke();
+    }
+    const sl = TRACK.start; c.fillStyle = '#fff'; c.fillRect(sl.x - sx - 3, sl.z - sz - TRACK_W / 2, 6, TRACK_W);
+  }
   const [ci0, cj0] = [Math.floor((sx - R) / P) - 1, Math.floor((sz - R) / P) - 1];
   const [ci1, cj1] = [Math.ceil((sx + R) / P) + 1, Math.ceil((sz + R) / P) + 1];
-  for (let i = ci0; i <= ci1; i++) for (let j = cj0; j <= cj1; j++) {
+  if (!st.track) for (let i = ci0; i <= ci1; i++) for (let j = cj0; j <= cj1; j++) {
     c.fillStyle = BLOCK_COL[blockType(i, j)];
     c.fillRect(i * P + 5.9 - sx, j * P + 5.9 - sz, P - 11.8, P - 11.8);
     if (hasStation(i, j)) { c.fillStyle = '#42ff8a'; c.beginPath(); c.arc(i * P + 8.4 - sx, j * P + 15 - sz, 6, 0, 6.3); c.fill(); }
   }
   // VESC shop marker
-  if (!(st.vesc && st.dt3 && st.sonic)) {
+  if (!st.track && !(st.vesc && st.dt3 && st.sonic)) {
     let dx = SHOP.x - sx, dz = SHOP.z - sz;
     const d = Math.hypot(dx, dz);
     if (d > 150) { dx *= 150 / d; dz *= 150 / d; }
@@ -769,7 +847,7 @@ function updateHUD(dt) {
   }
   else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < 3.4) prompt = '<kbd>F</kbd> Aufsteigen';
   if (cache.prompt !== prompt) { cache.prompt = prompt; $('prompt').innerHTML = prompt; $('prompt').classList.toggle('hidden', !prompt); }
-  const shopLine = (st.vesc && st.dt3 && st.sonic) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
+  const shopLine = (st.track || (st.vesc && st.dt3 && st.sonic)) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
   if (cache.shopLine !== shopLine) { cache.shopLine = shopLine; $('shopline').innerHTML = shopLine; }
   const pct = s.battPct;
   setText('battPct', Math.round(pct) + '%');
@@ -788,7 +866,8 @@ function updateHUD(dt) {
   setText('clock', (sky.night > 0.5 ? '☾ ' : '☀ ') + fmtTime(sky.hours));
   $('timeLbl').textContent = fmtTime(sky.hours);
   // mission
-  if (mis.active && mis.cp) {
+  if (st.track) trackHud();
+  else if (mis.active && mis.cp) {
     const dx = mis.cp.x - me.x, dz = mis.cp.z - me.z;
     const d = Math.hypot(dx, dz);
     const m = Math.floor(mis.time / 60), ss = Math.floor(mis.time % 60);
@@ -930,8 +1009,8 @@ function tick(dt, now, render = true) {
     const dt2 = Math.min(dt, 0.05);
     const walking = st.mode === 'walk';
     traffic.extra = walking ? [{ x: scooter.x, z: scooter.z }] : [];
-    const cars = traffic.update(dt2, me, sig);
-    const pl = peds.update(dt2, me, sig, now);
+    const cars = st.track ? [] : traffic.update(dt2, me, sig);
+    const pl = st.track ? [] : peds.update(dt2, me, sig, now);
     dynAll.length = 0;
     for (const c of cars) dynAll.push(c);
     for (const c of pl) dynAll.push(c);
@@ -966,6 +1045,7 @@ function tick(dt, now, render = true) {
       toast('WHEELIE! +100 €', `${ev.dur.toFixed(1)} s auf dem Hinterrad · ${st.wheelies}. Wheelie`, 2200);
     }
     updatePolice(dt2);
+    if (st.track) trackUpdate(dt2);
     if (scooter.pedHit) {
       const p = scooter.pedHit; scooter.pedHit = null;
       if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : p.elder ? (p.kind === 'oma' ? 'Oma umgefahren!' : 'Opa umgefahren!') : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); if (p.elder) p.anger = Math.min(100, p.anger + 40); }
@@ -1117,4 +1197,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
