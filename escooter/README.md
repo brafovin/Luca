@@ -26,7 +26,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
 | `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). In der Nähe des VESC-Shops 🛒 kauft `E` den Umbau (500 €) |
-| `V` | **Rennstrecke** ↔ Stadt (auch Menü-Button „🏁 Rennstrecke“) |
+| `V` | **Rennstrecke** ↔ Stadt (auch Menü-Button „🏁 Zur Rennstrecke teleportieren“ bzw. HUD-Button unter der Minimap) |
 | `K` | **Polizei** an/aus (auch per Button unter der Minimap oder im Menü) |
 | `X` | Roller wechseln (auch im Pausenmenü → „Roller“) |
 | `Enter` | Chat (Multiplayer) |
