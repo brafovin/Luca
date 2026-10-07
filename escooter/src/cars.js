@@ -89,5 +89,15 @@ export function addCar(S, rnd, opts = {}) {
   }
   G.box(0, 0.48, L / 2 + 0.03, 0.5, 0.12, 0.02, '#e8e8e0');
   G.box(0, 0.58, -L / 2 - 0.03, 0.5, 0.12, 0.02, '#e8e8e0');
+  // wheel arches, door seams, handles, skirts, roof details
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) G.box(sx * (hw + 0.004), 0.52, sz * L * 0.31, 0.02, 0.5, 0.74, '#0e0f10');
+    for (const z of [L * 0.18, -L * 0.04, -L * 0.24]) G.box(sx * (hw + 0.003), 0.62, z, 0.012, 0.5, 0.014, '#0a0a0b');
+    for (const z of [L * 0.1, -L * 0.1]) G.box(sx * (hw + 0.012), yb - 0.06, z, 0.02, 0.03, 0.13, '#cfd2d6');
+    G.box(sx * (hw - 0.01), 0.34, 0, 0.03, 0.08, L * 0.5, '#151617');
+    if (type >= 0.6 && type < 0.82) G.box(sx * 0.7, yt + 0.05, (prof[1][0] + prof[2][0]) / 2, 0.03, 0.04, prof[2][0] - prof[1][0] - 0.3, '#18191b'); // roof rails
+  }
+  if (type < 0.35 && rnd() < 0.5) G.box(0, yt - 0.02, prof[1][0] - 0.05, W * 0.8, 0.04, 0.2, '#16171a'); // spoiler
+  if (rnd() < 0.5) G.cyl(0.0, yt + 0.02, prof[1][0] + 0.2, 0.008, 0.28, '#111', 4, false); // antenna
   return { L, W, H };
 }

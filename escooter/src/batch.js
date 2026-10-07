@@ -158,6 +158,17 @@ export class Batch {
     }
   }
 
+  /** Cylinder side with uv wrapped across [u0,u1] x [v0,v1] (closed top). */
+  cylUV(cx, y0, cz, r, h, col, seg, u0, u1, v0, v1, topCol) {
+    for (let i = 0; i < seg; i++) {
+      const a0 = (i / seg) * Math.PI * 2, a1 = ((i + 1) / seg) * Math.PI * 2;
+      const ua = u0 + ((u1 - u0) * i) / seg, ub = u0 + ((u1 - u0) * (i + 1)) / seg;
+      this.quad([cx + Math.cos(a0) * r, y0, cz + Math.sin(a0) * r], [cx + Math.cos(a1) * r, y0, cz + Math.sin(a1) * r],
+        [cx + Math.cos(a1) * r, y0 + h, cz + Math.sin(a1) * r], [cx + Math.cos(a0) * r, y0 + h, cz + Math.sin(a0) * r],
+        col, [ua, v0, ub, v0, ub, v1, ua, v1], [cx, y0 + h / 2, cz]);
+    }
+  }
+
   /** Extrude a convex 2D profile. map(p,q,t) -> [x,y,z]. */
   extrude(profile, map, t0, t1, col) {
     const n = profile.length;

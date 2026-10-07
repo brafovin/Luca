@@ -123,6 +123,18 @@ function blob(B, x, y, z, rx, ry, rz, col, rnd) {
   B.geo(blobGeos[Math.floor(rnd() * 3)], _m4, col, 0.55);
 }
 
+const unitCylW = new THREE.CylinderGeometry(1, 0.9, 1, 7);
+unitCylW.translate(0, 0.5, 0);
+const _wa = new THREE.Vector3(), _wb = new THREE.Vector3(), _wq = new THREE.Quaternion(), _wm = new THREE.Matrix4(), _ws = new THREE.Vector3(), _wup = new THREE.Vector3(0, 1, 0);
+function limbW(B, ax, ay, az, bx, by, bz, r, col) {
+  _wa.set(ax, ay, az); _wb.set(bx - ax, by - ay, bz - az);
+  const l = _wb.length() || 1e-3;
+  _wq.setFromUnitVectors(_wup, _wb.multiplyScalar(1 / l));
+  _wm.compose(_wa, _wq, _ws.set(r, l, r));
+  B.geo(unitCylW, _wm, col);
+}
+const torusW = new THREE.TorusGeometry(0.33, 0.018, 6, 16);
+
 const PLASTER = ['#f1e9d6', '#e9d8a6', '#e0bd9a', '#c9d6c0', '#c4d4e6', '#f0f0ee', '#e4bfb2', '#e2c9a8', '#bcae9f', '#d7dfe6'];
 const BRICKT = ['#ffffff', '#e8d8d0', '#f4dccc'];
 const ROOFCOL = ['#a8442b', '#9c3b25', '#b45a35', '#5b5e63', '#4a4d52', '#7a3a2a'];
@@ -207,6 +219,20 @@ class ChunkBuilder {
         M.plane(sx - 0.2, zl[0], sx + 0.2, zl[1], y, W);
       }
     }
+    // wheel tracks, repair patches and drain grates
+    for (let rot = 0; rot < 2; rot++) {
+      this.frame(rot);
+      for (const lane of [-1.75, 1.75]) for (const o of [-0.75, 0.75]) M.plane(16, lane + o - 0.14, 84, lane + o + 0.14, 0.0102, '#56575b');
+      for (let k = 0; k < 3; k++) {
+        const x = 18 + rnd() * 64, z = (rnd() * 5.4 - 2.7), w = 1.2 + rnd() * 3, h = 0.8 + rnd() * 1.4;
+        const c = rnd() < 0.6 ? '#4a4b4e' : '#64656a';
+        M.plane(x, z, x + w, Math.min(3.3, z + h), 0.0108, c);
+      }
+      for (const sd of [-1, 1]) for (let x = 24 + rnd() * 6; x < 82; x += 26 + rnd() * 8) {
+        M.plane(x, sd * 5.55 - 0.18, x + 0.7, sd * 5.55 + 0.18, 0.0112, '#17181a');
+        for (let i = 1; i < 5; i++) M.plane(x + i * 0.14, sd * 5.55 - 0.16, x + i * 0.14 + 0.03, sd * 5.55 + 0.16, 0.0114, '#4b4d52');
+      }
+    }
     this.frame(0);
     // speed bumps (visual)
     for (const axis of ['x', 'z']) {
@@ -259,7 +285,7 @@ class ChunkBuilder {
       for (const side of [1, -1]) for (const s of [34, 66]) {
         if (rnd() < 0.15) continue;
         const [px, pz] = [s + (rnd() - 0.5) * 3, side * 7.4];
-        this.tree(px, pz, CURB);
+        this.tree(px, pz, CURB, { pit: true });
       }
       // bus stop
       if (hash2(this.ci, this.cj, 31 + rot) < 0.3) this.busStop(rot);
@@ -279,8 +305,80 @@ class ChunkBuilder {
         G.box(s, CURB + 0.95, z, 0.56, 0.08, 0.56, '#3a3d40');
         this.circ(s, z, 0.28);
       }
+      this.roadProps(rot);
     }
     this.frame(0);
+  }
+
+  roadProps(rot) {
+    const { rnd } = this;
+    const G = this.b('generic'), SG = this.b('sign'), PO = this.b('poster');
+    const cellUV = (i, j) => [i / 4, 1 - (j + 1) / 2, (i + 1) / 4, 1 - j / 2];
+    const sign = (x, z, nx, cell, y, size) => {
+      const [u0, v0, u1, v1] = cellUV(cell[0], cell[1]);
+      const x2 = x + nx * 0.05, h = size / 2;
+      const zl = nx > 0 ? z + h : z - h, zr = nx > 0 ? z - h : z + h;
+      SG.quad([x2, y - h, zl], [x2, y - h, zr], [x2, y + h, zr], [x2, y + h, zl], '#ffffff', [u0, v0, u1, v0, u1, v1, u0, v1], [x - nx, y, z]);
+      const round = cell[1] === 0 && cell[0] === 0 || cell[1] === 1 && (cell[0] === 0 || cell[0] === 3);
+      if (round) { // backing disc
+        const g = this.discGeo || (this.discGeo = new THREE.CylinderGeometry(1, 1, 0.012, 20).rotateZ(Math.PI / 2));
+        const m = new THREE.Matrix4().compose(new THREE.Vector3(x + nx * 0.03, y, z), new THREE.Quaternion(), new THREE.Vector3(1, h * 0.96, h * 0.96));
+        G.geo(g, m, '#8d9096');
+      } else if (cell[0] !== 3 && !(cell[0] === 2 && cell[1] === 1)) G.box(x + nx * 0.035, y, z, 0.012, size * 0.98, size * 0.98, '#8d9096');
+    };
+    // traffic signs just before the intersections
+    const pole = (x, z, h) => { G.cyl(x, CURB, z, 0.035, h, '#8a8d92', 6); this.circ(x, z, 0.1); };
+    const pick = rnd();
+    pole(87.5, 6.95, 2.9);
+    sign(87.5, 6.95, -1, pick < 0.55 ? [0, 0] : pick < 0.8 ? [3, 0] : [3, 1], 2.4, 0.62);
+    if (rnd() < 0.5) sign(87.5, 6.95, -1, [2, 0], 1.7, 0.55);
+    pole(12.5, -6.95, 2.9);
+    sign(12.5, -6.95, 1, rnd() < 0.5 ? [0, 0] : [2, 1], 2.4, 0.62);
+    if (rnd() < 0.4) sign(12.5, -6.95, 1, [1, 0], 1.75, 0.5);
+    // advertising column
+    if (rnd() < 0.3) {
+      const s = 46 + rnd() * 8, z = (rnd() < 0.5 ? 1 : -1) * 8.1;
+      PO.cylUV(s, CURB + 0.3, z, 0.6, 2.5, '#ffffff', 16, 0, 1, 0.02, 0.98);
+      G.cyl(s, CURB, z, 0.64, 0.3, '#2f4a3a', 14, false);
+      G.cyl(s, CURB + 2.8, z, 0.7, 0.14, '#2f4a3a', 14, true, 0.64);
+      G.cyl(s, CURB + 2.94, z, 0.5, 0.2, '#2f4a3a', 12, true, 0.1);
+      this.circ(s, z, 0.64);
+    }
+    // post box + phone-style cabinet
+    if (rnd() < 0.3) {
+      const s = 18 + rnd() * 6, z = (rnd() < 0.5 ? 1 : -1) * 8.55;
+      G.box(s, CURB + 0.55, z, 0.32, 0.8, 0.26, '#f2c200'); G.box(s, CURB + 1.0, z, 0.34, 0.1, 0.28, '#e0b000'); G.box(s, CURB + 0.78, z + 0.135, 0.18, 0.04, 0.01, '#222');
+      G.box(s, CURB + 0.08, z, 0.2, 0.16, 0.18, '#555'); this.circ(s, z, 0.25);
+    }
+    if (rnd() < 0.25) {
+      const s = 28 + rnd() * 40, z = (rnd() < 0.5 ? 1 : -1) * 8.8;
+      G.box(s, CURB + 0.7, z, 1.0, 1.4, 0.35, '#9ba0a3'); G.box(s, CURB + 1.42, z, 1.04, 0.05, 0.4, '#7e8386'); this.box2(s - 0.5, z - 0.18, s + 0.5, z + 0.18);
+    }
+    // bike rack with parked bikes
+    if (rnd() < 0.35) {
+      const s = 72 + rnd() * 6, side = rnd() < 0.5 ? 1 : -1;
+      const zc = side * 8.2;
+      for (let k = 0; k < 4; k++) { const x = s + k * 0.8; G.box(x, CURB + 0.4, zc, 0.04, 0.8, 0.04, '#9aa0a5'); G.box(x, CURB + 0.78, zc - 0.28, 0.04, 0.04, 0.56, '#9aa0a5'); G.box(x, CURB + 0.78, zc + 0.28, 0.04, 0.04, 0.56, '#9aa0a5'); }
+      const bikeCols = ['#2a4a7a', '#8a2a2a', '#2a2a2e', '#d8d8d4', '#2f7a4a'];
+      const nb = 1 + Math.floor(rnd() * 3);
+      for (let b = 0; b < nb; b++) this.bike(s + 0.4 + b * 0.8, zc + (b % 2 ? 0.15 : -0.1), bikeCols[Math.floor(rnd() * 5)]);
+      this.box2(s - 0.2, zc - 0.5, s + 3.4, zc + 0.5);
+    }
+    // fire hydrant
+    if (rnd() < 0.2) { const s = 30 + rnd() * 40, z = (rnd() < 0.5 ? 1 : -1) * 9.0; G.cyl(s, CURB, z, 0.1, 0.6, '#c42a2a', 8); G.cyl(s, CURB + 0.58, z, 0.12, 0.08, '#c42a2a', 8); this.circ(s, z, 0.15); }
+  }
+
+  bike(x, z, col) {
+    // bike parked along the kerb (frame in the x-y plane)
+    const G = this.b('generic');
+    const y0 = CURB, wr = 0.33;
+    for (const wx of [-0.52, 0.52]) G.geo(torusW, new THREE.Matrix4().makeTranslation(x + wx, y0 + wr, z), '#1a1a1c');
+    const bb = [x, y0 + 0.3, z], rear = [x - 0.52, y0 + wr, z], front = [x + 0.52, y0 + wr, z], seat = [x - 0.2, y0 + 0.88, z], head = [x + 0.38, y0 + 0.92, z];
+    const L = (a, b2, r) => limbW(G, a[0], a[1], a[2], b2[0], b2[1], b2[2], r, col);
+    L(bb, seat, 0.014); L(seat, head, 0.014); L(bb, head, 0.016); L(bb, rear, 0.01); L(seat, rear, 0.01); L(head, front, 0.01);
+    G.box(head[0] + 0.02, head[1] + 0.07, z, 0.03, 0.03, 0.5, '#222');
+    G.box(seat[0], seat[1] + 0.03, z, 0.2, 0.04, 0.1, '#1b1b1e');
+    G.box(x - 0.2, y0 + 0.75, z + 0.0, 0.05, 0.02, 0.03, '#222');
   }
 
   busStop(rot) {
@@ -296,7 +394,7 @@ class ChunkBuilder {
     this.box2(cx + 2.5, cz - 0.5, cx + 2.7, cz - 0.3);
   }
 
-  tree(px, pz, y0) {
+  tree(px, pz, y0, opts = {}) {
     const { rnd } = this;
     const G = this.b('generic'), F = this.b('foliage');
     const kind = rnd();
@@ -309,13 +407,28 @@ class ChunkBuilder {
       for (let i = 0; i < 5; i++) { F.cyl(px, y, pz, r, 1.9, '#2f5a36', 9, false, 0.05); y += 1.25; r *= 0.78; }
     } else {
       const h = 2.6 + rnd() * 1.2;
-      G.cyl(px, y0, pz, 0.2, h + 0.5, '#4d3b2b', 7, true, 0.11);
-      const n = 4 + Math.floor(rnd() * 3);
+      G.cyl(px, y0, pz, 0.2, h + 0.5, '#4d3b2b', 8, true, 0.11);
+      G.cyl(px, y0, pz, 0.27, 0.35, '#4d3b2b', 8, false, 0.2); // root flare
+      const n = 5 + Math.floor(rnd() * 3);
       const R = 1.5 + rnd() * 0.7;
       blob(F, px, y0 + h + R * 0.9, pz, R * 1.15, R * 0.95, R * 1.15, col, rnd);
       for (let i = 0; i < n; i++) {
         const a = rnd() * 6.28, d = R * (0.5 + rnd() * 0.6);
-        blob(F, px + Math.cos(a) * d, y0 + h + R * (0.2 + rnd() * 0.9), pz + Math.sin(a) * d, R * 0.7, R * 0.6, R * 0.7, col, rnd);
+        const bx = px + Math.cos(a) * d, by = y0 + h + R * (0.2 + rnd() * 0.9), bz = pz + Math.sin(a) * d;
+        blob(F, bx, by, bz, R * 0.7, R * 0.6, R * 0.7, col, rnd);
+        limbW(G, px, y0 + h * 0.8, pz, px + (bx - px) * 0.75, y0 + h + (by - y0 - h) * 0.5, pz + (bz - pz) * 0.75, 0.05, '#4d3b2b');
+      }
+      if (y0 === CURB && opts.pit) {
+        G.cyl(px, y0, pz, 0.62, 0.02, '#3a3430', 10);
+        if (autumn) { // leaf litter
+          const M = this.b('mark');
+          for (let k = 0; k < 16; k++) {
+            const a = rnd() * 6.28, d = 0.4 + rnd() * 1.8, lx = px + Math.cos(a) * d, lz = pz + Math.sin(a) * d, ang = rnd() * 3.14;
+            const c = Math.cos(ang) * 0.09, sn = Math.sin(ang) * 0.09, c2 = -sn * 0.55, s2 = c * 0.55;
+            if (Math.abs(lz) < 5.95 || Math.abs(lz) > 9.0) continue;
+            M.quad([lx - c - c2, y0 + 0.014, lz - sn - s2], [lx + c - c2, y0 + 0.014, lz + sn - s2], [lx + c + c2, y0 + 0.014, lz + sn + s2], [lx - c + c2, y0 + 0.014, lz - sn + s2], AUTUMN[Math.floor(rnd() * 5)]);
+          }
+        }
       }
     }
     this.circ(px, pz, 0.28);
@@ -408,6 +521,7 @@ class ChunkBuilder {
       if (w.skip) continue;
       F.wall(w.a[0], w.a[1], w.c[0], w.c[1], yb, yt, tint, cols(w.len), b.floors);
     }
+    b.gcol = gcol;
     // plinth + cornice
     const wdt = x1 - x0, dpt = z1 - z0;
     G.box((x0 + x1) / 2, yb + 0.4, (z0 + z1) / 2, wdt + 0.12, 0.8, dpt + 0.12, b.kind === 'brick' ? '#5a4a42' : '#8c8a84');
@@ -467,9 +581,95 @@ class ChunkBuilder {
         G.box(x0 + 2 + rnd() * (wdt - 4), yt + 1.1, z0 + 2 + rnd() * (dpt - 4), 1.5 + rnd() * 1.5, 1, 1.2 + rnd(), '#9da0a3');
       }
     }
+    this.buildingExtras(b, H, cols);
     // entrance door + balcony details on street side
     this.facadeDetails(b, cols);
     this.colliders.push({ t: 0, x0, x1, z0, z1 });
+  }
+
+  buildingExtras(b, H, cols) {
+    const { rnd } = this;
+    const G = this.b('generic'), GL = this.b('glass'), F = this.b('foliage'), PL = this.b('plain'), R = this.b('roof');
+    const alongX = b.front === '+z' || b.front === '-z';
+    const sgn = b.front[0] === '+' ? 1 : -1;
+    const lo = alongX ? b.x0 : b.z0, hi = alongX ? b.x1 : b.z1, len = hi - lo, nc = cols(len);
+    const face = alongX ? (sgn > 0 ? b.z1 : b.z0) : (sgn > 0 ? b.x1 : b.x0);
+    const yt = CURB + H;
+    const at = (a, d, y, w, h, dp, col, B = G) => { if (alongX) B.box(a, y, face + sgn * d, w, h, dp, col); else B.box(face + sgn * d, y, a, dp, h, w, col); };
+    // gutter + downpipes
+    if (b.roof === 'gable' && b.kind !== 'glass') {
+      const ov = 0.35, ya = yt - 0.2;
+      const gcol = '#8f9398';
+      if (alongX) {
+        for (const zz of [b.z0 - ov, b.z1 + ov]) G.box((b.x0 + b.x1) / 2, ya - 0.05, zz, b.x1 - b.x0 + 0.7, 0.09, 0.1, gcol);
+        G.cyl(b.x1 - 0.25, CURB, sgn > 0 ? b.z1 + 0.06 : b.z0 - 0.06, 0.04, H - 0.2, gcol, 6, false);
+      } else {
+        for (const xx of [b.x0 - ov, b.x1 + ov]) G.box(xx, ya - 0.05, (b.z0 + b.z1) / 2, 0.1, 0.09, b.z1 - b.z0 + 0.7, gcol);
+        G.cyl(sgn > 0 ? b.x1 + 0.06 : b.x0 - 0.06, CURB, b.z1 - 0.25, 0.04, H - 0.2, gcol, 6, false);
+      }
+    }
+    // shutters or flower boxes
+    if (b.kind !== 'glass' && b.kind !== 'panel' && b.floors <= 4) {
+      const mode = rnd();
+      const shutCol = ['#2f5a3a', '#2a4a7a', '#f2f2ee', '#7a2a24', '#4a3a2a', '#8a8d6a'][Math.floor(rnd() * 6)];
+      if (mode < 0.38) {
+        for (let c = 0; c < nc; c++) {
+          const a = lo + ((c + 0.5) * len) / nc;
+          for (let f = 0; f < b.floors; f++) {
+            const y = CURB + f * FLOOR + 1.77;
+            for (const sx of [-1, 1]) at(a + sx * 0.97, 0.05, y, 0.44, 1.73, 0.04, shutCol);
+          }
+        }
+      } else if (mode < 0.62) {
+        const boxCol = '#5a3d28', flow = ['#d83a4a', '#f2f2ee', '#e8b830', '#c44a9a'];
+        for (let c = 0; c < nc; c++) {
+          if (rnd() < 0.3) continue;
+          const a = lo + ((c + 0.5) * len) / nc;
+          for (let f = 0; f < Math.min(b.floors, 3); f++) {
+            const y = CURB + f * FLOOR + 0.78;
+            at(a, 0.12, y, 1.0, 0.16, 0.22, boxCol);
+            at(a, 0.12, y + 0.12, 0.96, 0.1, 0.2, '#3f8a3a', F);
+            const fc = flow[Math.floor(rnd() * 4)];
+            for (let k = -2; k <= 2; k++) at(a + k * 0.18, 0.12 + (k % 2) * 0.03, y + 0.2, 0.08, 0.08, 0.08, fc, F);
+          }
+        }
+      }
+    }
+    // basement lights
+    if (b.kind !== 'glass' && nc > 2) for (let c = 1; c < nc; c += 2) { const a = lo + ((c + 0.5) * len) / nc; at(a, 0.03, CURB + 0.38, 0.7, 0.28, 0.06, '#26292d'); }
+    // dormers on pitched roofs
+    if (b.roof === 'gable' && alongX && b.floors >= 3 && len > 11 && rnd() < 0.55) {
+      const ov = 0.35, half = (b.z1 - b.z0) / 2, rise = half * 0.72, cz = (b.z0 + b.z1) / 2;
+      const ya = yt - 0.2, yr = yt + rise;
+      const zE = face + sgn * ov, t = 0.38;
+      const zd = zE + (cz - zE) * t, yd = ya + (yr - ya) * t;
+      const n = len > 17 ? 3 : 2;
+      for (let k = 0; k < n; k++) {
+        const a = lo + ((k + 0.5) * len) / n;
+        const zf = zd + sgn * 0.35, zc = zf - sgn * 0.6;
+        PL.box(a, yd + 0.35, zc, 1.5, 1.5, 1.2, b.gcol || '#d8d4c8');
+        GL.box(a, yd + 0.4, zf + sgn * 0.012, 0.9, 1.0, 0.02, '#ffffff');
+        G.box(a, yd + 0.4, zf + sgn * 0.02, 1.06, 0.07, 0.04, '#f0f0ec'); G.box(a, yd - 0.12, zf + sgn * 0.04, 1.1, 0.06, 0.1, '#c8c4b8');
+        const base = yd + 1.1;
+        R.extrude([[-0.95, 0], [0.95, 0], [0, 0.75]], (p, q, tt) => [a + p, base + q, tt], Math.min(zf + sgn * 0.12, zf - sgn * 1.25), Math.max(zf + sgn * 0.12, zf - sgn * 1.25), b.roofCol);
+      }
+    }
+    // antennas & dishes on some roofs
+    if (b.roof === 'gable' && rnd() < 0.35) {
+      const ax = (b.x0 + b.x1) / 2 + (rnd() - 0.5) * (b.x1 - b.x0) * 0.5, az = (b.z0 + b.z1) / 2;
+      const rise = (alongX ? (b.z1 - b.z0) : (b.x1 - b.x0)) / 2 * 0.72, yb = yt + rise;
+      G.cyl(ax, yb, az, 0.015, 2.2, '#8a8d92', 5, false);
+      for (let k = 0; k < 3; k++) G.box(ax, yb + 1.2 + k * 0.4, az, alongX ? 0 + 0.02 : 0.9 - k * 0.2, 0.015, alongX ? 0.9 - k * 0.2 : 0.02, '#8a8d92');
+    }
+    if (b.balcony && b.floors >= 3 && rnd() < 0.5 && b.kind !== 'glass') {
+      const a = lo + len * (0.25 + rnd() * 0.5), y = CURB + (1 + Math.floor(rnd() * (b.floors - 1))) * FLOOR + 1.5;
+      const g = this.dishGeo || (this.dishGeo = new THREE.CylinderGeometry(0.3, 0.04, 0.12, 14));
+      const m = new THREE.Matrix4();
+      const pos = alongX ? new THREE.Vector3(a, y, face + sgn * 0.8) : new THREE.Vector3(face + sgn * 0.8, y, a);
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(alongX ? sgn * 1.2 : 0, 0, alongX ? 0 : -sgn * 1.2));
+      m.compose(pos, q, new THREE.Vector3(1, 1, 1));
+      G.geo(g, m, '#d8d8d4');
+    }
   }
 
   facadeDetails(b, cols) {
@@ -837,7 +1037,7 @@ class ChunkBuilder {
 const MESHDEF = {
   asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], paver2: ['paver2', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
-  glass: ['glass', 0, 1], water: ['water', 0, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
+  glass: ['glass', 0, 1], water: ['water', 0, 1], sign: ['sign', 0, 1], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
 };

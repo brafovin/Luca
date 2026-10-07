@@ -18,7 +18,8 @@ Alternativ lokal ausliefern: `npm start` und `http://localhost:8080` öffnen.
 | `W` / `↑` | Beschleunigen |
 | `S` / `↓` | Bremsen (im Stand: langsam rückwärts) |
 | `A` `D` / `←` `→` | Lenken |
-| `Shift` | Boost / Turbo (bis ca. 62 km/h, höherer Akkuverbrauch) |
+| `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) |
+| Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
 | `C` | Kamera wechseln (hinter dem Roller / Ego-Cockpit mit Display) |
 | `R` | Reset – setzt dich auf die nächste Straße |
@@ -37,13 +38,13 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Berliner Kissen (Bremsschwellen), Gullydeckeln. Blöcke: Altbau-Blockrand (Putz/Klinker/Platte),
   Einfamilienhäuser mit Zäunen & Hecken, Parks mit Brunnen, Glas-Bürotürme, Supermarkt mit Parkplatz.
   Straßenlaternen, Bäume (auch Herbstlaub), parkende Autos, fahrende Autos & Busse (halten an roten
-  Ampeln), Fußgänger (warten am Bordstein).
+  Ampeln), Fußgänger (warten am Bordstein) und **andere E-Scooter-Fahrer**, die sich an Ampeln halten.
 * **Roller**: Deck mit Griptape, 10"-Räder mit Profil und Bremsscheiben, Federgabel mit roten
   Federn, Heck-Federbein, Kotflügel, Rück-/Bremslicht, LED-Streifen, Scheinwerfer, Lenker mit
-  **Live-Display** (Geschwindigkeit, Akku, Trip). Fahrer mit Helm; der Lenker dreht sich sichtbar,
+  **Live-Display** (Geschwindigkeit, Akku, Trip). Fahrer mit Sturmhaube, Skibrille, Helm und Kurier-Rucksack; der Lenker dreht sich sichtbar,
   der Roller neigt sich physikalisch korrekt in Kurven (`tan φ = a_lat / g`).
 * **Physik**: sanfte Beschleunigung (Drehmoment bis ~5 m/s, danach Leistungsgrenze), Höchstgeschwindigkeit
-  45 km/h (Turbo 62 km/h), Luft-/Rollwiderstand, Rekuperation, geschwindigkeitsabhängiger Bremsweg,
+  65 km/h (Turbo 100 km/h, ab ca. 40 km/h Sturz bei hartem Aufprall), Luft-/Rollwiderstand, Rekuperation, geschwindigkeitsabhängiger Bremsweg,
   Lenkwinkel nimmt mit Tempo ab, Querbeschleunigung begrenzt, Federung (Feder-Dämpfer) bei Bordsteinen und
   Bodenschwellen, Nick-Bewegung beim Bremsen, Kollisionen mit Häusern, Autos, Bäumen, Laternen,
   Zäunen, Fußgängern.

@@ -5,6 +5,7 @@ import { groundHeight } from './world.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
+const NO_INPUT = {};
 const M_TOTAL = 106; // rider + scooter (kg)
 const BATT_WH = 936; // 52 V * 18 Ah
 
@@ -32,7 +33,7 @@ function setSegment(m, a, b) {
   m.scale.set(1, l, 1);
 }
 const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), _t3 = new THREE.Vector3();
-function ik2(A, C, l1, l2, pole, out) {
+export function ik2(A, C, l1, l2, pole, out) {
   _t1.subVectors(C, A);
   const dist = Math.min(_t1.length(), l1 + l2 - 1e-3);
   _t1.normalize();
@@ -243,6 +244,53 @@ export class Scooter {
     // reflector
     add(steer, box(0.03, 0.02, 0.008), mRed, 0.06, 0.55, 0.043);
 
+    // ---- extra detail: cables, collars, deck screws, reflectors, plate
+    const mCable = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 0.6 });
+    const tube = (pts, r, parent, mat = mCable) => {
+      const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), 24, r, 6, false);
+      const m = new THREE.Mesh(g, mat); m.castShadow = true; parent.add(m); return m;
+    };
+    for (const sx of [-1, 1]) {
+      // brake hoses from the levers along the stem to the discs
+      tube([[sx * 0.2, 1.04, 0.07], [sx * 0.12, 1.0, 0.06], [sx * 0.045, 0.9, 0.04], [sx * 0.04, 0.6, 0.035], [sx * 0.05, 0.3, 0.05], [sx * 0.05, 0.08, 0.07]], 0.0042, steer);
+    }
+    tube([[0.0, 0.6, -0.034], [0.01, 0.45, -0.036], [0.02, 0.36, -0.03]], 0.0035, steer);
+    // rear brake hose (in body space)
+    tube([[0.03, 0.46, 0.34], [0.04, 0.3, 0.26], [0.04, 0.215, 0.1], [0.045, 0.2, -0.3], [0.05, 0.2, -0.46], [0.05, 0.19, -0.52]], 0.0042, tilt);
+    // collars on the stem
+    for (const y of [0.4, 0.97]) {
+      const c = add(steer, new THREE.CylinderGeometry(0.037, 0.037, 0.022, 16), mRed, 0, y, 0); c.scale.set(1.12, 1, 0.9);
+    }
+    // deck screws + side reflectors + rubber edge
+    for (const sx of [-1, 1]) {
+      for (const z of [-0.34, -0.12, 0.1, 0.28]) add(tilt, new THREE.CylinderGeometry(0.0065, 0.0065, 0.004, 8), mAlu, sx * 0.088, 0.2275, z);
+      add(tilt, box(0.006, 0.02, 0.05), new THREE.MeshStandardMaterial({ color: 0xff8a1a, emissive: 0xff5a00, emissiveIntensity: 0.15, roughness: 0.4 }), sx * 0.1055, 0.19, 0.3);
+      add(tilt, box(0.006, 0.02, 0.05), new THREE.MeshStandardMaterial({ color: 0xff8a1a, emissive: 0xff5a00, emissiveIntensity: 0.15, roughness: 0.4 }), sx * 0.1055, 0.19, -0.36);
+      // fender stays
+      const stay = add(tilt, box(0.008, 0.14, 0.008), mAlu, sx * 0.065, 0.2, -0.64); stay.rotation.x = -0.5;
+    }
+    add(tilt, box(0.206, 0.012, 0.74), mAlu, 0, 0.143, -0.04).scale.set(0.96, 1, 1); // aluminium deck base
+    // German insurance plate on the rear mudguard
+    const plateCv = document.createElement('canvas'); plateCv.width = 128; plateCv.height = 80;
+    const px = plateCv.getContext('2d');
+    px.fillStyle = '#f4f4f0'; px.fillRect(0, 0, 128, 80);
+    px.strokeStyle = '#111'; px.lineWidth = 4; px.strokeRect(3, 3, 122, 74);
+    px.fillStyle = '#16a05a'; px.fillRect(6, 6, 116, 14);
+    px.fillStyle = '#111'; px.font = '700 40px Arial'; px.textAlign = 'center'; px.fillText('123', 64, 52); px.font = '700 24px Arial'; px.fillText('HQM', 64, 72);
+    const plateTex = new THREE.CanvasTexture(plateCv); plateTex.colorSpace = THREE.SRGBColorSpace;
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.0625), new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.5 }));
+    plate.position.set(0, 0.215, -0.745); plate.rotation.set(0.12, Math.PI, 0); tilt.add(plate);
+    // front fork lowers: dust boots
+    for (const sx of [-1, 1]) add(steer, new THREE.CylinderGeometry(0.024, 0.03, 0.09, 12), mMatte, sx * 0.068, 0.15, 0);
+    // bar-end lights + DRL strip on the headlamp
+    for (const sx of [-1, 1]) {
+      const be = add(steer, new THREE.CylinderGeometry(0.013, 0.013, 0.018, 10), this.mHead, sx * 0.335, 1.06, -0.02); be.rotation.z = Math.PI / 2; be.castShadow = false;
+    }
+    const drl = add(steer, box(0.11, 0.008, 0.01), this.mHead, 0, 0.665, 0.05); drl.castShadow = false;
+    // tyre valve + stem logo plate
+    add(this.rearWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
+    add(this.frontWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
+
     // ---- rider
     this.buildRider();
   }
@@ -252,35 +300,99 @@ export class Scooter {
     const rider = new THREE.Group();
     tilt.add(rider);
     this.rider = rider;
-    const mJacket = new THREE.MeshStandardMaterial({ color: 0x56606b, roughness: 0.75 });
-    const mAccent = new THREE.MeshStandardMaterial({ color: 0xf06a28, roughness: 0.6 });
-    const mPants = new THREE.MeshStandardMaterial({ color: 0x191b21, roughness: 0.85 });
-    const mShoe = new THREE.MeshStandardMaterial({ color: 0xe9e9e9, roughness: 0.6 });
-    const mGlove = new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.7 });
-    const mHelmet = new THREE.MeshStandardMaterial({ color: 0xf2f2f0, roughness: 0.22, metalness: 0.25 });
-    const mSkin = new THREE.MeshStandardMaterial({ color: 0xc89878, roughness: 0.8 });
-    const mk = (geo, mat, parent = rider) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; parent.add(m); return m; };
+    const std = (o) => new THREE.MeshStandardMaterial(o);
+    const mJacket = std({ color: 0x4a5560, roughness: 0.8 });
+    const mJacketDark = std({ color: 0x2c3138, roughness: 0.85 });
+    const mReflect = std({ color: 0xdfe5e8, roughness: 0.35, metalness: 0.3, emissive: 0x303638, emissiveIntensity: 0.4 });
+    const mPants = std({ color: 0x191b21, roughness: 0.85 });
+    const mShoe = std({ color: 0xe9e9e9, roughness: 0.6 });
+    const mSole = std({ color: 0x2a2a2d, roughness: 0.9 });
+    const mGlove = std({ color: 0x141517, roughness: 0.7 });
+    const mHelmet = std({ color: 0xf2f2f0, roughness: 0.22, metalness: 0.25 });
+    const mBal = std({ color: 0x0c0c0e, roughness: 0.97 });
+    const mSkin = std({ color: 0xc89878, roughness: 0.8 });
+    const mLens = std({ color: 0xff8a2a, roughness: 0.06, metalness: 0.95, envMapIntensity: 1.6 });
+    const mAccent = std({ color: 0xff7a1a, roughness: 0.6 });
+    const mk = (geo, mat, parent = rider) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
     this.rParts = {};
-    // torso
-    const torso = mk(new THREE.CapsuleGeometry(0.125, 0.25, 6, 14), mJacket);
-    torso.scale.set(1.15, 1, 0.78);
+
+    // ---- torso (jacket) with collar, reflective stripes, courier backpack
+    const torso = mk(new THREE.CapsuleGeometry(0.125, 0.25, 6, 16), mJacket);
+    torso.scale.set(1.2, 1, 0.78);
     this.rParts.torso = torso;
-    const stripe = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.6 })); // courier backpack
+    const torsoExtra = [];
+    const collar = mk(new THREE.TorusGeometry(0.075, 0.03, 8, 16), mJacketDark);
+    collar.rotation.x = Math.PI / 2; torsoExtra.push(collar);
+    for (const y of [-0.05, 0.04]) {
+      const st = mk(new THREE.BoxGeometry(0.31, 0.02, 0.2), mReflect);
+      st.position.y = y - 0.06; torsoExtra.push(st);
+    }
+    const belt = mk(new THREE.BoxGeometry(0.3, 0.035, 0.2), mJacketDark); belt.position.y = -0.2; torsoExtra.push(belt);
+    const pocket = mk(new THREE.BoxGeometry(0.07, 0.07, 0.015), mJacketDark); pocket.position.set(0.07, 0.02, 0.098); torsoExtra.push(pocket);
+    this.torsoExtra = torsoExtra;
+    const stripe = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), std({ color: 0xff7a1a, roughness: 0.6 })); // courier backpack
     this.rParts.stripe = stripe;
-    const bpLogo = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), stripe);
+    const bpLogo = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), std({ color: 0xffffff, roughness: 0.5 }), stripe);
     bpLogo.position.set(0, 0.08, -0.106);
-    // head + helmet
-    const head = mk(new THREE.SphereGeometry(0.095, 14, 12), mSkin);
-    const helmet = mk(new THREE.SphereGeometry(0.128, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), mHelmet);
-    const visor = mk(new THREE.BoxGeometry(0.17, 0.05, 0.1), new THREE.MeshStandardMaterial({ color: 0x0a0d12, roughness: 0.05, metalness: 0.9 }));
-    const hstripe = mk(new THREE.BoxGeometry(0.025, 0.02, 0.26), mAccent);
-    this.rParts.head = [head, helmet, visor, hstripe];
-    // legs
+    const bpRefl = mk(new THREE.BoxGeometry(0.3, 0.025, 0.012), mReflect, stripe);
+    bpRefl.position.set(0, -0.12, -0.106);
+    const bpFlap = mk(new THREE.BoxGeometry(0.34, 0.1, 0.215), std({ color: 0xd9600f, roughness: 0.65 }), stripe);
+    bpFlap.position.set(0, 0.17, 0);
+    this.rParts.straps = [];
+    for (const sx of [-1, 1]) {
+      const strap = mk(new THREE.BoxGeometry(0.035, 0.3, 0.012), mJacketDark);
+      this.rParts.straps.push(strap);
+      strap.userData.sx = sx;
+    }
+
+    // ---- head: balaclava (Sturmhaube) + ski goggles + helmet
+    const head = [];
+    const bal = mk(new THREE.SphereGeometry(0.1, 20, 16), mBal); bal.scale.set(1, 1.1, 1.06); head.push(bal);
+    const neck = mk(new THREE.CylinderGeometry(0.05, 0.068, 0.13, 14), mBal); head.push(neck);
+    const cheeks = mk(new THREE.SphereGeometry(0.09, 14, 10), mBal); cheeks.scale.set(1, 0.8, 0.95); head.push(cheeks);
+    const slit = mk(new THREE.BoxGeometry(0.118, 0.034, 0.03), mSkin); head.push(slit);
+    const brow = mk(new THREE.BoxGeometry(0.12, 0.016, 0.034), mBal); head.push(brow);
+    const gogg = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mLens); head.push(gogg);
+    const goggFrame = mk(new THREE.BoxGeometry(0.172, 0.07, 0.036), mJacketDark); head.push(goggFrame);
+    const strap = mk(new THREE.TorusGeometry(0.108, 0.013, 8, 24), mJacketDark); strap.rotation.x = Math.PI / 2; head.push(strap);
+    const helmet = mk(new THREE.SphereGeometry(0.128, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.43), mHelmet); helmet.scale.set(1, 1.04, 1.12); head.push(helmet);
+    const peak = mk(new THREE.BoxGeometry(0.16, 0.012, 0.07), mHelmet); head.push(peak);
+    const hstripe = mk(new THREE.BoxGeometry(0.026, 0.012, 0.26), mAccent); head.push(hstripe);
+    const vents = [];
+    for (const sx of [-1, 1]) { const v = mk(new THREE.BoxGeometry(0.02, 0.006, 0.12), mJacketDark); v.userData.sx = sx; vents.push(v); head.push(v); }
+    this.rParts.head = head;
+    this.headMeshes = { bal, neck, cheeks, slit, brow, gogg, goggFrame, strap, helmet, peak, hstripe, vents };
+
+    // ---- limbs
     this.legs = [];
     this.arms = [];
+    const glove = () => {
+      const g = new THREE.Group();
+      mk(new THREE.BoxGeometry(0.075, 0.042, 0.09), mGlove, g);
+      const f = mk(new THREE.BoxGeometry(0.075, 0.032, 0.05), mGlove, g); f.position.set(0, -0.012, 0.062); f.rotation.x = 0.5;
+      const th = mk(new THREE.BoxGeometry(0.025, 0.028, 0.05), mGlove, g); th.position.set(0, 0.026, 0.03);
+      const cuff = mk(new THREE.CylinderGeometry(0.046, 0.046, 0.05, 10), mJacketDark, g); cuff.rotation.x = Math.PI / 2; cuff.position.z = -0.06;
+      rider.add(g);
+      return g;
+    };
+    const shoe = () => {
+      const g = new THREE.Group();
+      mk(new THREE.BoxGeometry(0.095, 0.06, 0.26), mShoe, g);
+      const so = mk(new THREE.BoxGeometry(0.1, 0.02, 0.27), mSole, g); so.position.y = -0.035;
+      const toe = mk(new THREE.SphereGeometry(0.05, 10, 8), mShoe, g); toe.position.set(0, -0.005, 0.12); toe.scale.set(1, 0.8, 1);
+      rider.add(g);
+      return g;
+    };
     for (let i = 0; i < 2; i++) {
-      this.legs.push({ up: limbMesh(0.068, mPants), lo: limbMesh(0.055, mPants), knee: mk(new THREE.SphereGeometry(0.062, 10, 8), mPants), foot: mk(new THREE.BoxGeometry(0.095, 0.075, 0.26), mShoe) });
-      this.arms.push({ up: limbMesh(0.052, mJacket), lo: limbMesh(0.043, mJacket), elbow: mk(new THREE.SphereGeometry(0.05, 10, 8), mJacket), hand: mk(new THREE.SphereGeometry(0.034, 10, 8), mGlove) });
+      const lo = limbMesh(0.052, mPants);
+      const knee = mk(new THREE.SphereGeometry(0.066, 12, 10), mPants);
+      this.legs.push({ up: limbMesh(0.074, mPants), lo, knee, foot: shoe() });
+      const band = mk(new THREE.CylinderGeometry(0.052 * 1.12, 0.052 * 1.12, 0.1, 10), mReflect, lo);
+      band.position.y = 0.5; band.scale.y = 0.4;
+      const loA = limbMesh(0.043, mJacket);
+      const bandA = mk(new THREE.CylinderGeometry(0.043 * 1.14, 0.043 * 1.14, 0.1, 10), mReflect, loA);
+      bandA.position.y = 0.55; bandA.scale.y = 0.4;
+      this.arms.push({ up: limbMesh(0.054, mJacket), lo: loA, elbow: mk(new THREE.SphereGeometry(0.052, 12, 10), mJacket), hand: glove(), shoulder: mk(new THREE.SphereGeometry(0.068, 12, 10), mJacket) });
       for (const k of ['up', 'lo']) { rider.add(this.legs[i][k]); rider.add(this.arms[i][k]); }
     }
     // joint positions (tilt space)
@@ -288,25 +400,49 @@ export class Scooter {
     this.foot = [new THREE.Vector3(0.05, 0.265, 0.06), new THREE.Vector3(-0.05, 0.265, -0.28)];
     this.shoulder = [new THREE.Vector3(0.2, 1.33, -0.03), new THREE.Vector3(-0.2, 1.33, -0.03)];
     this._v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-    this._grip = new THREE.Vector3();
     this.torsoBase = new THREE.Vector3(0, 1.08, -0.1);
     this.headBase = new THREE.Vector3(0, 1.53, 0.05);
     torso.position.copy(this.torsoBase);
     torso.rotation.x = 0.45;
+    // torso accessories follow the torso frame
+    const tq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.45);
+    for (const m of torsoExtra) {
+      const off = m.position.clone().applyQuaternion(tq).add(this.torsoBase);
+      m.userData.base = off; m.position.copy(off); m.quaternion.multiplyQuaternions(tq, m.quaternion);
+    }
+    collar.position.copy(this.torsoBase).add(new THREE.Vector3(0, 0.2, 0.06).applyQuaternion(tq));
+    collar.rotation.set(Math.PI / 2 + 0.45, 0, 0);
     stripe.position.set(0, 1.16, -0.25); stripe.rotation.x = 0.45;
-    for (const p of this.rParts.head) p.position.copy(this.headBase);
-    this.rParts.head[0].position.y -= 0.02;
-    this.rParts.head[2].position.set(0, this.headBase.y + 0.005, this.headBase.z + 0.115);
-    this.rParts.head[3].position.set(0, this.headBase.y + 0.125, this.headBase.z);
-    this.rParts.head[1].position.y += 0.015;
-    // sneakers: heading along z
+    this.rParts.straps.forEach((m) => {
+      m.position.copy(this.torsoBase).add(new THREE.Vector3(m.userData.sx * 0.085, 0.07, 0.1).applyQuaternion(tq));
+      m.rotation.x = 0.45;
+    });
+    this.rParts.torsoExtra = torsoExtra;
+    this.placeHead(0);
+  }
+
+  placeHead(sway) {
+    const H = this.headMeshes, b = this.headBase, y = b.y + sway;
+    H.bal.position.set(b.x, y, b.z);
+    H.cheeks.position.set(b.x, y - 0.045, b.z + 0.005);
+    H.neck.position.set(b.x, y - 0.1, b.z - 0.015);
+    H.slit.position.set(b.x, y + 0.012, b.z + 0.085);
+    H.brow.position.set(b.x, y + 0.04, b.z + 0.083);
+    H.gogg.position.set(b.x, y + 0.012, b.z + 0.098);
+    H.goggFrame.position.set(b.x, y + 0.012, b.z + 0.09);
+    H.strap.position.set(b.x, y + 0.012, b.z);
+    H.helmet.position.set(b.x, y + 0.012, b.z - 0.012);
+    H.peak.position.set(b.x, y + 0.078, b.z + 0.125);
+    H.peak.rotation.x = -0.18;
+    H.hstripe.position.set(b.x, y + 0.141, b.z);
+    H.vents.forEach((v) => v.position.set(b.x + v.userData.sx * 0.05, y + 0.132, b.z + 0.02));
   }
 
   updateRider(dt, speed) {
     const tilt = this.tilt, steer = this.steer;
     tilt.updateMatrixWorld(true);
     const sway = Math.sin(this.odo * 0.8) * 0.004 * Math.min(1, speed / 4);
-    this.rParts.head.forEach((p, i) => { if (i < 2) p.position.y = this.headBase.y + sway + (i === 0 ? -0.005 : 0.015); });
+    this.placeHead(sway);
     const T = this._tmp || (this._tmp = {
       grips: [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)],
       g: new THREE.Vector3(), pole: [new THREE.Vector3(0.45, -0.55, -0.45), new THREE.Vector3(-0.45, -0.55, -0.45)],
@@ -316,7 +452,9 @@ export class Scooter {
       const g = T.g.copy(T.grips[i]);
       steer.localToWorld(g);
       tilt.worldToLocal(g);
-      this.arms[i].hand.position.set(g.x, g.y, g.z - 0.012);
+      this.arms[i].hand.position.set(g.x, g.y + 0.012, g.z - 0.02);
+      this.arms[i].hand.rotation.set(0.05, 0, 0);
+      this.arms[i].shoulder.position.copy(this.shoulder[i]);
       ik2(this.shoulder[i], g, 0.3, 0.3, T.pole[i], this._v[0]);
       setSegment(this.arms[i].up, this.shoulder[i], this._v[0]);
       setSegment(this.arms[i].lo, this._v[0], g);
@@ -336,8 +474,10 @@ export class Scooter {
     const show = !first;
     this.rParts.torso.visible = show; this.rParts.stripe.visible = show;
     this.rParts.head.forEach((p) => (p.visible = show));
+    this.rParts.torsoExtra.forEach((p) => (p.visible = show));
+    this.rParts.straps.forEach((p) => (p.visible = show));
     for (const l of this.legs) for (const k in l) l[k].visible = show;
-    for (const a of this.arms) { a.up.visible = show; a.elbow.visible = show; a.lo.visible = show; }
+    for (const a of this.arms) { a.up.visible = show; a.elbow.visible = show; a.lo.visible = show; a.shoulder.visible = show; }
   }
 
   /* ------------------------------------------------------------ state */
@@ -358,6 +498,7 @@ export class Scooter {
     this.boosting = false; this.braking = false;
     this.impact = 0;
     this.stuckT = 0;
+    this.fallT = 0;
     this.wheelAng = 0;
     this.whPerM = 0.02;
     this.shake = 0;
@@ -368,12 +509,14 @@ export class Scooter {
   get battPct() { return clamp((this.batt / BATT_WH) * 100, 0, 100); }
 
   update(dt, inp, world, drainScale, dyn) {
+    if (this.fallT > 0) { this.fallT -= dt; inp = NO_INPUT; }
     const empty = this.batt <= 0.2;
     const boost = !!inp.boost && !!inp.fwd && !empty && this.v > 1;
     this.boosting = boost;
-    let vmax = empty ? 3.2 : boost ? 17.2 : 12.5;
-    const aMax = empty ? 0.7 : boost ? 4.2 : 2.3;
-    const vKnee = boost ? 7.5 : 5.0;
+    // KuKirin G4: 65 km/h normal, 100 km/h with turbo
+    const vmax = empty ? 3.2 : boost ? 28.6 : 18.0;
+    const aMax = empty ? 0.7 : boost ? 5.2 : 2.6;
+    const vKnee = boost ? 11 : 6.0;
 
     // throttle / brake smoothing
     const thrT = inp.fwd ? 1 : 0;
@@ -389,7 +532,7 @@ export class Scooter {
     let motorA = 0;
     if (this.thr > 0.01 && v > -0.5) {
       const base = aMax * Math.min(1, vKnee / Math.max(v, vKnee));
-      const lim = clamp((vmax - v) / 1.3, 0, 1);
+      const lim = clamp((vmax - v) / 1.6, 0, 1);
       motorA = this.thr * base * lim;
       if (v < 0) motorA += 3; // regen against reverse
       a += motorA;
@@ -403,12 +546,13 @@ export class Scooter {
     }
     // coast / drag
     const sgn = Math.sign(v);
-    const drag = (0.14 + 0.0032 * v * v) * sgn;
+    const drag = (0.12 + 0.0009 * v * v) * sgn;
     a -= drag;
     if (this.thr < 0.05 && Math.abs(v) > 0.3 && !this.brk) a -= 0.35 * sgn; // motor regen
     // brakes
-    const brakeA = (this.brk * 4.6 + this.space * 6.8) * Math.min(1, Math.abs(v) / 0.6);
+    const brakeA = Math.min(7.6, this.brk * 4.6 + this.space * 6.8) * Math.min(1, Math.abs(v) / 0.6);
     a -= brakeA * sgn;
+    if (this.fallT > 0) a -= 6 * sgn;
     // stopped by brakes
     const prevV = v;
     let nv = v + a * dt;
@@ -420,14 +564,15 @@ export class Scooter {
     this.braking = this.brk > 0.3 || this.space > 0.3 || (inp.back && v > 0.25);
 
     // steering
-    const target = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
-    const rate = target === 0 ? 8 : 5.5;
+    const analog = inp.steer !== undefined && inp.steer !== null;
+    const target = analog ? inp.steer : (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
+    const rate = analog ? 11 : target === 0 ? 8 : 5.5;
     this.steerIn = damp(this.steerIn, target, rate, dt);
     const av = Math.abs(this.v);
     const dMax = 0.14 + 0.46 / (1 + (av / 3.5) ** 2);
     this.delta = this.steerIn * dMax;
     let omega = (this.v * Math.tan(this.delta)) / WHEELBASE;
-    const aLatMax = 7.5;
+    const aLatMax = 8.5;
     if (av > 0.5 && Math.abs(omega) * av > aLatMax) omega = (Math.sign(omega) * aLatMax) / av;
     this.heading = wrapAngle(this.heading + omega * dt);
     const aLat = this.v * omega;
@@ -440,17 +585,22 @@ export class Scooter {
     // collisions
     this.impact = 0;
     if (world) this.collide(world.colliders, dyn);
+    if (this.impact > 11 && !(this.fallT > 0)) { // heavy crash: rider goes down
+      this.fallT = 1.7; this.fallDir = Math.random() < 0.5 ? 1 : -1; this.fellEvent = true;
+      this.v *= 0.2;
+    }
 
     // odometry & battery
     const ds = Math.abs(this.v) * dt;
     this.odo += ds; this.trip += ds;
-    const pElec = (Math.max(0, motorA) * M_TOTAL * av + M_TOTAL * (0.14 + 0.0032 * av * av) * av * (this.thr > 0.05 ? 1 : 0.0)) / 0.85 + 22;
+    const pElec = (Math.max(0, motorA) * M_TOTAL * av + M_TOTAL * (0.12 + 0.0009 * av * av) * av * (this.thr > 0.05 ? 1 : 0.0)) / 0.85 + 22;
     const used = ((pElec * dt) / 3600) * drainScale;
     this.batt = Math.max(0, this.batt - used);
     if (ds > 0.001) this.whPerM = lerp(this.whPerM, used / ds, clamp(ds / 150, 0, 1));
 
     // lean (physical: tan(phi)=a_lat/g) with critically damped-ish spring
-    const leanT = clamp(Math.atan2(aLat, G) * 0.8 + 0.1 * this.steerIn * Math.min(1, av / 2), -0.55, 0.55);
+    let leanT = clamp(Math.atan2(aLat, G) * 0.8 + 0.1 * this.steerIn * Math.min(1, av / 2), -0.55, 0.55);
+    if (this.fallT > 0) leanT = this.fallDir * 1.3;
     const w0 = 11, zeta = 0.8;
     this.leanV += (w0 * w0 * (leanT - this.lean) - 2 * zeta * w0 * this.leanV) * dt;
     this.lean += this.leanV * dt;

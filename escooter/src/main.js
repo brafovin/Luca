@@ -36,7 +36,7 @@ const world = new World(scene, M);
 const scooter = new Scooter(tex);
 scene.add(scooter.root);
 const audio = new GameAudio();
-const traffic = new Traffic(scene, M, 12);
+const traffic = new Traffic(scene, M, 12, 9);
 const peds = new Pedestrians(scene, M, 16);
 traffic.peds = peds;
 const dynAll = [];
@@ -82,6 +82,7 @@ const cfg = {
   flow: true,
   hours: 10,
   volume: store.get('volume', 0.7),
+  mouse: store.get('mouse', true),
 };
 const st = {
   running: false, paused: true, fp: false, userHead: null, resScale: 1,
@@ -138,9 +139,15 @@ window.addEventListener('resize', resize);
 /* ------------------------------------------------------------------ input */
 const keys = new Set();
 const KEYMAP = { fwd: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], boost: ['ShiftLeft', 'ShiftRight'], space: ['Space'] };
+const mouse = { steer: 0, lock: false, lmb: false, rmb: false, lookY: 0 };
 function readInput() {
   const o = {};
   for (const k in KEYMAP) o[k] = KEYMAP[k].some((c) => keys.has(c));
+  if (mouse.lock) {
+    if (!o.left && !o.right) o.steer = mouse.steer;
+    if (mouse.lmb) o.fwd = true;
+    if (mouse.rmb) o.back = true;
+  }
   // gamepad
   const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
   if (gp) {
@@ -173,6 +180,33 @@ window.addEventListener('keydown', (e) => {
   }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
+
+// mouse steering: click into the game to capture the cursor; moving the mouse left/right steers
+function lockMouse() {
+  if (cfg.mouse && canvas.requestPointerLock && document.pointerLockElement !== canvas) {
+    try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* ignore */ }
+  }
+}
+document.addEventListener('pointerlockchange', () => {
+  const was = mouse.lock;
+  mouse.lock = document.pointerLockElement === canvas;
+  if (!mouse.lock) { mouse.steer = 0; mouse.lmb = mouse.rmb = false; if (was && st.running && !st.paused) setPaused(true); }
+  else toast('Maus-Lenkung aktiv', 'Maus links/rechts = lenken · linke Taste = Gas · rechte Taste = Bremse · Esc = Pause', 3200);
+});
+document.addEventListener('mousemove', (e) => {
+  if (!mouse.lock) return;
+  mouse.steer = clamp(mouse.steer - e.movementX * 0.0042, -1, 1);
+  mouse.lookY = clamp(mouse.lookY + e.movementY * 0.0016, -0.35, 0.35);
+});
+canvas.addEventListener('mousedown', (e) => {
+  if (!st.running || st.paused) return;
+  if (!mouse.lock) { lockMouse(); return; }
+  if (e.button === 0) mouse.lmb = true;
+  if (e.button === 2) mouse.rmb = true;
+});
+window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.lmb = false; if (e.button === 2) mouse.rmb = false; });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('wheel', (e) => { st.zoom = clamp((st.zoom || 1) * (e.deltaY > 0 ? 1.08 : 0.93), 0.6, 2.2); e.preventDefault(); }, { passive: false });
 window.addEventListener('blur', () => { keys.clear(); if (st.running && !st.paused) setPaused(true); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && st.running && !st.paused) setPaused(true); });
 
@@ -201,12 +235,13 @@ function setPaused(p) {
   $('btnStart').textContent = st.started ? 'Weiter fahren' : 'Fahrt starten';
   $('menusub').textContent = st.started ? 'Pausiert – passe Einstellungen an oder fahre weiter.' : 'Fahre mit dem E-Scooter frei durch eine endlose deutsche Stadt – oder sammle Checkpoints.';
   $('best').textContent = st.best ? `Bestwert: ${Math.round(st.best).toLocaleString('de-DE')} Punkte` : '';
-  if (p) keys.clear();
+  if (p) { keys.clear(); if (document.exitPointerLock && document.pointerLockElement) document.exitPointerLock(); }
   else { if (document.activeElement && document.activeElement !== canvas) document.activeElement.blur(); canvas.focus(); }
   $('hud').classList.toggle('hidden', !st.started);
 }
-function toggleCam() {
-  st.fp = !st.fp;
+function toggleCam(force) {
+  st.fp = typeof force === 'boolean' ? force : !st.fp;
+  $('optCam').value = st.fp ? 'fp' : 'tp';
   scooter.setView(st.fp);
   
   toast(st.fp ? 'Ego-Kamera' : 'Verfolger-Kamera', '', 900);
@@ -227,9 +262,13 @@ $('optBatt').onchange = (e) => { cfg.battMode = e.target.value; store.set('battM
 $('optTime').oninput = (e) => { cfg.hours = parseFloat(e.target.value); };
 $('optFlow').onchange = (e) => { cfg.flow = e.target.checked; };
 $('optWet').onchange = (e) => { cfg.wet = e.target.checked; applyWet(); };
+$('optCam').onchange = (e) => toggleCam(e.target.value === 'fp');
+$('camBtn').onclick = () => toggleCam();
+$('optMouse').checked = cfg.mouse;
+$('optMouse').onchange = (e) => { cfg.mouse = e.target.checked; store.set('mouse', cfg.mouse); if (!cfg.mouse && document.exitPointerLock) document.exitPointerLock(); };
 $('optVol').oninput = (e) => { cfg.volume = parseFloat(e.target.value); audio.setVolume(cfg.volume); store.set('volume', cfg.volume); };
-$('btnStart').onclick = () => { audio.start(); audio.setVolume(cfg.volume); st.started = true; setPaused(false); };
-$('btnReset').onclick = () => { teleportStart(); audio.start(); st.started = true; setPaused(false); };
+$('btnStart').onclick = () => { lockMouse(); audio.start(); audio.setVolume(cfg.volume); st.started = true; setPaused(false); };
+$('btnReset').onclick = () => { teleportStart(); lockMouse(); audio.start(); st.started = true; setPaused(false); };
 canvas.addEventListener('mousedown', () => canvas.focus());
 
 function applyWet() {
@@ -371,9 +410,11 @@ function updateCamera(dt, first) {
   const k = first ? 1 : 1 - Math.exp(-dt * 4.2);
   camYaw = wrapAngle(camYaw + wrapAngle(s.heading - camYaw) * k);
   const spd = Math.abs(s.v);
-  const baseFov = 62 + (s.kmh / 62) * 13 + (s.boosting ? 5 : 0);
+  const baseFov = 62 + (s.kmh / 100) * 22 + (s.boosting ? 4 : 0);
+  const zoom = st.zoom || 1;
   if (st.fp) {
-    fpAnchor.rotation.set(s.pitch * 0.4 + 0.2, 0, -s.lean * 0.5, 'YXZ');
+    mouse.lookY = damp(mouse.lookY, 0, 1.5, dt);
+    fpAnchor.rotation.set(s.pitch * 0.4 + 0.2 + mouse.lookY, 0, -s.lean * 0.5, 'YXZ');
     scooter.root.updateMatrixWorld(true);
     fpLook.getWorldPosition(camera.position);
     fpLook.getWorldQuaternion(camera.quaternion);
@@ -381,9 +422,9 @@ function updateCamera(dt, first) {
     camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh;
     camera.fov = lerp(camera.fov, baseFov + 6, 0.1);
   } else {
-    const dist = 3.5 + Math.min(spd / 17, 1) * 1.0;
+    const dist = (3.5 + Math.min(spd / 28, 1) * 1.6) * zoom;
     camDist = damp(camDist, dist, 3, dt);
-    const h = 1.95 + Math.min(spd / 17, 1) * 0.2;
+    const h = (1.95 + Math.min(spd / 28, 1) * 0.35) * (0.7 + 0.3 * zoom);
     const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
     const tx = s.x + sinY * 3.4, tz = s.z + cosY * 3.4, ty = (s.yOff || 0) - 0.3;
     let f = 1;
@@ -452,12 +493,12 @@ function updateHUD(dt) {
   const s = scooter;
   const kmh = s.kmh;
   setText('speedNum', String(Math.round(kmh)));
-  const frac = clamp(kmh / 65, 0, 1);
+  const frac = clamp(kmh / 110, 0, 1);
   const arc = $('arcFg');
   arc.setAttribute('stroke-dasharray', `${(frac * arcLen).toFixed(1)} 1000`);
-  arc.setAttribute('stroke', s.boosting ? '#ff7a1a' : kmh > 50 ? '#ffc23d' : '#35e6ff');
+  arc.setAttribute('stroke', s.boosting ? '#ff7a1a' : kmh > 70 ? '#ffc23d' : '#35e6ff');
   $('boostTxt').style.opacity = s.boosting ? 1 : 0;
-  $('speedfx').style.opacity = clamp((kmh - 28) / 40, 0, 1).toFixed(2);
+  $('speedfx').style.opacity = clamp((kmh - 40) / 50, 0, 1).toFixed(2);
   const pct = s.battPct;
   setText('battPct', Math.round(pct) + '%');
   const bar = $('battBar');
@@ -518,6 +559,7 @@ function tick(dt, now, render = true) {
   if (st.showFps) setText('fps', `${Math.round(st.fpsAvg)} fps · ${st.resScale.toFixed(2)}x`);
 
   const active = st.running && !st.paused;
+  if (mouse.lock) mouse.steer = damp(mouse.steer, 0, 1.4, dt);
   const inp = st.inputOverride || readInput();
   {
     const tt = st.trafficT % 26;
@@ -542,9 +584,10 @@ function tick(dt, now, render = true) {
       simAcc -= h; steps++;
       if (scooter.impact > 1.8) onCrash(scooter.impact);
     }
+    if (scooter.fellEvent) { scooter.fellEvent = false; st.score = Math.max(0, st.score - 150); toast('Sturz!', '−150 Punkte – zu schnell gegen ein Hindernis', 2200); audio.thud(14); st.crashT = 1; $('crash').style.opacity = 0.9; }
     if (scooter.pedHit) {
       const p = scooter.pedHit; scooter.pedHit = null;
-      if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast('Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); }
+      if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); }
     }
     simAcc = 0;
     const dOdo = scooter.odo - odo0;
@@ -662,4 +705,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
