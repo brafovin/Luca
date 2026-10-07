@@ -26,6 +26,8 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
 | `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). In der Nähe des VESC-Shops 🛒 kauft `E` den Umbau (500 €) |
+| `K` | **Polizei** an/aus (auch per Button unter der Minimap oder im Menü) |
+| `X` | Roller wechseln (auch im Pausenmenü → „Roller“) |
 | `Enter` | Chat (Multiplayer) |
 | Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
@@ -70,8 +72,17 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   geschlitzten Scheiben, Reifenprofil, Batterie-Seitenverkleidung, Deck-LED, Kennzeichen. Normal 65 km/h, Turbo 100 km/h.
 * **Dualtron Thunder 3** (im VESC-Shop für **1000 €**, Taste `Q`): breites Deck, Doppel-Hydraulikgabel mit roten Federn,
   zwei Heck-Federbeine, Dual-Motor-Naben mit Kühlrippen, Vierkolben-Bremsen, Doppel-Scheinwerfer, großes Display.
+  LED-Leiste am Rohr, Blinker, Gabelbrücke, Ausgleichsbehälter, Lüftungsschlitze, Rücklicht mit Reflektoren u. v. m.
   Normal 110 km/h, Turbo **170 km/h**. Mit dem VESC (500 €, gilt für beide Roller): G4 150 km/h, Dualtron **235 km/h**.
-* `X` wechselt zwischen den gekauften Rollern (im Stand).
+* `X` oder das Menü (Pause → „Roller“) wechselt zwischen den gekauften Rollern.
+
+## Polizei 🚓
+
+* Streifenwagen fahren (mit Abbiegen und Ampeln) durch die Stadt – sie interessieren sich **nur für Wheelies**:
+  Sobald du auf dem Hinterrad fährst, bist du 25 s „gesucht“; **Blaulicht + Sirene**, Punkte auf der Minimap, Anzeige oben.
+* Während der Verfolgung fahren sie **maximal 100 km/h** (Streife ca. 40–50 km/h). Hänge sie ab (+300 Punkte) – oder bleib stehen und
+  bekomm eine Strafe von 250 € (danach 25 s Ruhe).
+* Mit `K`, dem Button unter der Minimap oder im Menü lässt sich die Polizei komplett **deaktivieren** (wird gespeichert).
 
 ## Neu: Shop, zu Fuß, Oma & Opa, Multiplayer
 

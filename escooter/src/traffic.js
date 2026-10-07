@@ -123,8 +123,52 @@ export function buildAiScooter(M, rnd, o = {}) {
   return { group: g, tilt, wf, wr, L: 1.7, W: 0.6 };
 }
 
+function buildPoliceCar(M, rnd, glowTex) {
+  const S = new BatchSet();
+  const dim = addCar(S, rnd, { type: 0.45, color: '#eceff1', lights: 'lampW' });
+  const { L, W, H } = dim;
+  const PA = S.get('paint'), G = S.get('generic');
+  const g = new THREE.Group();
+  // blue livery
+  for (const sx of [-1, 1]) {
+    PA.box(sx * (W / 2 + 0.004), 0.66, -L * 0.02, 0.01, 0.2, L * 0.62, '#1f4fb4');
+    PA.box(sx * (W / 2 + 0.004), 0.5, -L * 0.02, 0.01, 0.05, L * 0.62, '#f2c200');
+  }
+  PA.box(0, 0.91, L * 0.33, W - 0.3, 0.012, L * 0.2, '#1f4fb4'); // bonnet stripe
+  // roof light bar (dark housing, lenses are separate emissive meshes)
+  const yr = H - 0.02;
+  G.box(0, yr + 0.05, -L * 0.04, W * 0.62, 0.1, 0.28, '#1a1b1e');
+  const mats = [new THREE.MeshBasicMaterial({ color: 0x1a4cff, toneMapped: false }), new THREE.MeshBasicMaterial({ color: 0x1a4cff, toneMapped: false })];
+  const lensL = new THREE.Mesh(new THREE.BoxGeometry(W * 0.27, 0.075, 0.25), mats[0]); lensL.position.set(W * 0.16, yr + 0.07, -L * 0.04);
+  const lensR = new THREE.Mesh(new THREE.BoxGeometry(W * 0.27, 0.075, 0.25), mats[1]); lensR.position.set(-W * 0.16, yr + 0.07, -L * 0.04);
+  // grille / rear flashers
+  const fl = [];
+  for (const sx of [-1, 1]) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.02), mats[sx > 0 ? 0 : 1]); f.position.set(sx * 0.4, 0.64, L / 2 + 0.01); fl.push(f);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.02), mats[sx > 0 ? 1 : 0]); r.position.set(sx * 0.42, 1.02, -L / 2 + 0.28); r.rotation.x = 0.4; fl.push(r);
+  }
+  for (const [k, b] of Object.entries(S.b)) {
+    if (b.empty) continue;
+    const m = new THREE.Mesh(b.build(), M[{ paint: 'paint', glass: 'glass', generic: 'generic', lampW: 'lampW' }[k]]);
+    m.castShadow = k !== 'glass' && k !== 'lampW'; m.receiveShadow = true; g.add(m);
+  }
+  g.add(lensL, lensR, ...fl);
+  // "POLIZEI" lettering on both doors
+  const tex = new THREE.CanvasTexture((() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d'); x.font = '900 46px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#12308a'; x.fillText('POLIZEI', 128, 34); return c; })());
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const dm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.4, roughness: 0.5, side: THREE.DoubleSide });
+  for (const sx of [-1, 1]) { const d = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.27), dm); d.position.set(sx * (W / 2 + 0.014), 0.74, -L * 0.02); d.rotation.y = sx * Math.PI / 2; g.add(d); }
+  // light glows (visible during pursuit only)
+  const glows = [];
+  for (const [lx, m] of [[W * 0.16, mats[0]], [-W * 0.16, mats[1]]]) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x3a6bff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+    sp.scale.set(3.2, 3.2, 1); sp.position.set(lx, yr + 0.3, -L * 0.04); g.add(sp); glows.push(sp);
+  }
+  return { group: g, L, W, H, sirenMats: mats, glows };
+}
+
 export class Traffic {
-  constructor(scene, M, count = 12, riders = 8) {
+  constructor(scene, M, count = 12, riders = 8, opts = {}) {
     this.scene = scene;
     this.M = M;
     this.rnd = mulberry32(99);
@@ -132,13 +176,21 @@ export class Traffic {
     this.count = count;
     this.dyn = [];
     this.time = 0;
+    this.policeOn = opts.police !== false;
+    this.pursuit = { active: false, x: 0, z: 0 };
+    this.policeCount = opts.policeCount ?? 3;
     for (let i = 0; i < count + riders; i++) {
       const isRider = i >= count;
       const bus = !isRider && i % 6 === 5;
       const c = isRider ? buildAiScooter(M, this.rnd) : buildVehicleMeshes(M, this.rnd, bus);
       c.group.visible = false;
       scene.add(c.group);
-      this.cars.push({ ...c, active: false, bus, kind: isRider ? 'scooter' : 'car', laneOff: isRider ? 3.1 : LANE, s: 0, v: 0, axis: 'x', dir: 1, lane: 0, cruise: 10, wait: 0, down: 0, phase: Math.random() * 6, fall: 0 });
+      this.cars.push({ ...c, active: false, bus, kind: isRider ? 'scooter' : 'car', laneOff: isRider ? 3.1 : LANE, s: 0, v: 0, axis: 'x', dir: 1, lane: 0, cruise: 10, wait: 0, down: 0, phase: Math.random() * 6, fall: 0, turn: null, plan: 0, planKey: '' });
+    }
+    for (let i = 0; i < this.policeCount; i++) {
+      const c = buildPoliceCar(M, this.rnd, opts.glow);
+      c.group.visible = false; scene.add(c.group);
+      this.cars.push({ ...c, active: false, bus: false, kind: 'police', laneOff: LANE, s: 0, v: 0, axis: 'x', dir: 1, lane: 0, cruise: 12, patrolCruise: 11 + this.rnd() * 3, wait: 0, down: 0, phase: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
     }
   }
 
@@ -165,7 +217,7 @@ export class Traffic {
       const wx = axis === 'x' ? s : lane, wz = axis === 'x' ? lane : s;
       if (Math.hypot(wx - px, wz - pz) < 50) ok = false;
       if (!ok) continue;
-      Object.assign(c, { active: true, axis, dir, lane, s, v: 0, cruise: c.kind === 'scooter' ? 4.5 + rnd() * 7 : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0 });
+      Object.assign(c, { active: true, axis, dir, lane, s, v: 0, cruise: c.kind === 'scooter' ? 4.5 + rnd() * 7 : c.kind === 'police' ? c.patrolCruise : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
       c.v = c.cruise * 0.8;
       c.group.visible = true;
       return true;
@@ -176,10 +228,25 @@ export class Traffic {
   update(dt, player, sig, R = 180) {
     const px = player.x, pz = player.z;
     this.dyn.length = 0;
+    this.time += dt;
     for (const c of this.cars) {
+      if (c.kind === 'police' && !this.policeOn) { if (c.active) { c.active = false; c.group.visible = false; } continue; }
       if (!c.active) { this.spawn(c, px, pz, R); continue; }
-      const wx = c.axis === 'x' ? c.s : c.lane, wz = c.axis === 'x' ? c.lane : c.s;
-      if (Math.hypot(wx - px, wz - pz) > R * 1.5) { c.active = false; c.group.visible = false; continue; }
+      let wx = c.axis === 'x' ? c.s : c.lane, wz = c.axis === 'x' ? c.lane : c.s;
+      if (c.turn) { wx = c.turn.x; wz = c.turn.z; }
+      if (Math.hypot(wx - px, wz - pz) > R * (c.chase ? 2.4 : 1.5)) { c.active = false; c.group.visible = false; c.turn = null; continue; }
+      if (c.kind === 'police') {
+        const pu = this.pursuit;
+        const chase = !!(pu.active && Math.hypot(wx - pu.x, wz - pu.z) < 340);
+        c.chase = chase;
+        c.cruise = chase ? 27.7 : c.patrolCruise;
+        const on = chase ? (Math.floor(this.time * 7) % 2 === 0) : false;
+        c.sirenMats[0].color.setHex(chase ? (on ? 0x4d7bff : 0x0a1a66) : 0x16205a);
+        c.sirenMats[1].color.setHex(chase ? (on ? 0x0a1a66 : 0xff2a2a) : 0x16205a);
+        c.glows[0].material.opacity = chase && on ? 0.95 : 0; c.glows[1].material.opacity = chase && !on ? 0.95 : 0;
+        c.glows[1].material.color.setHex(0xff3a2a);
+      }
+      if (c.turn) { this.stepTurn(c, dt); continue; }
       // --- target speed
       let vt = c.cruise;
       const green = c.axis === 'x' ? sig.aG : sig.bG;
@@ -188,9 +255,23 @@ export class Traffic {
       if (c.dir > 0) { const k = Math.ceil((front + STOP) / P); d = k * P - STOP - front; }
       else { const k = Math.floor((front - STOP) / P); d = front - (k * P + STOP); }
       if (d < -0.5) d = 1e9; // already past the line
-      if (!green && d < 60) {
+      if (!green && d < 60 && !c.chase) {
         const brakeDist = (c.v * c.v) / (2 * 3.5);
         if (d > brakeDist * 0.7 - 0.5 || c.v < 1) vt = Math.min(vt, Math.sqrt(Math.max(0, 2 * 2.6 * (d - 0.8))));
+      }
+      // intersection manoeuvre (straight / right / left)
+      if (c.kind !== 'scooter' && !c.bus) {
+        const j = Math.round(c.lane / P);
+        const k = c.dir > 0 ? Math.ceil((c.s + 0.001) / P) : Math.floor((c.s - 0.001) / P);
+        const dC = (k * P - c.s) * c.dir;
+        const key = c.axis + k + ':' + j;
+        if (dC <= 26 && c.planKey !== key) { c.planKey = key; c.plan = this.chooseManoeuvre(c, k, j, px, pz); }
+        if (c.plan > 0 && c.planKey === key) {
+          const e = c.plan === 1 ? 6 : 7.25;
+          if (dC <= e + 0.05) { this.startTurn(c, k, j, Math.max(0, e - dC)); this.stepTurn(c, 0); continue; }
+          const rem = Math.max(0, dC - e), vT = c.chase ? 9 : 6.5;
+          vt = Math.min(vt, Math.sqrt(vT * vT + 2 * 3.5 * rem));
+        }
       }
       // obstacles ahead: other cars, player, pedestrians
       const look = 14 + c.v * 1.2;
@@ -240,5 +321,83 @@ export class Traffic {
     }
     return this.dyn;
   }
-}
 
+  /* ---- turning ---- */
+  chooseManoeuvre(c, k, j, px, pz) {
+    const f = c.axis === 'x' ? [c.dir, 0] : [0, c.dir];
+    const Rv = [-f[1], f[0]];
+    const C = c.axis === 'x' ? [k * P, j * P] : [j * P, k * P];
+    if (c.chase) {
+      const tx = px - C[0], tz = pz - C[1], tl = Math.hypot(tx, tz) || 1;
+      if (tl < 28) return 0;
+      const sc = [(f[0] * tx + f[1] * tz) / tl + 0.2, (Rv[0] * tx + Rv[1] * tz) / tl, (-Rv[0] * tx - Rv[1] * tz) / tl];
+      return sc[1] > sc[0] && sc[1] >= sc[2] ? 1 : sc[2] > sc[0] ? 2 : 0;
+    }
+    const r = Math.random();
+    return r < 0.74 ? 0 : r < 0.87 ? 1 : 2;
+  }
+  startTurn(c, k, j, skip) {
+    const f = c.axis === 'x' ? [c.dir, 0] : [0, c.dir];
+    const Rv = [-f[1], f[0]];
+    const C = c.axis === 'x' ? [k * P, j * P] : [j * P, k * P];
+    let center, r, sv, sign, ef;
+    if (c.plan === 1) { center = [C[0] - 6 * f[0] + 6 * Rv[0], C[1] - 6 * f[1] + 6 * Rv[1]]; r = 4.25; sv = [-Rv[0], -Rv[1]]; sign = 1; ef = Rv; }
+    else { center = [C[0] - 7.25 * f[0] - 7.25 * Rv[0], C[1] - 7.25 * f[1] - 7.25 * Rv[1]]; r = 9; sv = Rv; sign = -1; ef = [-Rv[0], -Rv[1]]; }
+    c.turn = { cx: center[0], cz: center[1], r, a0: Math.atan2(sv[1], sv[0]), sign, len: (r * Math.PI) / 2, d: skip, ef, f, x: 0, z: 0 };
+    c.plan = 0;
+  }
+  stepTurn(c, dt) {
+    const t = c.turn;
+    const vTurn = c.chase ? 10 : c.plan === 2 ? 8 : 7;
+    const a = clamp((Math.min(c.cruise, vTurn) - c.v) * 1.4, -6, 2.0);
+    c.v = Math.max(0, c.v + a * dt);
+    t.d += c.v * dt;
+    if (t.d >= t.len) { // finish: continue straight on the new road
+      const ang = t.a0 + t.sign * (Math.PI / 2);
+      const ex = t.cx + t.r * Math.cos(ang), ez = t.cz + t.r * Math.sin(ang);
+      const ef = t.ef;
+      c.axis = Math.abs(ef[0]) > 0.5 ? 'x' : 'z';
+      c.dir = c.axis === 'x' ? Math.sign(ef[0]) : Math.sign(ef[1]);
+      c.lane = c.axis === 'x' ? ez : ex; c.s = c.axis === 'x' ? ex : ez;
+      c.turn = null;
+      const x = ex, z = ez;
+      c.group.position.set(x, 0, z);
+      c.group.rotation.y = c.axis === 'x' ? (c.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (c.dir > 0 ? 0 : Math.PI);
+      this.pushDyn(c, x, z, Math.sin(c.group.rotation.y), Math.cos(c.group.rotation.y));
+      return;
+    }
+    const ang = t.a0 + t.sign * (t.d / t.r);
+    const x = t.cx + t.r * Math.cos(ang), z = t.cz + t.r * Math.sin(ang);
+    const tx = t.sign * -Math.sin(ang), tz = t.sign * Math.cos(ang);
+    t.x = x; t.z = z;
+    c.group.position.set(x, 0, z);
+    c.group.rotation.y = Math.atan2(tx, tz);
+    this.pushDyn(c, x, z, tx, tz);
+  }
+  pushDyn(c, x, z, fx, fz) {
+    const n = Math.max(3, Math.round(c.L / 1.8)), r = c.W / 2 + 0.05;
+    for (let i = 0; i < n; i++) {
+      const tt = (-0.5 + (i + 0.5) / n) * (c.L - r);
+      this.dyn.push({ x: x + fx * tt, z: z + fz * tt, r, vx: fx * c.v, vz: fz * c.v });
+    }
+  }
+  /** nearest pursuing police car */
+  nearestChaser(px, pz) {
+    let best = null;
+    for (const c of this.cars) {
+      if (c.kind !== 'police' || !c.active || !c.chase) continue;
+      const x = c.turn ? c.turn.x : c.axis === 'x' ? c.s : c.lane, z = c.turn ? c.turn.z : c.axis === 'x' ? c.lane : c.s;
+      const d = Math.hypot(x - px, z - pz);
+      if (!best || d < best.d) best = { d, v: c.v, x, z };
+    }
+    return best;
+  }
+  policeList() {
+    const o = [];
+    for (const c of this.cars) {
+      if (c.kind !== 'police' || !c.active) continue;
+      o.push({ x: c.turn ? c.turn.x : c.axis === 'x' ? c.s : c.lane, z: c.turn ? c.turn.z : c.axis === 'x' ? c.lane : c.s, chase: c.chase });
+    }
+    return o;
+  }
+}

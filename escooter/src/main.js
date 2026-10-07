@@ -51,8 +51,9 @@ const me = {
   get speed() { return st.mode === 'walk' ? walker.speed : Math.abs(scooter.v); },
   get heading() { return st.mode === 'walk' ? walker.yaw : scooter.heading; },
 };
+const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
 const parkDyn = [];
-const traffic = new Traffic(scene, M, 12, 9);
+const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), glow: tex.glow });
 const peds = new Pedestrians(scene, M, 16, 6);
 traffic.peds = peds;
 const rain = new Rain(scene);
@@ -107,6 +108,7 @@ const cfg = {
   volume: store.get('volume', 0.7),
   mouse: store.get('mouse', true),
   weather: 'clear',
+  police: store.get('police', true),
 };
 const VESC_PRICE = 500, DT3_PRICE = 1000;
 const st = {
@@ -114,6 +116,7 @@ const st = {
   score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
+  wanted: 0, copCool: 0, bustT: 0, fines: 0,
   mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), model: store.get('model', 'g4'),
 };
 
@@ -222,6 +225,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyE': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9 && !st.vesc) interact(); break;
     case 'KeyQ': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9) buyDT3(); break;
     case 'KeyX': switchModel(); break;
+    case 'KeyK': setPolice(!cfg.police); break;
     case 'KeyF': toggleMount(); break;
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
@@ -426,6 +430,51 @@ function missionUpdate(dt) {
 }
 
 /* ------------------------------------------------------------------ on foot, shop, money */
+function setPolice(on) {
+  cfg.police = !!on; store.set('police', cfg.police);
+  traffic.policeOn = cfg.police;
+  $('optPolice').checked = cfg.police;
+  const b = $('policeBtn');
+  b.textContent = cfg.police ? '🚓 Polizei: an' : '🚓 Polizei: aus';
+  b.classList.toggle('off', !cfg.police);
+  if (!cfg.police) { st.wanted = 0; st.bustT = 0; traffic.pursuit.active = false; audio.siren(0); }
+  if (st.running) toast(cfg.police ? 'Polizei aktiv' : 'Polizei deaktiviert', cfg.police ? 'Sie verfolgt dich nur, wenn du einen Wheelie machst' : '', 1600);
+}
+$('optPolice').onchange = (e) => setPolice(e.target.checked);
+$('policeBtn').onclick = (e) => { setPolice(!cfg.police); e.currentTarget.blur(); };
+const WANTED_TIME = 25;
+/** police only chase the player after a wheelie; their top speed is 100 km/h */
+function updatePolice(dt) {
+  const pu = traffic.pursuit;
+  if (!cfg.police) { pu.active = false; return; }
+  st.copCool = Math.max(0, st.copCool - dt);
+  const riding = st.mode === 'ride';
+  if (riding && scooter.wheelie > 0.3 && st.copCool <= 0) {
+    if (st.wanted <= 0) { toast('🚨 Polizei hat dich gesehen!', 'Sie verfolgt dich mit max. 100 km/h – hänge sie ab!', 2600); audio.beep(); }
+    st.wanted = WANTED_TIME;
+  }
+  if (st.wanted > 0) {
+    const ch = traffic.nearestChaser(me.x, me.z);
+    // wanted level cools down; much faster once the police are far behind
+    const far = !ch || ch.d > 220;
+    if (!(riding && scooter.wheelie > 0.3)) st.wanted -= dt * (far ? 2.5 : 1);
+    if (ch && ch.d < 7 && me.speed < 3.5) st.bustT += dt; else st.bustT = Math.max(0, st.bustT - dt * 2);
+    if (st.bustT > 1.4) {
+      const fine = Math.min(Math.floor(st.money), 250);
+      earn(-fine);
+      st.wanted = 0; st.bustT = 0; st.copCool = 25; st.fines = (st.fines || 0) + 1;
+      toast('🚔 Erwischt!', `Strafe: −${fine} € – die Polizei lässt dich 25 s in Ruhe`, 3400);
+      audio.thud(8);
+    } else if (st.wanted <= 0) {
+      st.wanted = 0; st.copCool = 10; st.score += 300;
+      toast('Polizei abgehängt!', '+300 Punkte', 2200); audio.chime([523, 659, 784]);
+    }
+  } else st.bustT = 0;
+  pu.active = st.wanted > 0;
+  pu.x = me.x; pu.z = me.z;
+  const ch = pu.active ? traffic.nearestChaser(me.x, me.z) : null;
+  audio.siren(ch ? clamp(1 - ch.d / 260, 0, 1) : 0);
+}
 function earn(eur, why) {
   st.money = Math.max(0, st.money + eur);
   store.set('money', Math.floor(st.money));
@@ -457,11 +506,19 @@ function setVesc(on) {
   shopBeacon.visible = !(on && st.dt3);
   $('vescBadge').classList.toggle('hidden', !on);
 }
+function syncModelSelect() {
+  const sel = $('optModel');
+  sel.options[1].disabled = !st.dt3;
+  sel.options[1].textContent = st.dt3 ? 'Dualtron Thunder 3' : 'Dualtron Thunder 3 (im Shop kaufen, 1000 €)';
+  sel.value = st.model;
+}
+$('optModel').onchange = (e) => { const id = e.target.value; if (id === st.model) return; setModel(id); };
 function setModel(id, silent) {
   if (id === 'dt3' && !st.dt3) return;
   st.model = id; store.set('model', id);
   scooter.setModel(id);
   $('modelName').textContent = scooter.model.name;
+  syncModelSelect();
   if (!silent) toast(scooter.model.name, `bis ${Math.round(scooter.topKmh)} km/h Turbo`, 1800);
 }
 function switchModel() {
@@ -633,6 +690,17 @@ function drawMap() {
   for (const rp of net.remoteList ? net.remoteList() : []) {
     c.fillStyle = '#7dff8a'; c.beginPath(); c.arc(rp.x - sx, rp.z - sz, 7, 0, 6.3); c.fill();
   }
+  // police
+  if (cfg.police) {
+    const blink = Math.floor(performance.now() / 220) % 2;
+    for (const pc of traffic.policeList()) {
+      const dx = pc.x - sx, dz = pc.z - sz;
+      if (dx * dx + dz * dz > 230 * 230) continue;
+      c.fillStyle = pc.chase ? (blink ? '#ff3b3b' : '#4d7bff') : '#9db4ff';
+      c.strokeStyle = '#fff'; c.lineWidth = 1.5 / s;
+      c.beginPath(); c.arc(dx, dz, pc.chase ? 8 : 6, 0, 6.3); c.fill(); c.stroke();
+    }
+  }
   // checkpoint
   if (mis.active && mis.cp) {
     let dx = mis.cp.x - sx, dz = mis.cp.z - sz;
@@ -665,6 +733,13 @@ function updateHUD(dt) {
   const wEl = $('wheelie');
   if (scooter.wheelie > 0.3 && st.mode === 'ride') { wEl.classList.remove('hidden'); const ok = scooter.wheelieT >= 1.5; wEl.innerHTML = `WHEELIE <b>${scooter.wheelieT.toFixed(1)} s</b> ${ok ? '· <span style="color:#8dffb0">+100 € beim Absetzen</span>' : '· halte durch (1,5 s)'}`; }
   else wEl.classList.add('hidden');
+  const wd = $('wanted');
+  if (st.wanted > 0) {
+    const ch = traffic.nearestChaser(me.x, me.z);
+    const t = `🚨 POLIZEI VERFOLGT DICH · ${Math.ceil(st.wanted)} s${ch ? ' · ' + Math.round(ch.d) + ' m' : ''}${st.bustT > 0.1 ? ' · STEHEN BLEIBEN = FESTNAHME' : ''}`;
+    if (cache.wanted !== t) { cache.wanted = t; wd.textContent = t; }
+    wd.classList.remove('hidden');
+  } else wd.classList.add('hidden');
   // shop / interaction prompt
   const ds = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
   let prompt = '';
@@ -872,6 +947,7 @@ function tick(dt, now, render = true) {
       audio.chime([660, 880, 1100, 1480]);
       toast('WHEELIE! +100 €', `${ev.dur.toFixed(1)} s auf dem Hinterrad · ${st.wheelies}. Wheelie`, 2200);
     }
+    updatePolice(dt2);
     if (scooter.pedHit) {
       const p = scooter.pedHit; scooter.pedHit = null;
       if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : p.elder ? (p.kind === 'oma' ? 'Oma umgefahren!' : 'Opa umgefahren!') : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); if (p.elder) p.anger = Math.min(100, p.anger + 40); }
@@ -992,6 +1068,7 @@ async function boot() {
   scooter.setView(false);
   setVesc(st.vesc);
   setModel(st.model === 'dt3' && st.dt3 ? 'dt3' : 'g4', true);
+  setPolice(cfg.police);
   shopBeacon.position.set(SHOP.x, groundHeight(SHOP.x, SHOP.z), SHOP.z);
   sky.setTime(cfg.hours);
   sky.update(0.01, new THREE.Vector3(30, 0, 0), true);
@@ -1020,4 +1097,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { net, walker, me, dismount, mount, interact, buyDT3, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

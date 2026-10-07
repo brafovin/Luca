@@ -400,6 +400,60 @@ export function buildDT3(ctx) {
   add(steer, box(0.2, 0.012, 0.014), mats.head, 0, 0.82, 0.07).castShadow = false;
   add(steer, box(0.06, 0.03, 0.01), mRed, 0, 0.74, 0.07);
 
+  /* ---- extra detail (Thunder 3) */
+  const mRedLed = new THREE.MeshBasicMaterial({ color: 0xff2a1a, toneMapped: false });
+  const mWhite = new THREE.MeshBasicMaterial({ color: 0xf6f4ea, toneMapped: false });
+  // deck: cooling vents on the battery covers, anti-slip ribs, nose lights, heel kick
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 9; i++) add(group, box(0.004, 0.034, 0.05), mDark, sx * 0.1655, 0.155, -0.4 + i * 0.09).castShadow = false;
+    add(group, box(0.01, 0.025, 0.1), mAmber, sx * 0.155, 0.255, 0.57).castShadow = false;           // nose marker
+    for (const z of [-0.24, 0.2]) add(group, new THREE.CylinderGeometry(0.011, 0.011, 0.006, 8), mTrim, sx * 0.152, 0.236, z);
+  }
+  for (let i = 0; i < 16; i++) add(group, box(0.255, 0.0035, 0.011), mMatte, 0, 0.2465, -0.4 + i * 0.05).castShadow = false;
+  add(group, box(0.26, 0.03, 0.03), mTrim, 0, 0.255, -0.5);                                          // heel kick
+  add(group, box(0.1, 0.01, 0.1), mats.led, 0, 0.125, 0.35).castShadow = false;                      // under-neck LED
+  // front fork: brace arch, hydraulic reservoirs, damper
+  add(steer, box(0.23, 0.022, 0.05), mGloss, 0, 0.36, 0.03);
+  for (const sx of [-1, 1]) {
+    add(steer, new THREE.CylinderGeometry(0.014, 0.014, 0.07, 10), mDark, sx * 0.17, 0.5, 0.01);
+    add(steer, new THREE.CylinderGeometry(0.016, 0.016, 0.014, 10), mRed, sx * 0.17, 0.543, 0.01);
+    add(steer, box(0.02, 0.03, 0.03), mRed, sx * 0.17, 0.455, 0.01);
+    const f = add(steer, box(0.008, 0.2, 0.035), mFender, sx * 0.06, 0.12, 0.17); f.rotation.x = -0.35;      // fender stays
+    add(steer, new THREE.CylinderGeometry(0.0055, 0.0055, 0.06, 8), mRed, sx * 0.07, 0.08, 0.1).rotation.z = Math.PI / 2; // banjo
+  }
+  const damper = add(steer, new THREE.CylinderGeometry(0.014, 0.014, 0.16, 10), mDark, 0, 0.56, 0.07); damper.rotation.z = Math.PI / 2;
+  add(steer, new THREE.CylinderGeometry(0.018, 0.018, 0.03, 10), mRed, 0.09, 0.56, 0.07).rotation.z = Math.PI / 2;
+  // stem: LED strip, indicator pods, bolts
+  add(steer, box(0.012, 0.5, 0.006), mRedLed, 0, 0.9, 0.052).castShadow = false;
+  for (const sx of [-1, 1]) {
+    add(steer, box(0.03, 0.06, 0.05), mGloss, sx * 0.05, 0.98, 0.03);
+    add(steer, box(0.018, 0.04, 0.012), mAmber, sx * 0.05, 0.98, 0.056).castShadow = false;
+    for (const dz of [-0.03, 0.03]) add(steer, new THREE.CylinderGeometry(0.005, 0.005, 0.006, 8), mDark, sx * 0.0615, 0.62, dz).rotation.z = Math.PI / 2;
+  }
+  // bars: clamps, horn, throttle, brake lock
+  for (const sx of [-1, 1]) {
+    for (const dz of [-0.03, 0.03]) add(steer, new THREE.CylinderGeometry(0.005, 0.005, 0.01, 8), mDark, sx * 0.05, BY + 0.045, dz);
+    add(steer, box(0.026, 0.014, 0.03), mRed, sx * 0.3, BY + 0.022, -0.05);
+  }
+  add(steer, box(0.04, 0.026, 0.05), mRed, -0.205, BY + 0.01, -0.03);                      // throttle pod
+  add(steer, new THREE.CylinderGeometry(0.008, 0.008, 0.012, 8), mWhite, 0.205, BY + 0.03, -0.03).castShadow = false; // horn
+  for (let i = 0; i < 3; i++) add(disp, new THREE.CylinderGeometry(0.007, 0.007, 0.006, 8), mDark, -0.05 + i * 0.05, -0.062, -0.008).rotation.x = Math.PI / 2;
+  // rear: dual lamps, brake bar, reflectors, plate light, flap
+  for (const sx of [-1, 1]) {
+    add(group, box(0.05, 0.034, 0.018), mats.tail, sx * 0.1, 0.33, -0.985).castShadow = false;
+    add(group, box(0.04, 0.012, 0.01), mRedLed, sx * 0.17, 0.27, -0.97).castShadow = false;
+    add(group, box(0.006, 0.05, 0.1), new THREE.MeshStandardMaterial({ color: 0xaa1a1a, emissive: 0x500000, emissiveIntensity: 0.3, roughness: 0.3 }), sx * 0.098, 0.37, -0.64);
+    const f = add(group, box(0.01, 0.1, 0.2), mFender, sx * 0.082, 0.19, -0.9); f.rotation.x = 0.4;
+  }
+  add(group, box(0.11, 0.008, 0.012), mWhite, 0, 0.285, -0.96).castShadow = false;
+  const flap = add(group, box(0.22, 0.14, 0.008), mMatte, 0, 0.17, -0.99); flap.rotation.x = 0.1;
+  // hub motors: cable ports and axle nuts
+  for (const w of [rearWheel, frontWheel]) {
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283; add(w, cylX(0.006, 0.01, 6), mDark, -0.062, Math.cos(a) * 0.045, Math.sin(a) * 0.045).castShadow = false; }
+    add(w, cylX(0.014, 0.02, 6), mTrim, -0.07, 0, 0);
+    add(w, cylX(0.009, 0.05, 8), mCable, -0.075, 0.07, 0);
+  }
+
   /* ---- VESC upgrade parts */
   const vescParts = [];
   const mBlue = std({ color: 0x1668ff, roughness: 0.3, metalness: 0.8 });

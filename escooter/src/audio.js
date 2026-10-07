@@ -92,6 +92,21 @@ export class GameAudio {
     });
   }
   beep() { this.chime([520, 520]); }
+  /** police siren (two-tone wail), level 0..1 = loudness by distance */
+  siren(level) {
+    if (!this.ctx) return;
+    const c = this.ctx;
+    if (!this.sirenO) {
+      const o = c.createOscillator(); o.type = 'square'; o.frequency.value = 700;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1500;
+      const g = c.createGain(); g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(this.master); o.start();
+      this.sirenO = o; this.sirenG = g;
+    }
+    const t = c.currentTime;
+    this.sirenO.frequency.setTargetAtTime(Math.floor(t * 1.6) % 2 ? 960 : 720, t, 0.04);
+    this.sirenG.gain.setTargetAtTime(Math.max(0, level) * 0.07, t, 0.15);
+  }
   bell() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
