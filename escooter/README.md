@@ -86,7 +86,9 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Auslaufzonen, Zielportal mit Zielflagge und Tribüne, Kilometer-Tafeln. **Kein Verkehr, keine Fußgänger, keine Polizei, keine Hindernisse.**
 * `V` oder Menü-Button teleportiert dich vor die Ziellinie (und wieder zurück in die Stadt). Zeit startet beim Überfahren der Ziellinie;
   Abkürzen macht die Runde ungültig. Pro Runde **+300 €** (Bestzeit **+600 €**), Bestzeit wird gespeichert. `R` setzt dich auf die Strecke.
-* Auf dem Weped Sonic (500 km/h) brauchst du für eine Runde etwa 4–5 Minuten – in den Kurven musst du vom Gas.
+* **HYPER-Modus:** Nur hier fährt der Weped Sonic mit `Shift` bis **5000 km/h** (in ca. 7 s von 0 – absurde Beschleunigung, extra starke
+  Bremsen, Lenkung bleibt auch bei Überschall steuerbar). In der Stadt gilt wieder das normale Limit (500 km/h mit VESC).
+  Vor den Kurven musst du rechtzeitig abbremsen – bei 5000 km/h fliegst du sonst geradeaus auf die Wiese (`R` setzt dich zurück).
 
 ## Polizei 🚓
 
