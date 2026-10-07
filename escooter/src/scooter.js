@@ -235,10 +235,10 @@ export class Scooter {
     hl.castShadow = false;
     add(steer, box(0.12, 0.012, 0.04), mBlack, 0, 0.652, 0.04);
     this.spot = new THREE.SpotLight(0xfff0d8, 0, 38, 0.5, 0.6, 1.6);
-    this.spot.position.set(0, 0.62, 0.06);
+    this.spot.position.set(0, 0.78, 0.46);
     this.spotTarget = new THREE.Object3D();
-    this.spotTarget.position.set(0, 0.3, 14);
-    steer.add(this.spot, this.spotTarget);
+    this.spotTarget.position.set(0, 0, 13);
+    tilt.add(this.spot, this.spotTarget);
     this.spot.target = this.spotTarget;
     // reflector
     add(steer, box(0.03, 0.02, 0.008), mRed, 0.06, 0.55, 0.043);
@@ -252,9 +252,9 @@ export class Scooter {
     const rider = new THREE.Group();
     tilt.add(rider);
     this.rider = rider;
-    const mJacket = new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.75 });
+    const mJacket = new THREE.MeshStandardMaterial({ color: 0x56606b, roughness: 0.75 });
     const mAccent = new THREE.MeshStandardMaterial({ color: 0xf06a28, roughness: 0.6 });
-    const mPants = new THREE.MeshStandardMaterial({ color: 0x1f2a3d, roughness: 0.85 });
+    const mPants = new THREE.MeshStandardMaterial({ color: 0x191b21, roughness: 0.85 });
     const mShoe = new THREE.MeshStandardMaterial({ color: 0xe9e9e9, roughness: 0.6 });
     const mGlove = new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.7 });
     const mHelmet = new THREE.MeshStandardMaterial({ color: 0xf2f2f0, roughness: 0.22, metalness: 0.25 });
@@ -262,11 +262,13 @@ export class Scooter {
     const mk = (geo, mat, parent = rider) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; parent.add(m); return m; };
     this.rParts = {};
     // torso
-    const torso = mk(new THREE.CapsuleGeometry(0.14, 0.27, 6, 14), mJacket);
+    const torso = mk(new THREE.CapsuleGeometry(0.125, 0.25, 6, 14), mJacket);
     torso.scale.set(1.15, 1, 0.78);
     this.rParts.torso = torso;
-    const stripe = mk(new THREE.BoxGeometry(0.33, 0.045, 0.2), mAccent);
+    const stripe = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.6 })); // courier backpack
     this.rParts.stripe = stripe;
+    const bpLogo = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), stripe);
+    bpLogo.position.set(0, 0.08, -0.106);
     // head + helmet
     const head = mk(new THREE.SphereGeometry(0.095, 14, 12), mSkin);
     const helmet = mk(new THREE.SphereGeometry(0.128, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), mHelmet);
@@ -291,7 +293,7 @@ export class Scooter {
     this.headBase = new THREE.Vector3(0, 1.53, 0.05);
     torso.position.copy(this.torsoBase);
     torso.rotation.x = 0.45;
-    stripe.position.set(0, 0.93, -0.18); stripe.rotation.x = 0.45;
+    stripe.position.set(0, 1.16, -0.25); stripe.rotation.x = 0.45;
     for (const p of this.rParts.head) p.position.copy(this.headBase);
     this.rParts.head[0].position.y -= 0.02;
     this.rParts.head[2].position.set(0, this.headBase.y + 0.005, this.headBase.z + 0.115);
@@ -303,26 +305,29 @@ export class Scooter {
   updateRider(dt, speed) {
     const tilt = this.tilt, steer = this.steer;
     tilt.updateMatrixWorld(true);
-    // breathing / posture sway
     const sway = Math.sin(this.odo * 0.8) * 0.004 * Math.min(1, speed / 4);
     this.rParts.head.forEach((p, i) => { if (i < 2) p.position.y = this.headBase.y + sway + (i === 0 ? -0.005 : 0.015); });
-    const gripsLocal = [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)];
+    const T = this._tmp || (this._tmp = {
+      grips: [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)],
+      g: new THREE.Vector3(), pole: [new THREE.Vector3(0.45, -0.55, -0.45), new THREE.Vector3(-0.45, -0.55, -0.45)],
+      legPole: [new THREE.Vector3(0.15, 0.1, 1), new THREE.Vector3(-0.15, 0.1, 1)], ankle: new THREE.Vector3(),
+    });
     for (let i = 0; i < 2; i++) {
-      const g = steer.localToWorld(gripsLocal[i].clone());
+      const g = T.g.copy(T.grips[i]);
+      steer.localToWorld(g);
       tilt.worldToLocal(g);
-      const hand = this.arms[i].hand;
-      hand.position.copy(g).add(new THREE.Vector3(0, 0.0, -0.012));
-      ik2(this.shoulder[i], g, 0.3, 0.3, new THREE.Vector3(i ? -0.45 : 0.45, -0.55, -0.45), this._v[0]);
+      this.arms[i].hand.position.set(g.x, g.y, g.z - 0.012);
+      ik2(this.shoulder[i], g, 0.3, 0.3, T.pole[i], this._v[0]);
       setSegment(this.arms[i].up, this.shoulder[i], this._v[0]);
       setSegment(this.arms[i].lo, this._v[0], g);
       this.arms[i].elbow.position.copy(this._v[0]);
-      // legs
       const ft = this.foot[i];
-      ik2(this.hip[i], ft.clone().add(new THREE.Vector3(0, 0.05, -0.04)), 0.42, 0.42, new THREE.Vector3(i ? -0.15 : 0.15, 0.1, 1), this._v[1]);
+      T.ankle.set(ft.x, ft.y + 0.05, ft.z - 0.04);
+      ik2(this.hip[i], T.ankle, 0.42, 0.42, T.legPole[i], this._v[1]);
       setSegment(this.legs[i].up, this.hip[i], this._v[1]);
-      setSegment(this.legs[i].lo, this._v[1], ft.clone().add(new THREE.Vector3(0, 0.05, -0.04)));
+      setSegment(this.legs[i].lo, this._v[1], T.ankle);
       this.legs[i].knee.position.copy(this._v[1]);
-      this.legs[i].foot.position.copy(ft).add(new THREE.Vector3(0, 0.0, 0.06));
+      this.legs[i].foot.position.set(ft.x, ft.y, ft.z + 0.06);
     }
   }
 
@@ -364,7 +369,7 @@ export class Scooter {
 
   update(dt, inp, world, drainScale, dyn) {
     const empty = this.batt <= 0.2;
-    const boost = !!inp.boost && !empty && this.v > 1;
+    const boost = !!inp.boost && !!inp.fwd && !empty && this.v > 1;
     this.boosting = boost;
     let vmax = empty ? 3.2 : boost ? 17.2 : 12.5;
     const aMax = empty ? 0.7 : boost ? 4.2 : 2.3;

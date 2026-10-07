@@ -14,6 +14,11 @@ import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('c');
+if (!window.WebGL2RenderingContext || !document.createElement('canvas').getContext('webgl2')) {
+  $('loadtxt').textContent = 'Dein Browser unterstützt WebGL 2 nicht (oder es ist deaktiviert). Bitte aktuellen Chrome, Edge, Firefox oder Safari verwenden.';
+  $('loadbar').style.width = '0';
+  throw new Error('WebGL2 not available');
+}
 
 /* ------------------------------------------------------------------ renderer */
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -154,10 +159,12 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) { keys.add(e.code); return; }
   keys.add(e.code);
   if (!st.running) return;
+  if (st.paused && !['KeyP', 'Escape', 'Enter', 'KeyM'].includes(e.code)) return;
   switch (e.code) {
     case 'KeyC': toggleCam(); break;
     case 'KeyR': resetOnRoad(); break;
-    case 'KeyP': case 'Escape': setPaused(!st.paused); break;
+    case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
+    case 'Enter': if (st.paused) $('btnStart').click(); break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
     case 'KeyB': audio.bell(); break;
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
@@ -378,7 +385,7 @@ function updateCamera(dt, first) {
     camDist = damp(camDist, dist, 3, dt);
     const h = 1.95 + Math.min(spd / 17, 1) * 0.2;
     const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
-    const tx = s.x + sinY * 3.4, tz = s.z + cosY * 3.4, ty = (s.yOff || 0) + 0.15;
+    const tx = s.x + sinY * 3.4, tz = s.z + cosY * 3.4, ty = (s.yOff || 0) - 0.3;
     let f = 1;
     let px, pz;
     for (let i = 0; i < 6; i++) {
@@ -450,6 +457,7 @@ function updateHUD(dt) {
   arc.setAttribute('stroke-dasharray', `${(frac * arcLen).toFixed(1)} 1000`);
   arc.setAttribute('stroke', s.boosting ? '#ff7a1a' : kmh > 50 ? '#ffc23d' : '#35e6ff');
   $('boostTxt').style.opacity = s.boosting ? 1 : 0;
+  $('speedfx').style.opacity = clamp((kmh - 28) / 40, 0, 1).toFixed(2);
   const pct = s.battPct;
   setText('battPct', Math.round(pct) + '%');
   const bar = $('battBar');
@@ -484,6 +492,7 @@ function updateHUD(dt) {
 
 /* ------------------------------------------------------------------ main loop */
 const lampTmp = [];
+const _focus = new THREE.Vector3();
 let lampTimer = 0;
 let last = performance.now();
 let simAcc = 0;
@@ -564,7 +573,7 @@ function tick(dt, now, render = true) {
 
   // day / night
   sky.setTime(cfg.hours);
-  sky.update(dt, camera.position.clone().lerp(scooter.root.position, 0.5).setY(0));
+  sky.update(dt, _focus.copy(camera.position).lerp(scooter.root.position, 0.5).setY(0));
   const night = sky.night, lamps = sky.lampsOn;
   const win = lamps * 1.6;
   for (const k of ['plaster', 'brick', 'panel', 'glass']) M['f_' + k].emissiveIntensity = win;
@@ -636,8 +645,11 @@ async function boot() {
     txt.textContent = `Stadt wird gebaut … ${done}/${total}`;
     await new Promise((r) => setTimeout(r, 0));
   }
+  txt.textContent = 'Shader werden vorbereitet …';
+  await new Promise((r) => setTimeout(r, 30));
   startMission(true);
   scooter.updateLights(0, false, 1, 10);
+  try { renderer.compile(scene, camera); } catch (e) { /* ignore */ }
   updateCamera(0.016, true);
   $('loading').classList.add('hidden');
   $('hud').classList.remove('hidden');

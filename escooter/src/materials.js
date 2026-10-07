@@ -7,6 +7,8 @@ export function createMaterials(T) {
   M.lotAsphalt = M.asphalt.clone();
   M.lotAsphalt.polygonOffset = true; M.lotAsphalt.polygonOffsetFactor = -2; M.lotAsphalt.polygonOffsetUnits = -2;
   M.paver = std({ map: T.paver, roughness: 0.88, vertexColors: true });
+  M.paver2 = M.paver.clone();
+  M.paver2.polygonOffset = true; M.paver2.polygonOffsetFactor = -3; M.paver2.polygonOffsetUnits = -3;
   M.grass = std({ map: T.grass, roughness: 1, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   M.mark = std({ color: 0xffffff, vertexColors: true, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   M.generic = std({ vertexColors: true, roughness: 0.78, metalness: 0.05 });
@@ -14,7 +16,7 @@ export function createMaterials(T) {
   M.roof = std({ map: T.roof, vertexColors: true, roughness: 0.82, metalness: 0.02 });
   M.foliage = std({ map: T.leaf, vertexColors: true, roughness: 0.92, metalness: 0 });
   M.paint = std({ vertexColors: true, roughness: 0.26, metalness: 0.55, envMapIntensity: 1.3 });
-  M.glass = std({ color: 0x0b1118, roughness: 0.06, metalness: 0.92, envMapIntensity: 1.6 });
+  M.glass = std({ color: 0x6f869a, roughness: 0.07, metalness: 0.9, envMapIntensity: 1.25 });
   M.metal = std({ vertexColors: true, roughness: 0.35, metalness: 0.85 });
   M.water = std({ color: 0x2b5a72, roughness: 0.04, metalness: 0.2, envMapIntensity: 1.4 });
   for (const k of ['plaster', 'brick', 'panel', 'glass']) {

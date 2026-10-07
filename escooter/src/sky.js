@@ -149,7 +149,7 @@ export class Sky {
 
     // key light: sun by day, moon by night
     const sunI = 3.4 * smoothstep(-0.03, 0.3, e);
-    const moonI = 0.42 * smoothstep(0.0, -0.22, e);
+    const moonI = 0.24 * smoothstep(0.0, -0.22, e);
     const useSun = sunI >= moonI;
     const dir = useSun ? this.sunDir : this.moonDir;
     this.sun.intensity = useSun ? sunI : moonI;
@@ -159,7 +159,7 @@ export class Sky {
     // shadow camera snapped to texel grid in light space
     const size = this.sun.shadow.camera.right * 2;
     const texel = size / this.sun.shadow.mapSize.x;
-    const r = this._shadowRight.crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
+    const r = this._shadowRight.crossVectors(this._upV || (this._upV = new THREE.Vector3(0, 1, 0)), dir).normalize();
     const u = this._shadowUp.crossVectors(dir, r).normalize();
     const f = focus;
     const pr = Math.round(f.dot(r) / texel) * texel, pu = Math.round(f.dot(u) / texel) * texel, pd = f.dot(dir);
@@ -167,9 +167,9 @@ export class Sky {
     tgt.set(0, 0, 0).addScaledVector(r, pr).addScaledVector(u, pu).addScaledVector(dir, pd);
     this.sun.position.copy(tgt).addScaledVector(dir, 110);
 
-    this.hemi.intensity = lerp(0.12, 0.38, 1 - this.night);
-    this.hemi.color.copy(this.uniforms.zenith.value).lerp(new THREE.Color(1, 1, 1), 0.35);
-    this.renderer.toneMappingExposure = lerp(1.35, 0.95, 1 - this.night);
+    this.hemi.intensity = lerp(0.07, 0.38, 1 - this.night);
+    this.hemi.color.copy(this.uniforms.zenith.value).lerp(this._white || (this._white = new THREE.Color(1, 1, 1)), 0.35);
+    this.renderer.toneMappingExposure = lerp(1.2, 0.95, 1 - this.night);
     this.scene.environmentIntensity = lerp(0.85, 0.9, 1 - this.night);
 
     this.dome.position.copy(this.camera.position);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BatchSet, shade } from './batch.js';
+import { BatchSet, shade, geometryFromArrays } from './batch.js';
 import { mulberry32, hash2, clamp } from './util.js';
 import { addCar } from './cars.js';
 
@@ -437,12 +437,9 @@ class ChunkBuilder {
         }
         if (rnd() < 0.3) { // solar panels
           const sx0 = x0 + wdt * 0.2, sx1 = x1 - wdt * 0.2;
-          const k = (half + ov) / len;
-          const nz = (rise + 0.2) / len;
           const lift = 0.06;
           const side = b.front === '+z' ? 1 : -1;
           const zA = cz + side * (half * 0.2), zB = cz + side * (half * 0.85);
-          const yA = yr - (rise * 0.2 / half) * (half * 0.2) * 0 - ((Math.abs(zA - cz)) * (rise / half)) + 0.0 - 0;
           const yA2 = yr - Math.abs(zA - cz) * (rise / half), yB2 = yr - Math.abs(zB - cz) * (rise / half);
           this.b('paint').quad([sx0, yA2 + lift, zA], [sx1, yA2 + lift, zA], [sx1, yB2 + lift, zB], [sx0, yB2 + lift, zB], '#1d2b45', null, [cx, yt - 2, cz]);
         }
@@ -617,7 +614,7 @@ class ChunkBuilder {
     const SETBACK = 5, DEP = 10;
     const reserve = SETBACK + 12 + 1;
     const sides = [['S', LOT0, LOT1], ['N', LOT0, LOT1], ['W', LOT0 + reserve, LOT1 - reserve], ['E', LOT0 + reserve, LOT1 - reserve]];
-    const pav = this.b('paver');
+    const pav = this.b('paver2');
     for (const [side, a0, a1] of sides) {
       let pos = a0;
       while (a1 - pos > 10) {
@@ -687,7 +684,7 @@ class ChunkBuilder {
 
   park() {
     const { rnd } = this;
-    const pav = this.b('paver'), G = this.b('generic');
+    const pav = this.b('paver2'), G = this.b('generic');
     const c = P / 2;
     const pc = '#d9cfb8';
     pav.plane(c - 1.8, LOT0, c + 1.8, LOT1, CURB + 0.012, pc, 2);
@@ -737,8 +734,8 @@ class ChunkBuilder {
 
   modern() {
     const { rnd } = this;
-    const pav = this.b('paver'), G = this.b('generic');
-    pav.plane(LOT0, LOT0, LOT1, LOT1, CURB + 0.01, '#b8b8b8', 2);
+    const pav = this.b('paver2'), G = this.b('generic');
+    pav.plane(LOT0 + 0.3, LOT0 + 0.3, LOT1 - 0.3, LOT1 - 0.3, CURB + 0.01, '#b8b8b8', 2);
     const n = 2 + (rnd() < 0.4 ? 1 : 0);
     const slots = [[LOT0 + 8, LOT0 + 8], [LOT1 - 8, LOT0 + 8], [LOT0 + 8, LOT1 - 8], [LOT1 - 8, LOT1 - 8]];
     for (let i = slots.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [slots[i], slots[j]] = [slots[j], slots[i]]; }
@@ -823,40 +820,75 @@ class ChunkBuilder {
 
 /* ---------------------------------------------------------------- world manager */
 const MESHDEF = {
-  asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
+  asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], paver2: ['paver2', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
   glass: ['glass', 0, 1], water: ['water', 0, 1], lampW: ['lampW', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
 };
 
+/** Pure data generation (runs in a worker or on the main thread). */
+export function generateChunk(ci, cj) {
+  const cb = new ChunkBuilder(ci, cj).build();
+  const batches = {};
+  const transfer = [];
+  for (const [name, b] of Object.entries(cb.S.b)) {
+    if (b.empty) continue;
+    const arr = b.toArrays();
+    batches[name] = arr;
+    for (const k of Object.keys(arr)) transfer.push(arr[k].buffer);
+  }
+  const lamps = [];
+  for (const v of cb.lamps) lamps.push(v.x, v.y, v.z);
+  const glowPts = new Float32Array(cb.glowPts), glowG = new Float32Array(cb.glowG);
+  transfer.push(glowPts.buffer, glowG.buffer);
+  return { data: { ci, cj, batches, cols: cb.colliders, lamps, glowPts, glowG, stations: cb.stations }, transfer };
+}
+
 export class World {
   constructor(scene, M) {
     this.scene = scene;
     this.M = M;
     this.chunks = new Map();
+    this.pending = new Set();
     this.colliders = new Colliders();
-    this.group = new THREE.Group();
-    scene.add(this.group);
     this.radius = 2;
     this.stations = new Map();
-    this.shadows = true;
+    this.workers = [];
+    this.nextWorker = 0;
+    this.onChunk = null;
+    const src = typeof __WORKER_SRC__ !== 'undefined' ? __WORKER_SRC__ : null;
+    if (src && typeof Worker !== 'undefined') {
+      try {
+        const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+        const n = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
+        for (let i = 0; i < n; i++) {
+          const w = new Worker(url);
+          w.onmessage = (e) => this.receive(e.data);
+          w.onerror = () => { this.workers = []; };
+          this.workers.push(w);
+        }
+      } catch (err) {
+        this.workers = [];
+      }
+    }
   }
   key(i, j) { return i + ',' + j; }
   chunkAt(x, z) { return [Math.floor((x + RH) / P), Math.floor((z + RH) / P)]; }
 
-  buildChunk(ci, cj) {
-    const cb = new ChunkBuilder(ci, cj).build();
+  /** Turn generated data into meshes + colliders. */
+  instantiate(d) {
+    const { ci, cj } = d;
+    const k = this.key(ci, cj);
+    if (this.chunks.has(k)) return;
     const group = new THREE.Group();
     group.position.set(ci * P, 0, cj * P);
     group.matrixAutoUpdate = false;
     group.updateMatrix();
     const meshes = [];
-    for (const [name, b] of Object.entries(cb.S.b)) {
-      if (b.empty) continue;
+    for (const [name, arr] of Object.entries(d.batches)) {
       const def = MESHDEF[name];
-      const geo = b.build();
-      const mesh = new THREE.Mesh(geo, this.M[def[0]]);
+      const mesh = new THREE.Mesh(geometryFromArrays(arr), this.M[def[0]]);
       mesh.castShadow = !!def[1];
       mesh.receiveShadow = !!def[2];
       mesh.matrixAutoUpdate = false;
@@ -867,25 +899,38 @@ export class World {
     const addPts = (arr, mat) => {
       if (!arr.length) return;
       const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+      g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
       g.computeBoundingSphere();
       const pts = new THREE.Points(g, mat);
       pts.renderOrder = 3;
       group.add(pts);
       meshes.push(pts);
     };
-    addPts(cb.glowPts, this.M.glowW);
-    addPts(cb.glowG, this.M.glowG);
-    // world-space colliders & lamps
+    addPts(d.glowPts, this.M.glowW);
+    addPts(d.glowG, this.M.glowG);
     const ox = ci * P, oz = cj * P;
-    const cols = cb.colliders.map((c) => (c.t === 0 ? { t: 0, x0: c.x0 + ox, x1: c.x1 + ox, z0: c.z0 + oz, z1: c.z1 + oz } : { t: 1, x: c.x + ox, z: c.z + oz, r: c.r }));
+    const cols = d.cols.map((c) => (c.t === 0 ? { t: 0, x0: c.x0 + ox, x1: c.x1 + ox, z0: c.z0 + oz, z1: c.z1 + oz } : { t: 1, x: c.x + ox, z: c.z + oz, r: c.r }));
     for (const c of cols) this.colliders.add(c);
-    const lamps = cb.lamps.map((v) => new THREE.Vector3(v.x + ox, v.y, v.z + oz));
+    const lamps = [];
+    for (let i = 0; i < d.lamps.length; i += 3) lamps.push(new THREE.Vector3(d.lamps[i] + ox, d.lamps[i + 1], d.lamps[i + 2] + oz));
     this.scene.add(group);
-    const chunk = { ci, cj, group, meshes, cols, lamps, stations: cb.stations };
-    for (const s of cb.stations) this.stations.set(this.key(ci, cj), s);
-    this.chunks.set(this.key(ci, cj), chunk);
+    const chunk = { ci, cj, group, meshes, cols, lamps };
+    for (const s of d.stations) this.stations.set(k, s);
+    this.chunks.set(k, chunk);
     return chunk;
+  }
+  receive(d) {
+    this.pending.delete(this.key(d.ci, d.cj));
+    if (this._focus) {
+      const [fi, fj] = this._focus;
+      if (Math.abs(d.ci - fi) > this.radius + 1 || Math.abs(d.cj - fj) > this.radius + 1) return; // no longer needed
+    }
+    this.instantiate(d);
+    if (this.onChunk) this.onChunk();
+  }
+  buildChunkSync(ci, cj) {
+    const { data } = generateChunk(ci, cj);
+    return this.instantiate(data);
   }
   removeChunk(k) {
     const ch = this.chunks.get(k);
@@ -896,17 +941,29 @@ export class World {
     this.stations.delete(k);
     this.chunks.delete(k);
   }
-  /** Ensure chunks around (x,z); builds at most `max` new chunks. Returns number still missing. */
+  /** Ensure chunks around (x,z). `max` = chunks that may be built synchronously per call (fallback mode). Returns number still missing. */
   update(x, z, max = 1) {
     const [ci, cj] = this.chunkAt(x, z);
+    this._focus = [ci, cj];
     const need = [];
     const R = this.radius;
     for (let i = ci - R; i <= ci + R; i++) for (let j = cj - R; j <= cj + R; j++) if (!this.chunks.has(this.key(i, j))) need.push([i, j, Math.hypot(i - ci, j - cj)]);
     need.sort((a, b) => a[2] - b[2]);
-    let built = 0;
-    for (const [i, j] of need) { if (built >= max) break; this.buildChunk(i, j); built++; }
+    if (this.workers.length) {
+      const cap = this.workers.length * 2;
+      for (const [i, j] of need) {
+        if (this.pending.size >= cap) break;
+        const k = this.key(i, j);
+        if (this.pending.has(k)) continue;
+        this.pending.add(k);
+        this.workers[this.nextWorker++ % this.workers.length].postMessage({ ci: i, cj: j });
+      }
+    } else {
+      let built = 0;
+      for (const [i, j] of need) { if (built >= max) break; this.buildChunkSync(i, j); built++; }
+    }
     for (const [k, ch] of this.chunks) if (Math.abs(ch.ci - ci) > R + 1 || Math.abs(ch.cj - cj) > R + 1) this.removeChunk(k);
-    return need.length - built;
+    return need.filter(([i, j]) => !this.chunks.has(this.key(i, j))).length;
   }
   nearestLamps(x, z, n, out) {
     out.length = 0;

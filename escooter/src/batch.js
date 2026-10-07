@@ -192,6 +192,13 @@ export class Batch {
     }
   }
 
+  /** Plain typed arrays (transferable between worker and main thread). */
+  toArrays() {
+    const o = { pos: new Float32Array(this.pos), nor: new Float32Array(this.nor), uv: new Float32Array(this.uv), col: new Float32Array(this.col) };
+    if (this.extra) o.lamp = new Float32Array(this.extra);
+    return o;
+  }
+
   build() {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
@@ -202,4 +209,15 @@ export class Batch {
     g.computeBoundingSphere();
     return g;
   }
+}
+
+export function geometryFromArrays(a) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(a.pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(a.nor, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(a.uv, 2));
+  g.setAttribute('color', new THREE.BufferAttribute(a.col, 3));
+  if (a.lamp) g.setAttribute('lamp', new THREE.BufferAttribute(a.lamp, 1));
+  g.computeBoundingSphere();
+  return g;
 }
