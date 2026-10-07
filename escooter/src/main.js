@@ -110,14 +110,14 @@ const cfg = {
   weather: 'clear',
   police: store.get('police', true),
 };
-const VESC_PRICE = 500, DT3_PRICE = 1000;
+const VESC_PRICE = 500, DT3_PRICE = 1000, SONIC_PRICE = 1500;
 const st = {
   running: false, paused: true, fp: false, userHead: null, resScale: 1,
   score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
   wanted: 0, copCool: 0, bustT: 0, fines: 0,
-  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), model: store.get('model', 'g4'),
+  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), model: store.get('model', 'g4'),
 };
 
 /* ------------------------------------------------------------------ quality */
@@ -224,6 +224,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyB': audio.bell(); peds.bell(me.x, me.z); break;
     case 'KeyE': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9 && !st.vesc) interact(); break;
     case 'KeyQ': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9) buyDT3(); break;
+    case 'KeyU': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9) buySonic(); break;
     case 'KeyX': switchModel(); break;
     case 'KeyK': setPolice(!cfg.police); break;
     case 'KeyF': toggleMount(); break;
@@ -503,18 +504,22 @@ function toggleMount() { if (st.mode === 'ride') dismount(); else mount(); }
 function setVesc(on) {
   st.vesc = on;
   scooter.setVesc(on);
-  shopBeacon.visible = !(on && st.dt3);
+  shopBeacon.visible = !(on && st.dt3 && st.sonic);
   $('vescBadge').classList.toggle('hidden', !on);
 }
+const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic };
+const MODEL_ORDER = ['g4', 'dt3', 'sonic'];
 function syncModelSelect() {
   const sel = $('optModel');
   sel.options[1].disabled = !st.dt3;
-  sel.options[1].textContent = st.dt3 ? 'Dualtron Thunder 3' : 'Dualtron Thunder 3 (im Shop kaufen, 1000 €)';
+  sel.options[1].textContent = st.dt3 ? 'Dualtron Thunder 3' : `Dualtron Thunder 3 (im Shop kaufen, ${DT3_PRICE} €)`;
+  sel.options[2].disabled = !st.sonic;
+  sel.options[2].textContent = st.sonic ? 'Weped Sonic' : `Weped Sonic (im Shop kaufen, ${SONIC_PRICE} €)`;
   sel.value = st.model;
 }
 $('optModel').onchange = (e) => { const id = e.target.value; if (id === st.model) return; setModel(id); };
 function setModel(id, silent) {
-  if (id === 'dt3' && !st.dt3) return;
+  if (!OWNED[id] || !OWNED[id]()) return;
   st.model = id; store.set('model', id);
   scooter.setModel(id);
   $('modelName').textContent = scooter.model.name;
@@ -522,12 +527,13 @@ function setModel(id, silent) {
   if (!silent) toast(scooter.model.name, `bis ${Math.round(scooter.topKmh)} km/h Turbo`, 1800);
 }
 function switchModel() {
-  if (!st.dt3) { toast('Nur ein Roller', 'Im VESC-Shop gibt es den Dualtron Thunder 3 (1000 €)', 2200); return; }
+  const own = MODEL_ORDER.filter((k) => OWNED[k]());
+  if (own.length < 2) { toast('Nur ein Roller', `Im VESC-Shop gibt es den Dualtron (${DT3_PRICE} €) und den Weped Sonic (${SONIC_PRICE} €)`, 2400); return; }
   if (st.mode === 'ride' && Math.abs(scooter.v) > 3) { toast('Erst anhalten', 'zum Roller wechseln unter 10 km/h bremsen', 1500); return; }
-  setModel(st.model === 'g4' ? 'dt3' : 'g4');
+  setModel(own[(own.indexOf(st.model) + 1) % own.length]);
 }
 function buyDT3() {
-  if (st.dt3) { toast('Schon gekauft', 'Mit X wechselst du zwischen G4 und Dualtron', 2200); return; }
+  if (st.dt3) { toast('Schon gekauft', 'Mit X wechselst du zwischen deinen Rollern', 2200); return; }
   if (st.money < DT3_PRICE) { toast('Zu wenig Geld', `Du hast ${Math.floor(st.money)} € – der Dualtron Thunder 3 kostet ${DT3_PRICE} €`, 3000); audio.beep(); return; }
   if (st.mode === 'ride' && Math.abs(scooter.v) > 3) { toast('Erst anhalten', 'zum Kaufen kurz abbremsen', 1500); return; }
   earn(-DT3_PRICE);
@@ -536,6 +542,17 @@ function buyDT3() {
   audio.chime([392, 523, 659, 784, 1046, 1568]);
   toast('Dualtron Thunder 3!', `bis ${Math.round(scooter.topKmh)} km/h Turbo · X wechselt den Roller`, 4500);
   net.sendEvent && net.sendEvent('dt3');
+}
+function buySonic() {
+  if (st.sonic) { toast('Schon gekauft', 'Mit X wechselst du zwischen deinen Rollern', 2200); return; }
+  if (st.money < SONIC_PRICE) { toast('Zu wenig Geld', `Du hast ${Math.floor(st.money)} € – der Weped Sonic kostet ${SONIC_PRICE} €`, 3000); audio.beep(); return; }
+  if (st.mode === 'ride' && Math.abs(scooter.v) > 3) { toast('Erst anhalten', 'zum Kaufen kurz abbremsen', 1500); return; }
+  earn(-SONIC_PRICE);
+  st.sonic = true; store.set('sonic', true);
+  setModel('sonic', true);
+  audio.chime([330, 392, 523, 659, 784, 1046, 1568, 2093]);
+  toast('Weped Sonic!', `bis ${Math.round(scooter.topKmh)} km/h Turbo${st.vesc ? '' : ' · mit VESC 500 km/h'} · X wechselt den Roller`, 4800);
+  net.sendEvent && net.sendEvent('sonic');
 }
 function interact() {
   const d = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
@@ -679,7 +696,7 @@ function drawMap() {
     if (hasStation(i, j)) { c.fillStyle = '#42ff8a'; c.beginPath(); c.arc(i * P + 8.4 - sx, j * P + 15 - sz, 6, 0, 6.3); c.fill(); }
   }
   // VESC shop marker
-  if (!(st.vesc && st.dt3)) {
+  if (!(st.vesc && st.dt3 && st.sonic)) {
     let dx = SHOP.x - sx, dz = SHOP.z - sz;
     const d = Math.hypot(dx, dz);
     if (d > 150) { dx *= 150 / d; dz *= 150 / d; }
@@ -743,15 +760,16 @@ function updateHUD(dt) {
   // shop / interaction prompt
   const ds = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
   let prompt = '';
-  if (ds < 9 && !(st.vesc && st.dt3)) {
+  if (ds < 9 && !(st.vesc && st.dt3 && st.sonic)) {
     const l = [];
     if (!st.vesc) l.push(st.money >= VESC_PRICE ? `<kbd>E</kbd> VESC-Umbau – ${VESC_PRICE} €` : `VESC ${VESC_PRICE} € (dir fehlen ${Math.ceil(VESC_PRICE - st.money)} €)`);
     if (!st.dt3) l.push(st.money >= DT3_PRICE ? `<kbd>Q</kbd> Dualtron Thunder 3 – ${DT3_PRICE} €` : `Dualtron ${DT3_PRICE} € (dir fehlen ${Math.ceil(DT3_PRICE - st.money)} €)`);
+    if (!st.sonic) l.push(st.money >= SONIC_PRICE ? `<kbd>U</kbd> Weped Sonic – ${SONIC_PRICE} €` : `Weped Sonic ${SONIC_PRICE} € (dir fehlen ${Math.ceil(SONIC_PRICE - st.money)} €)`);
     prompt = '🛒 ' + l.join('  ·  ');
   }
   else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < 3.4) prompt = '<kbd>F</kbd> Aufsteigen';
   if (cache.prompt !== prompt) { cache.prompt = prompt; $('prompt').innerHTML = prompt; $('prompt').classList.toggle('hidden', !prompt); }
-  const shopLine = (st.vesc && st.dt3) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
+  const shopLine = (st.vesc && st.dt3 && st.sonic) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
   if (cache.shopLine !== shopLine) { cache.shopLine = shopLine; $('shopline').innerHTML = shopLine; }
   const pct = s.battPct;
   setText('battPct', Math.round(pct) + '%');
@@ -820,7 +838,7 @@ net.onPlayers = (names) => {
   el.classList.remove('hidden');
   el.innerHTML = `👥 ${names.length} Spieler: ${names.map((n) => n.replace(/</g, '&lt;')).join(', ')}`;
 };
-net.onEvent = (r, k) => { if (k === 'vesc') addChat(null, `${r.name} hat sich einen VESC eingebaut ⚡`, true); else if (k === 'dt3') addChat(null, `${r.name} fährt jetzt einen Dualtron Thunder 3 🔥`, true); };
+net.onEvent = (r, k) => { if (k === 'vesc') addChat(null, `${r.name} hat sich einen VESC eingebaut ⚡`, true); else if (k === 'dt3') addChat(null, `${r.name} fährt jetzt einen Dualtron Thunder 3 🔥`, true); else if (k === 'sonic') addChat(null, `${r.name} fährt jetzt einen Weped Sonic 🚀`, true); };
 const mpName = $('mpName'), mpRoom = $('mpRoom'), mpUrl = $('mpUrl'), mpLook = $('mpLook'), mpAuto = $('mpAuto');
 mpName.value = store.get('mpName', 'Fahrer' + Math.floor(100 + Math.random() * 900));
 mpRoom.value = store.get('mpRoom', 'stadt');
@@ -925,7 +943,7 @@ function tick(dt, now, render = true) {
     const odo0 = scooter.odo;
     const rideInp = walking ? PARK : inp;
     while (simAcc > 0 && steps < 10) {
-      const h = Math.min(simAcc, Math.abs(scooter.v) > 35 ? 1 / 150 : 1 / 90);
+      const h = Math.min(simAcc, Math.abs(scooter.v) > 80 ? 1 / 320 : Math.abs(scooter.v) > 35 ? 1 / 150 : 1 / 90);
       scooter.update(h, rideInp, world, cfg.battMode === 'off' ? 0 : cfg.battMode === 'real' ? 1 : 3, dynAll);
       simAcc -= h; steps++;
       if (!walking && scooter.impact > 1.8) onCrash(scooter.impact);
@@ -981,12 +999,14 @@ function tick(dt, now, render = true) {
     if (net.sendT > 1 / 15) {
       net.sendT = 0;
       const walking = st.mode === 'walk';
-      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: st.model === 'dt3' ? 1 : 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
+      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: st.model === 'dt3' ? 1 : st.model === 'sonic' ? 2 : 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
     }
   }
   net.update(dt, performance.now());
   // world streaming
-  const missing = world.update(me.x, me.z, active ? 1 : 2);
+  const fastV = st.mode === 'ride' ? Math.abs(scooter.v) : 0;
+  world.radius = QUALITY[cfg.quality].radius + (fastV > 70 ? 1 : 0);
+  const missing = world.update(me.x, me.z, active ? 1 : 2, fastV > 40 ? Math.sin(scooter.heading) * scooter.v : 0, fastV > 40 ? Math.cos(scooter.heading) * scooter.v : 0);
 
   // weather
   {
@@ -1041,7 +1061,7 @@ function tick(dt, now, render = true) {
 
   if (st.crashT > 0) { st.crashT -= dt; if (st.crashT <= 0) $('crash').style.opacity = 0; }
   if (active) { updateHUD(dt); updateBubbles(); }
-  { const sp = 1 + 0.06 * Math.sin(now * 0.005); shopBeacon.userData.ring.scale.setScalar(sp); shopBeacon.userData.c1.rotation.y += dt * 0.4; const dsb = Math.hypot(me.x - SHOP.x, me.z - SHOP.z); shopBeacon.visible = !(st.vesc && st.dt3) && dsb > 14; }
+  { const sp = 1 + 0.06 * Math.sin(now * 0.005); shopBeacon.userData.ring.scale.setScalar(sp); shopBeacon.userData.c1.rotation.y += dt * 0.4; const dsb = Math.hypot(me.x - SHOP.x, me.z - SHOP.z); shopBeacon.visible = !(st.vesc && st.dt3 && st.sonic) && dsb > 14; }
 
   if (!render) return;
   if (composer && st.bloom) composer.render();
@@ -1067,7 +1087,7 @@ async function boot() {
   camYaw = scooter.heading;
   scooter.setView(false);
   setVesc(st.vesc);
-  setModel(st.model === 'dt3' && st.dt3 ? 'dt3' : 'g4', true);
+  setModel(OWNED[st.model] && OWNED[st.model]() ? st.model : 'g4', true);
   setPolice(cfg.police);
   shopBeacon.position.set(SHOP.x, groundHeight(SHOP.x, SHOP.z), SHOP.z);
   sky.setTime(cfg.hours);
@@ -1097,4 +1117,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

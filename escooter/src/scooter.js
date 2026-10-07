@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
-import { buildG4, buildDT3 } from './models.js';
+import { buildG4, buildDT3, buildSonic } from './models.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
@@ -69,7 +69,7 @@ export class Scooter {
     this.dispTex = new THREE.CanvasTexture(dcv);
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
     const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
-    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx) };
+    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx) };
     for (const m of Object.values(this.models)) {
       this.tilt.add(m.group);
       this.root.add(m.glow);
@@ -588,7 +588,7 @@ export class Scooter {
     c.fillText(this.boosting ? 'TURBO' : this.model.dispMode, 244, 31);
     c.fillStyle = '#9db7c4'; c.font = '600 18px Arial, sans-serif'; c.textAlign = 'left';
     c.fillText('TRIP ' + (this.trip / 1000).toFixed(2) + ' km', 14, 148);
-    c.textAlign = 'right'; c.fillText(this.modelId === 'dt3' ? '72V' : '52V', 244, 148);
+    c.textAlign = 'right'; c.fillText(this.modelId === 'g4' ? '52V' : this.modelId === 'dt3' ? '72V' : '84V', 244, 148);
     this.dispTex.needsUpdate = true;
   }
 }
