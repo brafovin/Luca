@@ -88,6 +88,10 @@
   #players{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:#cfe0ea;line-height:1.5}
   #vescBadge{position:absolute;left:0;right:0;top:-4px;text-align:center;font-size:11px;font-weight:900;letter-spacing:.25em;color:#35e6ff;text-shadow:0 0 12px #35e6ff}
   #wheelie{position:absolute;left:50%;bottom:238px;transform:translateX(-50%);padding:8px 18px;font-size:16px;font-weight:800;letter-spacing:.04em;white-space:nowrap;border-color:rgba(53,230,255,.6)}
+  #wanted{position:absolute;left:50%;top:84px;transform:translateX(-50%);padding:8px 18px;font-size:17px;font-weight:900;letter-spacing:.08em;white-space:nowrap;border-color:rgba(255,70,70,.8);color:#ff8a8a;animation:wantedBlink .5s steps(2) infinite}
+  @keyframes wantedBlink{50%{border-color:rgba(70,110,255,.9);color:#9db4ff}}
+  #policeBtn{margin-top:6px;display:inline-block;padding:5px 12px;font:700 12px/1.2 inherit;color:#fff;cursor:pointer;pointer-events:auto;letter-spacing:.04em}
+  #policeBtn.off{color:var(--dim);opacity:.8}
   #wheelie b{color:#35e6ff;font-variant-numeric:tabular-nums}
   #prompt{position:absolute;left:50%;bottom:190px;transform:translateX(-50%);padding:10px 20px;font-size:17px;font-weight:700;white-space:nowrap;border-color:rgba(255,122,26,.7)}
   #prompt kbd{background:#ff7a1a;color:#1a0d00;border-color:#b8530c}
@@ -141,7 +145,8 @@
           <span><kbd>C</kbd></span><span>Kamera: hinten / Ego-Perspektive</span>
           <span><kbd>F</kbd></span><span>Absteigen / aufsteigen · zu Fuß: WASD, Shift rennen</span>
           <span><kbd>E</kbd></span><span>Wheelie (gedrückt halten, ab 1,5 s = +100 €) · beim VESC-Shop 🛒: VESC kaufen</span>
-          <span><kbd>Q</kbd> <kbd>X</kbd></span><span>Dualtron kaufen (im Shop) · Roller wechseln</span>
+          <span><kbd>Q</kbd> <kbd>X</kbd></span><span>Dualtron kaufen (im Shop) · Roller wechseln (auch im Menü)</span>
+          <span><kbd>K</kbd></span><span>Polizei an/aus – sie jagt dich nur nach einem Wheelie (max. 100 km/h)</span>
           <span><kbd>Enter</kbd></span><span>Chat (Multiplayer)</span>
           <span><kbd>R</kbd></span><span>Reset auf die Straße</span>
           <span><kbd>L</kbd> <kbd>B</kbd></span><span>Licht · Klingel (ärgert Oma &amp; Opa!)</span>
@@ -166,6 +171,10 @@
           <input id="optFlow" type="checkbox" checked />
           <label for="optWet">Nasse Straße (Reflexionen)</label>
           <input id="optWet" type="checkbox" />
+          <label for="optModel">Roller</label>
+          <select id="optModel"><option value="g4">KuKirin G4</option><option value="dt3" disabled>Dualtron Thunder 3 (im Shop kaufen)</option></select>
+          <label for="optPolice">Polizei aktiv (K)</label>
+          <input id="optPolice" type="checkbox" checked />
           <label for="optCam">Kamera (C)</label>
           <select id="optCam"><option value="tp">Hinter dem Roller</option><option value="fp">Ego-Perspektive (Cockpit)</option></select>
           <label for="optMouse">Maus-Lenkung (Klick ins Spiel)</label>
@@ -209,7 +218,8 @@
   </div>
   <div id="mapbox">
     <div class="ring"><canvas id="map" width="356" height="356"></canvas></div>
-    <div id="clock" class="panel">☀ 10:00</div>
+    <div id="clock" class="panel">☀ 10:00</div><br>
+    <button id="policeBtn" class="panel" style="pointer-events:auto" title="Polizei an/aus (K)">🚓 Polizei: an</button>
     <button id="camBtn" class="ghost" style="pointer-events:auto;margin-top:8px;padding:6px 12px;font-size:12px">📷 Kamera wechseln (C)</button>
   </div>
   <div id="speedo">
@@ -233,11 +243,12 @@
     <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fahren · <kbd>Shift</kbd> Turbo · Maus lenkt</div>
     <div><kbd>␣</kbd> Vollbremsung · <kbd>C</kbd> Kamera · <kbd>R</kbd> Reset</div>
     <div><kbd>E</kbd> Wheelie (+100 €) · <kbd>F</kbd> absteigen · <kbd>Enter</kbd> Chat</div>
-    <div><kbd>L</kbd> Licht · <kbd>B</kbd> Klingel · <kbd>Esc</kbd> Menü</div>
+    <div><kbd>L</kbd> Licht · <kbd>B</kbd> Klingel · <kbd>K</kbd> Polizei · <kbd>Esc</kbd> Menü</div>
   </div>
   <div id="lowbatt" class="hidden">AKKU FAST LEER – LADESÄULE ⚡ SUCHEN</div>
   <div id="prompt" class="panel hidden"></div>
   <div id="wheelie" class="panel hidden"></div>
+  <div id="wanted" class="panel hidden"></div>
   <div id="bubbles"></div>
   <div id="chat" class="hidden"><div id="chatlog"></div><input id="chatin" class="hidden" maxlength="140" placeholder="Nachricht … (Enter senden, Esc abbrechen)" autocomplete="off"/></div>
   <div id="toast" class="panel"></div>
