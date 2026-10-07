@@ -58,6 +58,7 @@ class Remote {
     const lean = lerp(A.l, B.l, k);
     this.mode = B.m; this.sx = lerp(A.sx, B.sx, k); this.sz = lerp(A.sz, B.sz, k); this.sh = A.sh + wrapAngle(B.sh - A.sh) * k;
     this.setVesc(!!B.vs);
+    const big = B.md ? 1.14 : 1; if (this.scooter.group.scale.x !== big) this.scooter.group.scale.setScalar(big);
     const ride = this.mode === 0;
     const sc = this.scooter;
     sc.group.visible = true;
@@ -132,7 +133,7 @@ export class Net {
         const t = performance.now();
         for (const a of m.s) {
           const r = this.remotes.get(a[0]);
-          if (r) r.push({ x: a[1], z: a[2], h: a[3], v: a[4], l: a[5], m: a[6], vs: a[7], sx: a[8], sz: a[9], sh: a[10], w: a[11] || 0 }, t);
+          if (r) r.push({ x: a[1], z: a[2], h: a[3], v: a[4], l: a[5], m: a[6], vs: a[7], sx: a[8], sz: a[9], sh: a[10], w: a[11] || 0, md: a[12] || 0 }, t);
         }
         break;
       }
@@ -144,7 +145,7 @@ export class Net {
   sendState(s) {
     if (!this.connected) return;
     const f = (n) => Math.round(n * 100) / 100;
-    this.ws.send(JSON.stringify({ t: 's', x: f(s.x), z: f(s.z), h: f(s.h), v: f(s.v), l: f(s.l), m: s.m, vs: s.vs, sx: f(s.sx), sz: f(s.sz), sh: f(s.sh), w: f(s.w || 0) }));
+    this.ws.send(JSON.stringify({ t: 's', x: f(s.x), z: f(s.z), h: f(s.h), v: f(s.v), l: f(s.l), m: s.m, vs: s.vs, sx: f(s.sx), sz: f(s.sz), sh: f(s.sh), w: f(s.w || 0), md: s.md ? 1 : 0 }));
   }
   sendChat(text) { if (this.connected) this.ws.send(JSON.stringify({ t: 'chat', text })); }
   sendEvent(k) { if (this.connected) this.ws.send(JSON.stringify({ t: 'ev', k })); }
