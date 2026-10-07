@@ -502,7 +502,7 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
   if (!st.ready) return;
-  tick(dt, now);
+  tick(dt, now, !st.skipRender);
 }
 
 function tick(dt, now, render = true) {
@@ -559,7 +559,7 @@ function tick(dt, now, render = true) {
     const stn = world.nearestStation(scooter.x, scooter.z);
     st.charging = false;
     if (stn && stn.d < 4.5 && Math.abs(scooter.v) < 2.5 && scooter.batt < 936) {
-      scooter.batt = Math.min(936, scooter.batt + 160 * dt);
+      scooter.batt = Math.min(936, scooter.batt + 110 * dt);
       st.charging = true;
     }
     if (st.score > st.best) { st.best = st.score; }

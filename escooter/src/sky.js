@@ -89,6 +89,7 @@ export class Sky {
     this.pmrem = new THREE.PMREMGenerator(renderer);
     this.envTarget = null;
     this.envTimer = 99;
+    this.envInterval = 6;
 
     // lights
     this.sun = new THREE.DirectionalLight(0xffffff, 3);
@@ -176,7 +177,7 @@ export class Sky {
 
     // env map refresh
     this.envTimer += dt;
-    if (forceEnv || this.envTimer > 4) {
+    if (forceEnv || this.envTimer > this.envInterval) {
       this.envTimer = 0;
       this.envScene.children[0].position.set(0, 0, 0);
       const rt = this.pmrem.fromScene(this.envScene, 0, 1, 2000);
