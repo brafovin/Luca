@@ -48,6 +48,7 @@ export class Scooter {
   constructor(tex) {
     this.tex = tex;
     this.vesc = false;
+    this.wheelie = 0; this.wheelieV = 0; this.wheelieT = 0; this.inWheelie = false; this.wheelieEvent = null;
     this.root = new THREE.Group();
     this.tilt = new THREE.Group();
     this.root.add(this.tilt);
@@ -522,6 +523,7 @@ export class Scooter {
     this.impact = 0;
     this.stuckT = 0;
     this.fallT = 0;
+    this.wheelie = 0; this.wheelieV = 0; this.wheelieT = 0; this.inWheelie = false;
     this.wheelAng = 0;
     this.whPerM = 0.02;
     this.shake = 0;
@@ -588,12 +590,24 @@ export class Scooter {
     this.braking = this.brk > 0.3 || this.space > 0.3 || (inp.back && v > 0.25);
 
     // steering
+    // wheelie (hold E): front wheel up, rear wheel balances
+    const wantW = !!inp.wheelie && !this.parked && !(inp.back || inp.space) && (this.inWheelie ? this.v > 1.0 : this.v > 2.0);
+    const wT = wantW ? 0.8 : 0;
+    this.wheelieV += (38 * (wT - this.wheelie) - 7.5 * this.wheelieV) * dt;
+    this.wheelie = clamp(this.wheelie + this.wheelieV * dt, 0, 0.95);
+    if (this.wheelie > 0.35) { this.wheelieT += dt; this.inWheelie = true; }
+    else if (this.inWheelie && this.wheelie < 0.2) {
+      this.inWheelie = false;
+      if (this.wheelieT >= 1.5 && !this.wheelieAbort) this.wheelieEvent = { dur: this.wheelieT };
+      this.wheelieT = 0; this.wheelieAbort = false;
+      this.bobV -= 0.5; this.shake = Math.min(1, this.shake + 0.25); // landing jolt
+    }
     const analog = inp.steer !== undefined && inp.steer !== null;
     const target = analog ? inp.steer : (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
     const rate = analog ? 11 : target === 0 ? 8 : 5.5;
     this.steerIn = damp(this.steerIn, target, rate, dt);
     const av = Math.abs(this.v);
-    const dMax = 0.14 + 0.46 / (1 + (av / 3.5) ** 2);
+    const dMax = (0.14 + 0.46 / (1 + (av / 3.5) ** 2)) * (1 - 0.55 * Math.min(1, this.wheelie / 0.5));
     this.delta = this.steerIn * dMax;
     let omega = (this.v * Math.tan(this.delta)) / WHEELBASE;
     const aLatMax = 8.5;
@@ -619,7 +633,7 @@ export class Scooter {
     this.odo += ds; this.trip += ds;
     const pElec = (Math.max(0, motorA) * M_TOTAL * av + M_TOTAL * (0.12 + 0.0009 * av * av) * av * (this.thr > 0.05 ? 1 : 0.0)) / 0.85 + 22;
     const used = ((pElec * dt) / 3600) * drainScale;
-    this.batt = Math.max(0, this.batt - used);
+    this.batt = drainScale === 0 ? BATT_WH : Math.max(0, this.batt - used);
     if (ds > 0.001) this.whPerM = lerp(this.whPerM, used / ds, clamp(ds / 150, 0, 1));
 
     // lean (physical: tan(phi)=a_lat/g) with critically damped-ish spring
@@ -727,13 +741,16 @@ export class Scooter {
       }
     }
     this.impact = worst;
+    if (worst > 2.5 && this.inWheelie) this.wheelieAbort = true;
   }
 
   applyTransform() {
     const r = this.root;
     r.position.set(this.x, (this.yOff ?? 0), this.z);
     r.rotation.set(0, this.heading, 0);
-    this.tilt.rotation.set(this.pitch, 0, -this.lean);
+    const a = this.pitch - this.wheelie; // wheelie rotates the whole bike around the rear tyre contact point
+    this.tilt.rotation.set(a, 0, -this.lean);
+    this.tilt.position.set(0, -0.58 * Math.sin(a), -0.58 + 0.58 * Math.cos(a));
     this.steer.rotation.y = this.delta * 1.25;
     this.frontWheel.rotation.x = this.wheelAng;
     this.rearWheel.rotation.x = this.wheelAng;

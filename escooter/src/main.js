@@ -100,7 +100,7 @@ const store = {
 const cfg = {
   quality: store.get('quality', 'med'),
   mode: store.get('mode', 'mission'),
-  battMode: store.get('battMode', 'game'),
+  battMode: store.get('battMode2', 'off'),
   wet: false,
   flow: true,
   hours: 10,
@@ -172,7 +172,7 @@ window.addEventListener('resize', resize);
 /* ------------------------------------------------------------------ input */
 const keys = new Set();
 const KEYMAP = { fwd: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], boost: ['ShiftLeft', 'ShiftRight'], space: ['Space'] };
-const mouse = { steer: 0, lock: false, lmb: false, rmb: false, lookY: 0, yawAcc: 0 };
+const mouse = { mmb: false, steer: 0, lock: false, lmb: false, rmb: false, lookY: 0, yawAcc: 0 };
 function readInput() {
   const o = {};
   for (const k in KEYMAP) o[k] = KEYMAP[k].some((c) => keys.has(c));
@@ -185,6 +185,7 @@ function readInput() {
     if (mouse.lock && mouse.rmb) o.back = true;
     return o;
   }
+  o.wheelie = (keys.has('KeyE') || mouse.mmb) && !(!st.vesc && Math.hypot(scooter.x - SHOP.x, scooter.z - SHOP.z) < 9);
   if (mouse.lock) {
     if (!o.left && !o.right) o.steer = mouse.steer;
     if (mouse.lmb) o.fwd = true;
@@ -200,6 +201,7 @@ function readInput() {
     if (gp.buttons[6]?.value > 0.15) o.back = true;
     if (gp.buttons[1]?.pressed) o.space = true;
     if (gp.buttons[5]?.pressed) o.boost = true;
+    if (gp.buttons[2]?.pressed) o.wheelie = true;
   }
   return o;
 }
@@ -217,7 +219,7 @@ window.addEventListener('keydown', (e) => {
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
     case 'KeyB': audio.bell(); peds.bell(me.x, me.z); break;
-    case 'KeyE': interact(); break;
+    case 'KeyE': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9 && !st.vesc) interact(); break;
     case 'KeyF': toggleMount(); break;
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
@@ -249,8 +251,9 @@ canvas.addEventListener('mousedown', (e) => {
   if (!mouse.lock) { lockMouse(); return; }
   if (e.button === 0) mouse.lmb = true;
   if (e.button === 2) mouse.rmb = true;
+  if (e.button === 1) { mouse.mmb = true; e.preventDefault(); }
 });
-window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.lmb = false; if (e.button === 2) mouse.rmb = false; });
+window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.lmb = false; if (e.button === 2) mouse.rmb = false; if (e.button === 1) mouse.mmb = false; });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('wheel', (e) => { st.zoom = clamp((st.zoom || 1) * (e.deltaY > 0 ? 1.08 : 0.93), 0.6, 2.2); e.preventDefault(); }, { passive: false });
 window.addEventListener('blur', () => { keys.clear(); if (st.running && !st.paused) setPaused(true); });
@@ -305,7 +308,7 @@ $('optVol').value = cfg.volume;
 $('optMode').onchange = (e) => { cfg.mode = e.target.value; store.set('mode', cfg.mode); startMission(true); };
 $('optQ').onchange = (e) => { applyQuality(e.target.value); store.set('quality', cfg.quality); };
 $('optWx').onchange = (e) => { cfg.weather = e.target.value; };
-$('optBatt').onchange = (e) => { cfg.battMode = e.target.value; store.set('battMode', cfg.battMode); };
+$('optBatt').onchange = (e) => { cfg.battMode = e.target.value; store.set('battMode2', cfg.battMode); };
 $('optTime').oninput = (e) => { cfg.hours = parseFloat(e.target.value); };
 $('optFlow').onchange = (e) => { cfg.flow = e.target.checked; };
 $('optWet').onchange = (e) => { cfg.wet = e.target.checked; st.wetNow = null; };
@@ -466,7 +469,6 @@ function interact() {
     return;
   }
   const stn = world.nearestStation(me.x, me.z);
-  if (stn && stn.d < 6) toast('Ladesäule', 'Roller daneben parken/anhalten zum Laden', 1600);
 }
 
 /* ------------------------------------------------------------------ camera */
@@ -536,7 +538,7 @@ function updateCamera(dt, first) {
   const baseFov = 62 + (s.kmh / (st.vesc ? 150 : 100)) * (st.vesc ? 28 : 22) + (s.boosting ? 4 : 0);
   if (st.fp) {
     mouse.lookY = damp(mouse.lookY, 0, 1.5, dt);
-    fpAnchor.rotation.set(s.pitch * 0.4 + 0.2 + mouse.lookY, 0, -s.lean * 0.5, 'YXZ');
+    fpAnchor.rotation.set(s.pitch * 0.4 + 0.2 + mouse.lookY - s.wheelie * 0.3, 0, -s.lean * 0.5, 'YXZ');
     scooter.root.updateMatrixWorld(true);
     fpLook.getWorldPosition(camera.position);
     fpLook.getWorldQuaternion(camera.quaternion);
@@ -635,6 +637,9 @@ function updateHUD(dt) {
   $('boostTxt').style.opacity = s.boosting && !walking ? 1 : 0;
   $('speedfx').style.opacity = clamp((kmh - 40) / 50, 0, 1).toFixed(2);
   setText('moneyVal', Math.floor(st.money).toLocaleString('de-DE') + ' €');
+  const wEl = $('wheelie');
+  if (scooter.wheelie > 0.3 && st.mode === 'ride') { wEl.classList.remove('hidden'); const ok = scooter.wheelieT >= 1.5; wEl.innerHTML = `WHEELIE <b>${scooter.wheelieT.toFixed(1)} s</b> ${ok ? '· <span style="color:#8dffb0">+100 € beim Absetzen</span>' : '· halte durch (1,5 s)'}`; }
+  else wEl.classList.add('hidden');
   // shop / interaction prompt
   const ds = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
   let prompt = '';
@@ -830,6 +835,13 @@ function tick(dt, now, render = true) {
       walker.update(dt2, inp, world.colliders, walkDyn);
     }
     if (scooter.fellEvent) { scooter.fellEvent = false; st.score = Math.max(0, st.score - 150); toast('Sturz!', '−150 Punkte – zu schnell gegen ein Hindernis', 2200); audio.thud(14); st.crashT = 1; $('crash').style.opacity = 0.9; }
+    if (scooter.wheelieEvent) {
+      const ev = scooter.wheelieEvent; scooter.wheelieEvent = null;
+      st.wheelies = (st.wheelies || 0) + 1;
+      earn(100); st.score += 150 + ev.dur * 40;
+      audio.chime([660, 880, 1100, 1480]);
+      toast('WHEELIE! +100 €', `${ev.dur.toFixed(1)} s auf dem Hinterrad · ${st.wheelies}. Wheelie`, 2200);
+    }
     if (scooter.pedHit) {
       const p = scooter.pedHit; scooter.pedHit = null;
       if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : p.elder ? (p.kind === 'oma' ? 'Oma umgefahren!' : 'Opa umgefahren!') : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); if (p.elder) p.anger = Math.min(100, p.anger + 40); }
@@ -863,7 +875,7 @@ function tick(dt, now, render = true) {
     if (net.sendT > 1 / 15) {
       net.sendT = 0;
       const walking = st.mode === 'walk';
-      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading });
+      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
     }
   }
   net.update(dt, performance.now());

@@ -25,7 +25,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `A` `D` / `←` `→` | Lenken |
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
-| `E` | Interagieren – **VESC-Shop** 🛒 (500 €) |
+| `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). In der Nähe des VESC-Shops 🛒 kauft `E` den Umbau (500 €) |
 | `Enter` | Chat (Multiplayer) |
 | Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
@@ -56,7 +56,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Lenkwinkel nimmt mit Tempo ab, Querbeschleunigung begrenzt, Federung (Feder-Dämpfer) bei Bordsteinen und
   Bodenschwellen, Nick-Bewegung beim Bremsen, Kollisionen mit Häusern, Autos, Bäumen, Laternen,
   Zäunen, Fußgängern.
-* **Gameplay**: Tacho, Kilometerzähler (Fahrt + Gesamt), Akkuanzeige mit Reichweite, Punkte für
+* **Gameplay**: Tacho, Kilometerzähler (Fahrt + Gesamt), Akkuanzeige (Akku ist standardmäßig **unendlich**, im Menü umstellbar), Punkte für
   Strecke (schneller = mehr), **Kurierfahrt** mit Checkpoint-Leuchtfeuer, Richtungspfeil, Zeitkonto und
   Tour-Bonus, **Ladesäulen** (⚡ auf Minimap, anhalten zum Laden), Minimap, Pause-/Startmenü, Reset.
 * **Grafik**: PBR-Materialien, Echtzeit-Schatten (folgen dem Spieler), Himmel-Shader mit Sonne, Mond,
