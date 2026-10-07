@@ -454,7 +454,7 @@ function enterTrack() {
   world.update(c.x, c.z, 0); world.preload(c.x, c.z);
   Object.assign(trk, { idx: -1, running: false, t: 0, lap: 0, bits: 0, sector: 0 });
   trackUpdate(0);
-  $('btnTrack').textContent = '🏙️ Zurück in die Stadt';
+  $('btnTrack').textContent = '🏙️ Zurück in die Stadt teleportieren'; $('trackBtn').textContent = '🏙️ Zurück in die Stadt';
   toast('🏁 Rennstrecke', `${(TRACK.len / 1000).toFixed(1)} km · frei von Verkehr · fahre über die Ziellinie, um die Zeit zu starten`, 4200);
 }
 function leaveTrack() {
@@ -462,11 +462,12 @@ function leaveTrack() {
   scooter.reset(30, 1.75, Math.PI / 2); scooter.v = 0; camYaw = scooter.heading;
   world.update(30, 1.75, 0); world.preload(30, 1.75);
   startMission(true);
-  $('btnTrack').textContent = '🏁 Rennstrecke';
+  $('btnTrack').textContent = '🏁 Zur Rennstrecke teleportieren'; $('trackBtn').textContent = '🏁 Zur Rennstrecke';
   toast('Zurück in der Stadt', '', 1600);
 }
 function toggleTrack() { if (st.track) leaveTrack(); else enterTrack(); }
 $('btnTrack').onclick = () => { toggleTrack(); if (st.started && st.paused) $('btnStart').click(); else if (!st.started) $('btnStart').click(); };
+$('trackBtn').onclick = (e) => { toggleTrack(); e.currentTarget.blur(); };
 function trackUpdate(dt) {
   const pr = trackProject(me.x, me.z, trk.idx);
   trk.idx = pr.idx; trk.lat = pr.lat; trk.d = pr.d;

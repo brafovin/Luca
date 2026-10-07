@@ -37,7 +37,7 @@
   select,input[type=range]{accent-color:var(--accent)}
   select{background:#141b24;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
   input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
-  .btns{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;align-items:center}
+  .btns{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;align-items:center;position:sticky;bottom:-28px;padding:14px 0 6px;background:linear-gradient(180deg,rgba(10,14,20,0),rgba(10,14,20,.94) 35%)}
   button.big{background:linear-gradient(180deg,#ff9a3d,var(--accent));border:0;color:#1a0d00;font-weight:800;font-size:17px;letter-spacing:.03em;padding:13px 30px;border-radius:12px;cursor:pointer;box-shadow:0 8px 24px rgba(255,122,26,.35)}
   button.big:hover{filter:brightness(1.08)}
   button.ghost{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--txt);font-weight:600;font-size:14px;padding:11px 18px;border-radius:12px;cursor:pointer}
@@ -90,6 +90,7 @@
   #wheelie{position:absolute;left:50%;bottom:238px;transform:translateX(-50%);padding:8px 18px;font-size:16px;font-weight:800;letter-spacing:.04em;white-space:nowrap;border-color:rgba(53,230,255,.6)}
   #wanted{position:absolute;left:50%;top:84px;transform:translateX(-50%);padding:8px 18px;font-size:17px;font-weight:900;letter-spacing:.08em;white-space:nowrap;border-color:rgba(255,70,70,.8);color:#ff8a8a;animation:wantedBlink .5s steps(2) infinite}
   @keyframes wantedBlink{50%{border-color:rgba(70,110,255,.9);color:#9db4ff}}
+  #trackBtn{margin-top:6px;display:inline-block;padding:5px 12px;font:700 12px/1.2 inherit;color:#fff;cursor:pointer;letter-spacing:.04em}
   #policeBtn{margin-top:6px;display:inline-block;padding:5px 12px;font:700 12px/1.2 inherit;color:#fff;cursor:pointer;pointer-events:auto;letter-spacing:.04em}
   #policeBtn.off{color:var(--dim);opacity:.8}
   #wheelie b{color:#35e6ff;font-variant-numeric:tabular-nums}
@@ -198,7 +199,7 @@
     <div class="btns">
       <button class="big" id="btnStart">Fahrt starten</button>
       <button class="ghost" id="btnReset">Zurück zum Start</button>
-      <button class="ghost" id="btnTrack">🏁 Rennstrecke</button>
+      <button class="big" id="btnTrack" style="background:linear-gradient(135deg,#ff7a1a,#ffb23d)">🏁 Zur Rennstrecke teleportieren</button>
       <span class="best" id="best"></span>
     </div>
   </div>
@@ -221,6 +222,7 @@
   <div id="mapbox">
     <div class="ring"><canvas id="map" width="356" height="356"></canvas></div>
     <div id="clock" class="panel">☀ 10:00</div><br>
+    <button id="trackBtn" class="panel" style="pointer-events:auto" title="Rennstrecke / Stadt (V)">🏁 Zur Rennstrecke</button>
     <button id="policeBtn" class="panel" style="pointer-events:auto" title="Polizei an/aus (K)">🚓 Polizei: an</button>
     <button id="camBtn" class="ghost" style="pointer-events:auto;margin-top:8px;padding:6px 12px;font-size:12px">📷 Kamera wechseln (C)</button>
   </div>
