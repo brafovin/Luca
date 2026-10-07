@@ -33,7 +33,9 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
 | `C` | Kamera wechseln (hinter dem Roller / Ego-Cockpit mit Display) |
-| `R` | Reset – setzt dich auf die nächste Straße |
+| `R` | **Eine Hand** vom Lenker nehmen (Einhand-Wheelie = **250 €** statt 100 €) – nochmal `R` = wieder beide Hände |
+| `Backspace` | Reset – setzt dich auf die nächste Straße / Strecke |
+| `H` | **Wheelie-Bar** an/aus (begrenzt den Wheelie auf ca. 32°, sicherer; im Menü ebenfalls) |
 | `L` / `B` | Licht an/aus · Klingel |
 | `T` | Tageszeit um 3 h vorstellen |
 | `M` | Ton an/aus |
@@ -67,7 +69,12 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
-## Drei Roller: KuKirin G4, Dualtron Thunder 3 & Weped Sonic
+## Fünf Roller
+
+* **ZT3 Pro** (Shop, **150 €**, Taste `I`): 40 km/h, mit VESC 70 km/h. · **Kukirin G2** (Shop, **300 €**, Taste `O`): 55 km/h, mit VESC 70 km/h.
+* Alle Roller haben jetzt **Wheelie-Bar** (Stützrad hinten, `H`) und **Lenkerend-Spiegel**. Der Fahrer ist ~17 % größer, mit neuen Handschuhen
+  (einzelne Finger, Daumen, Knöchel-Polster, Manschette); bei „Eine Hand“ winkt die linke Hand offen in die Luft.
+
 
 * **KuKirin G4** – komplett schwarz, mit sichtbaren Federn (Gabel + Heck-Coil-Over), Faltgelenk mit Verriegelung, Bremsleitungen,
   geschlitzten Scheiben, Reifenprofil, Batterie-Seitenverkleidung, Deck-LED, Kennzeichen. Normal 65 km/h, Turbo 100 km/h.
@@ -85,10 +92,10 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * Rundkurs mit **~30,7 km** (6 km lange Start-/Zielgerade, zwei große Kurven, S-Kurven auf der Gegengeraden), **32 m breit**, Curbs,
   Auslaufzonen, Zielportal mit Zielflagge und Tribüne, Kilometer-Tafeln. **Kein Verkehr, keine Fußgänger, keine Polizei, keine Hindernisse.**
 * `V` oder Menü-Button teleportiert dich vor die Ziellinie (und wieder zurück in die Stadt). Zeit startet beim Überfahren der Ziellinie;
-  Abkürzen macht die Runde ungültig. Pro Runde **+300 €** (Bestzeit **+600 €**), Bestzeit wird gespeichert. `R` setzt dich auf die Strecke.
+  Abkürzen macht die Runde ungültig. Pro Runde **+300 €** (Bestzeit **+600 €**), Bestzeit wird gespeichert. `Backspace` setzt dich auf die Strecke.
 * **HYPER-Modus:** Nur hier fährt der Weped Sonic mit `Shift` bis **5000 km/h** (in ca. 7 s von 0 – absurde Beschleunigung, extra starke
   Bremsen, Lenkung bleibt auch bei Überschall steuerbar). In der Stadt gilt wieder das normale Limit (500 km/h mit VESC).
-  Vor den Kurven musst du rechtzeitig abbremsen – bei 5000 km/h fliegst du sonst geradeaus auf die Wiese (`R` setzt dich zurück).
+  Vor den Kurven musst du rechtzeitig abbremsen – bei 5000 km/h fliegst du sonst geradeaus auf die Wiese (`Backspace` setzt dich zurück).
 
 ## Polizei 🚓
 

@@ -58,7 +58,7 @@ class Remote {
     const lean = lerp(A.l, B.l, k);
     this.mode = B.m; this.sx = lerp(A.sx, B.sx, k); this.sz = lerp(A.sz, B.sz, k); this.sh = A.sh + wrapAngle(B.sh - A.sh) * k;
     this.setVesc(!!B.vs);
-    const big = B.md === 2 ? 1.22 : B.md ? 1.14 : 1; if (this.scooter.group.scale.x !== big) this.scooter.group.scale.setScalar(big);
+    const big = B.md === 2 ? 1.22 : B.md === 1 ? 1.14 : B.md === 3 ? 0.97 : B.md === 4 ? 0.93 : 1; if (this.scooter.group.scale.x !== big) this.scooter.group.scale.setScalar(big);
     const ride = this.mode === 0;
     const sc = this.scooter;
     sc.group.visible = true;

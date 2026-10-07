@@ -17,6 +17,7 @@ export class WalkerModel {
     const jacket = o.jacket || 0x56606b, pants = o.pants || 0x191b21, helmetCol = o.helmet || 0xf2f2f0, pack = o.pack ?? 0xff7a1a;
     this.group = new THREE.Group();
     const g = this.group;
+    g.scale.setScalar(1.15); // a bit bigger than before
     const mk = (geo, m, parent = g) => { const me = new THREE.Mesh(geo, m); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; };
     this.parts = [];
     // legs (pivot at hip)
