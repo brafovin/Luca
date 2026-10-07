@@ -95,16 +95,17 @@ function plateMesh() {
 /* ============================================================================
    KuKirin G4 – full black
    ============================================================================ */
-export function buildG4(ctx) {
+const G4_SPEC = { vN: 18, vT: 28.6, vVN: 25, vVT: 42.4, aN: 2.6, aT: 5.2, aVN: 3.4, aVT: 7.8, kN: 6, kT: 11, kVN: 8, kVT: 17, drag2: 0.0009, brake: 4.6, space: 6.8, cap: 7.6, aLat: 8.5, mass: 106, wheelie: 0.8 };
+export function buildG4(ctx, o = {}) {
   const { T, mats, dispTex } = ctx;
   const { add, tube, spring } = tools();
   const group = new THREE.Group();
-  const mGloss = std({ color: 0x08090b, roughness: 0.24, metalness: 0.72, envMapIntensity: 1.3 });
-  const mMatte = std({ color: 0x0f1012, roughness: 0.72, metalness: 0.25 });
-  const mTrim = std({ color: 0x1c1d21, roughness: 0.45, metalness: 0.6 });
+  const mGloss = std({ color: o.body ?? 0x08090b, roughness: o.body ? 0.3 : 0.24, metalness: 0.72, envMapIntensity: 1.3 });
+  const mMatte = std({ color: o.matte ?? 0x0f1012, roughness: 0.72, metalness: 0.25 });
+  const mTrim = std({ color: o.accent ?? 0x1c1d21, roughness: 0.45, metalness: 0.6 });
   const mDark = std({ color: 0x15161a, roughness: 0.3, metalness: 0.88 }); // black anodised aluminium
   const mRubber = std({ color: 0x0b0b0c, roughness: 0.95, metalness: 0, vertexColors: true });
-  const mSpring = std({ color: 0x0c0d0f, roughness: 0.35, metalness: 0.8 });
+  const mSpring = std({ color: o.accent ?? 0x0c0d0f, roughness: 0.35, metalness: 0.8 });
   const mCable = std({ color: 0x050506, roughness: 0.55 });
   const mFender = std({ color: 0x0a0b0d, roughness: 0.32, metalness: 0.65, side: THREE.DoubleSide });
   const gripTex = T.grip.clone(); gripTex.needsUpdate = true; gripTex.repeat.set(1.5, 6);
@@ -203,7 +204,7 @@ export function buildG4(ctx) {
   add(steer, box(0.1, 0.03, 0.06), mDark, 0, 0.44, 0);
   for (const y of [0.4, 0.97]) { const c = add(steer, new THREE.CylinderGeometry(0.037, 0.037, 0.022, 16), mTrim, 0, y, 0); c.scale.set(1.12, 1, 0.9); }
   // stem decal (dark grey, subtle)
-  const decalTex = textCanvas(256, 64, (x) => { x.font = '700 40px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#7a7d84'; x.fillText('KuKirin', 100, 34); x.fillStyle = '#b8bcc4'; x.fillText('G4', 218, 34); });
+  const decalTex = textCanvas(256, 64, (x) => { x.font = '700 40px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = o.decalA || '#7a7d84'; x.fillText(o.brand || 'KuKirin', 100, 34); x.fillStyle = o.decalB || '#b8bcc4'; x.fillText(o.model || 'G4', 218, 34); });
   const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, depthWrite: false, toneMapped: false });
   for (const sx of [-1, 1]) { const d = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), decalMat); d.position.set(sx * 0.0345, 0.76, 0); d.rotation.y = sx * Math.PI / 2; d.rotation.z = Math.PI / 2; steer.add(d); }
   // handlebar cluster
@@ -251,11 +252,11 @@ export function buildG4(ctx) {
   for (const w of [rearWheel, frontWheel]) for (const sx of [-1, 1]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.0065, 6, 28), mCyan); ring.rotation.y = Math.PI / 2; ring.position.x = sx * 0.04; w.add(ring); vescParts.push(ring); }
 
   return {
-    id: 'g4', name: 'KuKirin G4', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.62, 1.7],
+    id: o.id || 'g4', name: o.name || 'KuKirin G4', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.62, 1.7],
     gripLocal: [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)],
     foot: [new THREE.Vector3(0.05, 0.265, 0.06), new THREE.Vector3(-0.05, 0.265, -0.28)],
-    half: HALF, wheelbase: 1.16, wheelR: R, spotPos: [0, 0.78, 0.46], dispMode: 'D3', stemDecal: 'G4',
-    spec: { vN: 18, vT: 28.6, vVN: 25, vVT: 42.4, aN: 2.6, aT: 5.2, aVN: 3.4, aVT: 7.8, kN: 6, kT: 11, kVN: 8, kVT: 17, drag2: 0.0009, brake: 4.6, space: 6.8, cap: 7.6, aLat: 8.5, mass: 106, wheelie: 0.8 },
+    half: HALF, wheelbase: 1.16, wheelR: R, spotPos: [0, 0.78, 0.46], dispMode: o.disp || 'D3', stemDecal: 'G4',
+    spec: o.spec || G4_SPEC,
   };
 }
 
@@ -652,4 +653,50 @@ export function buildSonic(ctx) {
     // 200 / 300 km/h stock, 350 / 500 km/h with VESC
     spec: { vN: 55.6, vT: 83.3, vVN: 97.2, vVT: 138.9, aN: 6.5, aT: 10, aVN: 9, aVT: 20, kN: 16, kT: 24, kVN: 24, kVT: 50, drag2: 0.00012, brake: 7.5, space: 10, cap: 11.5, aLat: 14, mass: 150, wheelie: 0.7 },
   };
+}
+
+/* ============================================================================
+   Budget scooters: Kukirin G2 (55 km/h, 70 with VESC) and ZT3 Pro (40 km/h, 70 with VESC)
+   ============================================================================ */
+export function buildG2(ctx) {
+  return buildG4(ctx, {
+    id: 'g2', name: 'Kukirin G2', body: 0x101216, accent: 0xff7a1a, brand: 'KuKirin', model: 'G2', decalA: '#c9ccd2', decalB: '#ff7a1a', disp: 'G2',
+    spec: { vN: 15.6, vT: 15.6, vVN: 19.7, vVT: 19.7, aN: 2.3, aT: 2.6, aVN: 3.2, aVT: 3.6, kN: 6, kT: 7, kVN: 8, kVT: 9, drag2: 0.0003, brake: 4.4, space: 6.4, cap: 7.2, aLat: 8, mass: 100, wheelie: 0.7 },
+  });
+}
+export function buildZT3(ctx) {
+  return buildG4(ctx, {
+    id: 'zt3', name: 'ZT3 Pro', body: 0xe4e6ea, matte: 0x3a3d44, accent: 0x1f7aff, brand: 'ZT3', model: 'PRO', decalA: '#1f4aa0', decalB: '#1f7aff', disp: 'ZT3',
+    spec: { vN: 11.45, vT: 11.45, vVN: 19.7, vVT: 19.7, aN: 1.7, aT: 1.9, aVN: 2.8, aVT: 3.2, kN: 5, kT: 6, kVN: 7, kVT: 8, drag2: 0.0003, brake: 4.0, space: 6.0, cap: 6.6, aLat: 7.5, mass: 96, wheelie: 0.6 },
+  });
+}
+
+/* ============================================================================
+   Accessories for every scooter: wheelie bar (touches down at ~31 degrees) + bar-end mirrors
+   ============================================================================ */
+export function decorate(m) {
+  const { add, tube } = tools();
+  const chrome = std({ color: 0xc9ccd1, roughness: 0.22, metalness: 0.95, envMapIntensity: 1.4 });
+  const dark = std({ color: 0x15161a, roughness: 0.4, metalness: 0.8 });
+  const rubber = std({ color: 0x0b0b0c, roughness: 0.9 });
+  const mirror = std({ color: 0xaecde0, roughness: 0.04, metalness: 1, envMapIntensity: 1.8 });
+  // wheelie bar
+  const bar = new THREE.Group();
+  const zr = -m.half - 0.32, yw = 0.2;
+  for (const sx of [-1, 1]) {
+    tube(bar, [[sx * 0.055, 0.29, -m.half - 0.02], [sx * 0.06, 0.26, -m.half - 0.2], [sx * 0.06, yw + 0.01, zr + 0.02]], 0.0085, chrome);
+    add(bar, new THREE.CylinderGeometry(0.01, 0.01, 0.05, 8), dark, sx * 0.055, 0.29, -m.half - 0.02).rotation.z = Math.PI / 2;
+  }
+  add(bar, new THREE.CylinderGeometry(0.009, 0.009, 0.14, 8), chrome, 0, yw, zr).rotation.z = Math.PI / 2;
+  for (const sx of [-1, 1]) { const w = add(bar, new THREE.CylinderGeometry(0.04, 0.04, 0.03, 16), rubber, sx * 0.04, yw, zr); w.rotation.z = Math.PI / 2; }
+  m.group.add(bar);
+  m.wheelieBar = bar;
+  // mirrors
+  const gx = m.gripLocal[0].x, gy = m.gripLocal[0].y;
+  for (const sx of [-1, 1]) {
+    const x = sx * (gx - 0.05), y = gy + 0.02;
+    add(m.steer, new THREE.CylinderGeometry(0.004, 0.004, 0.11, 6), dark, x, y + 0.055, -0.03);
+    const mr = add(m.steer, new THREE.BoxGeometry(0.06, 0.04, 0.008), dark, x + sx * 0.012, y + 0.12, -0.03); mr.rotation.set(-0.25, sx * 0.3, 0);
+    const gl = add(m.steer, new THREE.BoxGeometry(0.05, 0.03, 0.002), mirror, x + sx * 0.012, y + 0.12, -0.037); gl.rotation.set(-0.25, sx * 0.3 + Math.PI, 0); gl.castShadow = false;
+  }
 }

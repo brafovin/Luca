@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
-import { buildG4, buildDT3, buildSonic } from './models.js';
+import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, decorate } from './models.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
@@ -45,6 +45,7 @@ export function ik2(A, C, l1, l2, pole, out) {
   return out;
 }
 
+const K = 1.17; // rider size factor
 const HYPER_V = 1388.9, HYPER_A = 230; // 5000 km/h
 const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 export class Scooter {
@@ -71,8 +72,10 @@ export class Scooter {
     this.dispTex = new THREE.CanvasTexture(dcv);
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
     const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
-    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx) };
+    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx) };
+    this.wbar = true; this.oneHand = false; this.handMix = 0; this.wheelieOne = false;
     for (const m of Object.values(this.models)) {
+      decorate(m);
       this.tilt.add(m.group);
       this.root.add(m.glow);
       m.glow.visible = false;
@@ -99,6 +102,7 @@ export class Scooter {
     this.setVesc(this.vesc);
   }
 
+  setWbar(on) { this.wbar = on; for (const m of Object.values(this.models)) m.wheelieBar.visible = on; }
   get hyperOn() { return !!this.hyper && this.modelId === 'sonic'; }
   get topKmh() { if (this.hyperOn) return HYPER_V * 3.6; const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
   get vTurbo() { const S = this.spec; return this.vesc ? S.vVT : S.vT; }
@@ -126,7 +130,7 @@ export class Scooter {
 
     // ---- torso (jacket) with collar, reflective stripes, courier backpack
     const torso = mk(new THREE.CapsuleGeometry(0.125, 0.25, 6, 16), mJacket);
-    torso.scale.set(1.2, 1, 0.78);
+    torso.scale.set(1.2 * K, K, 0.78 * K);
     this.rParts.torso = torso;
     const torsoExtra = [];
     const collar = mk(new THREE.TorusGeometry(0.075, 0.03, 8, 16), mJacketDark);
@@ -138,6 +142,7 @@ export class Scooter {
     const belt = mk(new THREE.BoxGeometry(0.3, 0.035, 0.2), mJacketDark); belt.position.y = -0.2; torsoExtra.push(belt);
     const pocket = mk(new THREE.BoxGeometry(0.07, 0.07, 0.015), mJacketDark); pocket.position.set(0.07, 0.02, 0.098); torsoExtra.push(pocket);
     this.torsoExtra = torsoExtra;
+    for (const m of torsoExtra) { m.position.multiplyScalar(K); m.scale.multiplyScalar(K); }
     const stripe = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), std({ color: 0xff7a1a, roughness: 0.6 })); // courier backpack
     this.rParts.stripe = stripe;
     const bpLogo = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), std({ color: 0xffffff, roughness: 0.5 }), stripe);
@@ -148,7 +153,7 @@ export class Scooter {
     bpFlap.position.set(0, 0.17, 0);
     this.rParts.straps = [];
     for (const sx of [-1, 1]) {
-      const strap = mk(new THREE.BoxGeometry(0.035, 0.3, 0.012), mJacketDark);
+      const strap = mk(new THREE.BoxGeometry(0.035, 0.3 * K, 0.012), mJacketDark);
       this.rParts.straps.push(strap);
       strap.userData.sx = sx;
     }
@@ -168,23 +173,46 @@ export class Scooter {
     const hstripe = mk(new THREE.BoxGeometry(0.026, 0.012, 0.26), mAccent); head.push(hstripe);
     const vents = [];
     for (const sx of [-1, 1]) { const v = mk(new THREE.BoxGeometry(0.02, 0.006, 0.12), mJacketDark); v.userData.sx = sx; vents.push(v); head.push(v); }
+    const headG = new THREE.Group(); rider.add(headG); this.headG = headG;
+    for (const m of head) headG.add(m);
+    headG.scale.setScalar(K);
     this.rParts.head = head;
     this.headMeshes = { bal, neck, cheeks, slit, brow, gogg, goggFrame, strap, helmet, peak, hstripe, vents };
 
     // ---- limbs
     this.legs = [];
     this.arms = [];
-    const glove = () => {
+    const mGlove2 = std({ color: 0x2b2d33, roughness: 0.55, metalness: 0.2 });
+    const mKnuckle = std({ color: 0xff7a1a, roughness: 0.5 });
+    const glove = (sx) => { // origin = centre of the grip; fingers wrap around the bar (axis x)
       const g = new THREE.Group();
-      mk(new THREE.BoxGeometry(0.075, 0.042, 0.09), mGlove, g);
-      const f = mk(new THREE.BoxGeometry(0.075, 0.032, 0.05), mGlove, g); f.position.set(0, -0.012, 0.062); f.rotation.x = 0.5;
-      const th = mk(new THREE.BoxGeometry(0.025, 0.028, 0.05), mGlove, g); th.position.set(0, 0.026, 0.03);
-      const cuff = mk(new THREE.CylinderGeometry(0.046, 0.046, 0.05, 10), mJacketDark, g); cuff.rotation.x = Math.PI / 2; cuff.position.z = -0.06;
+      const palm = mk(new THREE.BoxGeometry(0.086, 0.03, 0.074), mGlove, g); palm.position.set(0, 0.03, -0.05);
+      const back = mk(new THREE.BoxGeometry(0.082, 0.014, 0.056), mGlove2, g); back.position.set(0, 0.049, -0.045);
+      const pad = mk(new THREE.BoxGeometry(0.07, 0.01, 0.014), mKnuckle, g); pad.position.set(0, 0.053, -0.016);
+      const heel = mk(new THREE.BoxGeometry(0.07, 0.034, 0.03), mGlove, g); heel.position.set(0, 0.026, -0.095);
+      const cuff = mk(new THREE.CylinderGeometry(0.044, 0.05, 0.06, 12), mJacketDark, g); cuff.rotation.x = Math.PI / 2; cuff.position.set(0, 0.03, -0.14);
+      const band = mk(new THREE.BoxGeometry(0.09, 0.012, 0.02), mReflect, g); band.position.set(0, 0.03, -0.165);
+      const segs = [[0.036, 0.0175], [0.03, 0.0165], [0.026, 0.0155]];
+      const finger = (x, y, z, lens, w) => {
+        const root = new THREE.Group(); root.position.set(x, y, z); g.add(root);
+        const js = []; let parent = root;
+        lens.forEach((l, k) => {
+          const j = new THREE.Group(); if (k) j.position.z = lens[k - 1]; parent.add(j); js.push(j);
+          const seg = mk(new THREE.BoxGeometry(w, w * 0.9, l), mGlove, j); seg.position.z = l / 2;
+          if (k === lens.length - 1) { const tip = mk(new THREE.SphereGeometry(w * 0.5, 8, 6), mGlove, j); tip.position.z = l; tip.scale.set(1, 0.9, 0.9); }
+          parent = j;
+        });
+        return { root, js };
+      };
+      g.userData.fingers = [0, 1, 2, 3].map((i) => finger((i - 1.5) * 0.0215, 0.034, -0.012, [0.036, 0.03, 0.026].map((l) => l * (i === 1 || i === 2 ? 1.08 : i === 3 ? 0.88 : 1)), 0.0185));
+      const th = finger(-sx * 0.05, 0.022, -0.045, [0.034, 0.028], 0.021);
+      g.userData.thumb = th; g.userData.sx = sx;
+      g.scale.setScalar(K * 0.98);
       rider.add(g);
       return g;
     };
     const shoe = () => {
-      const g = new THREE.Group();
+      const g = new THREE.Group(); g.scale.setScalar(K);
       mk(new THREE.BoxGeometry(0.095, 0.06, 0.26), mShoe, g);
       const so = mk(new THREE.BoxGeometry(0.1, 0.02, 0.27), mSole, g); so.position.y = -0.035;
       const toe = mk(new THREE.SphereGeometry(0.05, 10, 8), mShoe, g); toe.position.set(0, -0.005, 0.12); toe.scale.set(1, 0.8, 1);
@@ -192,24 +220,24 @@ export class Scooter {
       return g;
     };
     for (let i = 0; i < 2; i++) {
-      const lo = limbMesh(0.052, mPants);
-      const knee = mk(new THREE.SphereGeometry(0.066, 12, 10), mPants);
-      this.legs.push({ up: limbMesh(0.074, mPants), lo, knee, foot: shoe() });
-      const band = mk(new THREE.CylinderGeometry(0.052 * 1.12, 0.052 * 1.12, 0.1, 10), mReflect, lo);
+      const lo = limbMesh(0.052 * K, mPants);
+      const knee = mk(new THREE.SphereGeometry(0.066 * K, 12, 10), mPants);
+      this.legs.push({ up: limbMesh(0.074 * K, mPants), lo, knee, foot: shoe() });
+      const band = mk(new THREE.CylinderGeometry(0.052 * K * 1.12, 0.052 * K * 1.12, 0.1, 10), mReflect, lo);
       band.position.y = 0.5; band.scale.y = 0.4;
-      const loA = limbMesh(0.043, mJacket);
-      const bandA = mk(new THREE.CylinderGeometry(0.043 * 1.14, 0.043 * 1.14, 0.1, 10), mReflect, loA);
+      const loA = limbMesh(0.043 * K, mJacket);
+      const bandA = mk(new THREE.CylinderGeometry(0.043 * K * 1.14, 0.043 * K * 1.14, 0.1, 10), mReflect, loA);
       bandA.position.y = 0.55; bandA.scale.y = 0.4;
-      this.arms.push({ up: limbMesh(0.054, mJacket), lo: loA, elbow: mk(new THREE.SphereGeometry(0.052, 12, 10), mJacket), hand: glove(), shoulder: mk(new THREE.SphereGeometry(0.068, 12, 10), mJacket) });
+      this.arms.push({ up: limbMesh(0.054 * K, mJacket), lo: loA, elbow: mk(new THREE.SphereGeometry(0.052 * K, 12, 10), mJacket), hand: glove(i === 0 ? 1 : -1), shoulder: mk(new THREE.SphereGeometry(0.068 * K, 12, 10), mJacket) });
       for (const k of ['up', 'lo']) { rider.add(this.legs[i][k]); rider.add(this.arms[i][k]); }
     }
     // joint positions (tilt space)
-    this.hip = [new THREE.Vector3(0.09, 0.84, -0.2), new THREE.Vector3(-0.09, 0.84, -0.2)];
+    this.hip = [new THREE.Vector3(0.105, 0.99, -0.22), new THREE.Vector3(-0.105, 0.99, -0.22)];
     this.foot = [new THREE.Vector3(0.05, 0.265, 0.06), new THREE.Vector3(-0.05, 0.265, -0.28)];
-    this.shoulder = [new THREE.Vector3(0.2, 1.33, -0.03), new THREE.Vector3(-0.2, 1.33, -0.03)];
+    this.shoulder = [new THREE.Vector3(0.235, 1.57, -0.05), new THREE.Vector3(-0.235, 1.57, -0.05)];
     this._v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-    this.torsoBase = new THREE.Vector3(0, 1.08, -0.1);
-    this.headBase = new THREE.Vector3(0, 1.53, 0.05);
+    this.torsoBase = new THREE.Vector3(0, 1.27, -0.12);
+    this.headBase = new THREE.Vector3(0, 1.8, 0.07);
     torso.position.copy(this.torsoBase);
     torso.rotation.x = 0.45;
     // torso accessories follow the torso frame
@@ -218,11 +246,11 @@ export class Scooter {
       const off = m.position.clone().applyQuaternion(tq).add(this.torsoBase);
       m.userData.base = off; m.position.copy(off); m.quaternion.multiplyQuaternions(tq, m.quaternion);
     }
-    collar.position.copy(this.torsoBase).add(new THREE.Vector3(0, 0.2, 0.06).applyQuaternion(tq));
+    collar.position.copy(this.torsoBase).add(new THREE.Vector3(0, 0.2 * K, 0.06 * K).applyQuaternion(tq));
     collar.rotation.set(Math.PI / 2 + 0.45, 0, 0);
-    stripe.position.set(0, 1.16, -0.25); stripe.rotation.x = 0.45;
+    stripe.position.set(0, 1.37, -0.3); stripe.rotation.x = 0.45; stripe.scale.setScalar(K);
     this.rParts.straps.forEach((m) => {
-      m.position.copy(this.torsoBase).add(new THREE.Vector3(m.userData.sx * 0.085, 0.07, 0.1).applyQuaternion(tq));
+      m.position.copy(this.torsoBase).add(new THREE.Vector3(m.userData.sx * 0.085 * K, 0.07 * K, 0.1 * K).applyQuaternion(tq));
       m.rotation.x = 0.45;
     });
     this.rParts.torsoExtra = torsoExtra;
@@ -230,7 +258,8 @@ export class Scooter {
   }
 
   placeHead(sway) {
-    const H = this.headMeshes, b = this.headBase, y = b.y + sway;
+    const H = this.headMeshes, y = sway, b = { x: 0, z: 0 };
+    this.headG.position.copy(this.headBase);
     H.bal.position.set(b.x, y, b.z);
     H.cheeks.position.set(b.x, y - 0.045, b.z + 0.005);
     H.neck.position.set(b.x, y - 0.1, b.z - 0.015);
@@ -246,6 +275,18 @@ export class Scooter {
     H.vents.forEach((v) => v.position.set(b.x + v.userData.sx * 0.05, y + 0.132, b.z + 0.02));
   }
 
+  poseHand(hand, open, t) {
+    const fs = hand.userData.fingers, sx = hand.userData.sx;
+    const closed = [0.55, 1.35, 1.2], opened = [0.12, 0.14, 0.1];
+    fs.forEach((f, i) => {
+      f.js.forEach((j, k) => { j.rotation.x = closed[k] + (opened[k] + (open > 0.5 ? Math.sin(t * 9 + i) * 0.04 : 0) - closed[k]) * open; });
+      f.root.rotation.y = (i - 1.5) * 0.11 * open;
+    });
+    const th = hand.userData.thumb;
+    th.js[0].rotation.x = 0.85 - 0.6 * open; th.js[1].rotation.x = 0.9 - 0.75 * open;
+    th.root.rotation.y = -sx * (0.25 + 0.9 * open);
+  }
+
   updateRider(dt, speed) {
     const tilt = this.tilt, steer = this.steer;
     tilt.updateMatrixWorld(true);
@@ -253,22 +294,34 @@ export class Scooter {
     this.placeHead(sway);
     const T = this._tmp || (this._tmp = {
       g: new THREE.Vector3(), pole: [new THREE.Vector3(0.45, -0.55, -0.45), new THREE.Vector3(-0.45, -0.55, -0.45)],
-      legPole: [new THREE.Vector3(0.15, 0.1, 1), new THREE.Vector3(-0.15, 0.1, 1)], ankle: new THREE.Vector3(),
+      poleUp: new THREE.Vector3(0.7, -0.15, -0.55),
+      legPole: [new THREE.Vector3(0.15, 0.1, 1), new THREE.Vector3(-0.15, 0.1, 1)], ankle: new THREE.Vector3(), up: new THREE.Vector3(),
     });
+    this.handMix = damp(this.handMix, this.oneHand && !this.parked ? 1 : 0, 9, dt);
+    const hm = this.handMix, time = performance.now() * 0.001;
     for (let i = 0; i < 2; i++) {
       const g = T.g.copy(this.model.gripLocal[i]);
       steer.localToWorld(g);
       tilt.worldToLocal(g);
-      this.arms[i].hand.position.set(g.x, g.y + 0.012, g.z - 0.02);
-      this.arms[i].hand.rotation.set(0.05, 0, 0);
+      const lift = i === 0 ? hm : 0; // the left hand comes off the bar, the right one stays on the throttle
+      const hand = this.arms[i].hand;
+      if (lift > 0.001) {
+        T.up.set(this.shoulder[i].x + 0.14, this.shoulder[i].y + 0.3 + Math.sin(time * 5) * 0.015, this.shoulder[i].z + 0.3);
+        T.up.x += Math.sin(time * 5.5) * 0.03 * lift;
+        g.lerp(T.up, lift);
+      }
+      hand.position.set(g.x, g.y + 0.012 * (1 - lift), g.z - 0.02 * (1 - lift));
+      hand.rotation.set(0.05 - 1.5 * lift, 0, lift * (0.18 + Math.sin(time * 5.5) * 0.12));
+      this.poseHand(hand, lift, time);
       this.arms[i].shoulder.position.copy(this.shoulder[i]);
-      ik2(this.shoulder[i], g, 0.3, 0.3, T.pole[i], this._v[0]);
+      const pole = lift > 0.5 ? T.poleUp : T.pole[i];
+      ik2(this.shoulder[i], g, 0.35, 0.35, pole, this._v[0]);
       setSegment(this.arms[i].up, this.shoulder[i], this._v[0]);
       setSegment(this.arms[i].lo, this._v[0], g);
       this.arms[i].elbow.position.copy(this._v[0]);
       const ft = this.foot[i];
       T.ankle.set(ft.x, ft.y + 0.05, ft.z - 0.04);
-      ik2(this.hip[i], T.ankle, 0.42, 0.42, T.legPole[i], this._v[1]);
+      ik2(this.hip[i], T.ankle, 0.5, 0.5, T.legPole[i], this._v[1]);
       setSegment(this.legs[i].up, this.hip[i], this._v[1]);
       setSegment(this.legs[i].lo, this._v[1], T.ankle);
       this.legs[i].knee.position.copy(this._v[1]);
@@ -388,13 +441,14 @@ export class Scooter {
     // steering
     // wheelie (hold E): front wheel up, rear wheel balances
     const wantW = !!inp.wheelie && !this.parked && !(inp.back || inp.space) && (this.inWheelie ? this.v > 1.0 : this.v > 2.0);
-    const wT = wantW ? S.wheelie : 0;
+    const wMax = this.wbar ? 0.56 : 0.95;
+    const wT = wantW ? Math.min(S.wheelie, wMax - 0.02) : 0;
     this.wheelieV += (38 * (wT - this.wheelie) - 7.5 * this.wheelieV) * dt;
-    this.wheelie = clamp(this.wheelie + this.wheelieV * dt, 0, 0.95);
-    if (this.wheelie > 0.35) { this.wheelieT += dt; this.inWheelie = true; }
+    this.wheelie = clamp(this.wheelie + this.wheelieV * dt, 0, wMax);
+    if (this.wheelie > 0.35) { if (!this.inWheelie) this.wheelieOne = this.oneHand; else if (!this.oneHand) this.wheelieOne = false; this.wheelieT += dt; this.inWheelie = true; }
     else if (this.inWheelie && this.wheelie < 0.2) {
       this.inWheelie = false;
-      if (this.wheelieT >= 1.5 && !this.wheelieAbort) this.wheelieEvent = { dur: this.wheelieT };
+      if (this.wheelieT >= 1.5 && !this.wheelieAbort) this.wheelieEvent = { dur: this.wheelieT, one: this.wheelieOne };
       this.wheelieT = 0; this.wheelieAbort = false;
       this.bobV -= 0.5; this.shake = Math.min(1, this.shake + 0.25); // landing jolt
     }
