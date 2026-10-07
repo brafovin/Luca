@@ -359,12 +359,12 @@ export function buildDT3(ctx) {
   add(steer, box(0.2, 0.025, 0.08), mTrim, 0, 0.52, 0);
   const ffGeo = new THREE.CylinderGeometry(0.185, 0.185, 0.14, 30, 1, true, -Math.PI * 0.2, Math.PI * 0.9); ffGeo.rotateZ(Math.PI / 2);
   add(steer, ffGeo, mFender, 0, 0, 0);
-  const stem = add(steer, new THREE.CylinderGeometry(0.03, 0.04, 0.78, 18), mGloss, 0, 0.9, 0); stem.scale.set(1.2, 1, 0.9);
+  const stem = add(steer, new THREE.CylinderGeometry(0.03, 0.04, 0.66, 18), mGloss, 0, 0.78, 0); stem.scale.set(1.2, 1, 0.9); // ends at the bar clamp, below the display
   add(steer, box(0.12, 0.12, 0.1), mMatte, 0, 0.62, 0);
   add(steer, box(0.14, 0.022, 0.11), mTrim, 0, 0.685, 0);
   add(steer, box(0.14, 0.022, 0.11), mTrim, 0, 0.555, 0);
   add(steer, box(0.02, 0.12, 0.04), mRed, 0.07, 0.62, 0.02).rotation.z = -0.1;
-  for (const y of [0.5, 1.08]) { const c = add(steer, new THREE.CylinderGeometry(0.046, 0.046, 0.026, 18), mRed, 0, y, 0); c.scale.set(1.15, 1, 0.9); }
+  for (const y of [0.5, 1.06]) { const c = add(steer, new THREE.CylinderGeometry(0.046, 0.046, 0.026, 18), mRed, 0, y, 0); c.scale.set(1.15, 1, 0.9); }
   const decalTex = textCanvas(384, 64, (x) => { x.font = '800 36px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#d42020'; x.fillText('DUALTRON', 130, 34); x.fillStyle = '#e8e8ea'; x.fillText('THUNDER 3', 310, 34); });
   const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, depthWrite: false, toneMapped: false });
   for (const sx of [-1, 1]) { const d = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.06), decalMat); d.position.set(sx * 0.0495, 0.88, 0); d.rotation.y = sx * Math.PI / 2; d.rotation.z = Math.PI / 2; steer.add(d); }
@@ -373,6 +373,7 @@ export function buildDT3(ctx) {
   add(steer, cylX(0.0135, 0.78, 14), mGloss, 0, BY, -0.02);
   add(steer, box(0.14, 0.08, 0.1), mGloss, 0, BY - 0.01, 0);
   add(steer, box(0.08, 0.025, 0.1), mTrim, 0, BY + 0.035, 0);
+  add(steer, box(0.05, 0.05, 0.04), mGloss, 0, BY + 0.07, 0.0).rotation.x = 0.5; // display mount post, above the stem
   for (const sx of [-1, 1]) {
     add(steer, cylX(0.019, 0.14, 14), mRubber, sx * 0.34, BY, -0.02);
     for (const o of [-0.055, -0.02, 0.015, 0.05]) add(steer, cylX(0.0205, 0.006, 12), mMatte, sx * (0.34 + o), BY, -0.02);
@@ -424,7 +425,7 @@ export function buildDT3(ctx) {
   const damper = add(steer, new THREE.CylinderGeometry(0.014, 0.014, 0.16, 10), mDark, 0, 0.56, 0.07); damper.rotation.z = Math.PI / 2;
   add(steer, new THREE.CylinderGeometry(0.018, 0.018, 0.03, 10), mRed, 0.09, 0.56, 0.07).rotation.z = Math.PI / 2;
   // stem: LED strip, indicator pods, bolts
-  add(steer, box(0.012, 0.5, 0.006), mRedLed, 0, 0.9, 0.052).castShadow = false;
+  add(steer, box(0.012, 0.44, 0.006), mRedLed, 0, 0.84, 0.052).castShadow = false;
   for (const sx of [-1, 1]) {
     add(steer, box(0.03, 0.06, 0.05), mGloss, sx * 0.05, 0.98, 0.03);
     add(steer, box(0.018, 0.04, 0.012), mAmber, sx * 0.05, 0.98, 0.056).castShadow = false;
