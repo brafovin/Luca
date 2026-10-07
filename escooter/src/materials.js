@@ -29,6 +29,7 @@ export function createMaterials(T) {
   }
   // lamp heads: warm emissive that is switched by night factor
   M.lampW = std({ color: 0xffffff, vertexColors: true, emissive: 0xffc67a, emissiveIntensity: 0, roughness: 0.4 });
+  M.shopGlow = std({ color: 0xffffff, vertexColors: true, emissive: 0xffd49a, emissiveIntensity: 0, roughness: 0.6 });
   M.lampG = std({ color: 0xffffff, vertexColors: true, emissive: 0x3dff9a, emissiveIntensity: 0.4, roughness: 0.4 });
   M.pool = new THREE.MeshBasicMaterial({ map: T.pool, color: 0xffb35c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
   M.glowW = new THREE.PointsMaterial({ map: T.glow, color: 0xffc67a, size: 3.2, sizeAttenuation: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });

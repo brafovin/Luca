@@ -578,6 +578,7 @@ function tick(dt, now, render = true) {
   const win = lamps * 1.6;
   for (const k of ['plaster', 'brick', 'panel', 'glass']) M['f_' + k].emissiveIntensity = win;
   M.lampW.emissiveIntensity = lamps * 3.4;
+  M.shopGlow.emissiveIntensity = lamps * 0.9;
   M.pool.opacity = lamps * 0.5;
   M.glowW.opacity = lamps * 0.85;
   M.glowG.opacity = 0.55 + 0.35 * Math.sin(now * 0.004);

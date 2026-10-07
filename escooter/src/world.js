@@ -492,6 +492,21 @@ class ChunkBuilder {
       at(a, 1.3, CURB + 3.3, Math.min(len - 2, 9), 0.18, 2.6, '#2b2e32');
       return;
     }
+    if (b.shop && nc >= 3) {
+      const SG = this.b('shopGlow');
+      const a = lo + len / 2, w = len - 2.8;
+      const pal = ['#1f5f9a', '#9a1f2a', '#2a7a3a', '#c9a21c', '#3a3d42', '#7a3a8a'];
+      const sc = pal[Math.floor(rnd() * pal.length)];
+      at(a, 0.04, CURB + 1.45, w, 2.3, 0.04, ['#d9c7a3', '#cfd8dc', '#e6d2b0'][Math.floor(rnd() * 3)], SG);
+      at(a, 0.07, CURB + 0.14, w + 0.2, 0.28, 0.12, '#2b2e32');
+      at(a, 0.07, CURB + 2.7, w + 0.2, 0.14, 0.12, '#2b2e32');
+      const n = Math.max(2, Math.round(w / 2.2));
+      for (let i = 0; i <= n; i++) at(lo + len / 2 - w / 2 + (w * i) / n, 0.07, CURB + 1.45, 0.08, 2.4, 0.12, '#2b2e32');
+      at(a, 0.2, CURB + 3.25, w + 0.5, 0.8, 0.28, sc);
+      at(a, 0.35, CURB + 3.25, Math.min(w * 0.5, 4), 0.28, 0.02, '#f5f1e6');
+      if (nc >= 2) { const c = 1; const dx = lo + (c * len) / nc; at(dx, 0.07, CURB + 1.15, 1.4, 2.3, 0.14, DOORS[Math.floor(rnd() * DOORS.length)]); }
+      return;
+    }
     // door on a cell boundary
     if (nc >= 2) {
       const c = 1 + Math.floor(rnd() * (nc - 1));
@@ -539,7 +554,7 @@ class ChunkBuilder {
       ...r, ...o, kind, tint,
       roof: o.roof || (kind === 'panel' || kind === 'glass' ? 'flat' : rnd() < 0.72 ? 'gable' : 'flat'),
       roofCol: shade(ROOFCOL[Math.floor(rnd() * ROOFCOL.length)], 1),
-      balcony: o.balcony ?? rnd() < 0.5, awning: o.awning ?? rnd() < 0.2,
+      balcony: o.balcony ?? rnd() < 0.5, awning: o.awning ?? rnd() < 0.2, shop: o.shop && kind !== 'glass',
     });
   }
 
@@ -570,7 +585,7 @@ class ChunkBuilder {
       const row = this.splitRow(a0, a1, 0.1);
       row.forEach(([s, e], i) => {
         const floors = clamp(base + (rnd() < 0.35 ? (rnd() < 0.5 ? -1 : 1) : 0), 2, 6);
-        this.newBuilding(side, s, e, 0, depth[side], { floors, skipA: i > 0 && s - row[i - 1][1] < 0.1, skipB: i < row.length - 1 && row[i + 1][0] - e < 0.1 });
+        this.newBuilding(side, s, e, 0, depth[side], { floors, shop: rnd() < 0.3 && e - s > 11, skipA: i > 0 && s - row[i - 1][1] < 0.1, skipB: i < row.length - 1 && row[i + 1][0] - e < 0.1 });
       });
     }
     // courtyard
@@ -822,7 +837,7 @@ class ChunkBuilder {
 const MESHDEF = {
   asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], paver2: ['paver2', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
-  glass: ['glass', 0, 1], water: ['water', 0, 1], lampW: ['lampW', 0, 0], lampG: ['lampG', 0, 0],
+  glass: ['glass', 0, 1], water: ['water', 0, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
 };
