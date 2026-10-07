@@ -38,6 +38,7 @@ export class GameAudio {
     this.tire = mkNoise('bandpass', 500, 0.7);
     this.wind = mkNoise('highpass', 1200, 0.4);
     this.squeal = mkNoise('bandpass', 2600, 12);
+    this.rainN = mkNoise('highpass', 3500, 0.4);
     this.city = mkNoise('lowpass', 220, 0.5);
     this.city.g.gain.value = 0.05;
   }
@@ -59,6 +60,7 @@ export class GameAudio {
     this.o2.frequency.setTargetAtTime(f * 2.01, t, 0.05);
     this.mf.frequency.setTargetAtTime(380 + sp * 70 + load * 500, t, 0.08);
     this.mg.gain.setTargetAtTime(s.paused ? 0 : (0.018 + Math.min(sp / 14, 1) * 0.05 + load * 0.035) * (s.battEmpty ? 0.4 : 1), t, 0.06);
+    this.rainN.g.gain.setTargetAtTime(s.paused ? 0 : (s.rain || 0) * 0.07, t, 0.3);
     this.tire.g.gain.setTargetAtTime(s.paused ? 0 : Math.min(sp / 15, 1) * 0.16, t, 0.1);
     this.tire.f.frequency.setTargetAtTime(300 + sp * 45, t, 0.1);
     this.wind.g.gain.setTargetAtTime(s.paused ? 0 : Math.pow(Math.min(sp / 17, 1), 2) * 0.09, t, 0.1);

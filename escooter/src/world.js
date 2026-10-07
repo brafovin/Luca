@@ -10,6 +10,8 @@ export const LOT1 = P - LOT0;
 export const CURB = 0.12;
 export const RC = 4; // corner radius of the raised block
 export const FLOOR = 3.2;
+/** VESC shop: interaction point on the pavement in front of the door (world coords) */
+export const SHOP = { x: P + LOT0 + 24, z: 7.5 };
 
 /* ------------------------------------------------------------------ terrain */
 function sdRounded(lx, lz) {
@@ -40,6 +42,7 @@ export function groundHeight(x, z) {
 export function blockType(i, j) {
   if (i === 0 && j === 0) return 'perimeter';
   if (i === 0 && j === -1) return 'houses';
+  if (i === 1 && j === 0) return 'vescshop';
   const h = hash2(i, j, 7);
   if (h < 0.44) return 'perimeter';
   if (h < 0.64) return 'houses';
@@ -970,6 +973,77 @@ class ChunkBuilder {
     }
   }
 
+  miniScooter(x, z, ry, col) {
+    const S = this.S;
+    const m = new THREE.Matrix4().makeRotationY(ry); m.setPosition(x, CURB + 0.5, z);
+    S.setTransform(m);
+    const G = this.b('generic');
+    G.box(0, 0.18, 0, 0.2, 0.07, 0.72, '#16171a');
+    G.box(0, 0.14, 0, 0.17, 0.04, 0.6, col);
+    limbW(G, 0, 0.14, 0.58, 0, 1.1, 0.31, 0.026, '#16171a');
+    G.box(0, 1.12, 0.3, 0.62, 0.022, 0.022, '#16171a');
+    for (const wz of [-0.58, 0.58]) {
+      const g = new THREE.TorusGeometry(0.094, 0.047, 6, 14); g.rotateY(Math.PI / 2);
+      G.geo(g, new THREE.Matrix4().makeTranslation(0, 0.138, wz), '#0d0d0f');
+      G.box(0, 0.138, wz, 0.07, 0.12, 0.12, '#8c9096');
+    }
+    S.setTransform(null);
+    this.circ(x, z, 0.5);
+  }
+
+  vescShop() {
+    const { rnd } = this;
+    const G = this.b('generic'), PL = this.b('plain'), SG = this.b('shopGlow'), L = this.b('lampW'), SS = this.b('shopsign'), pav = this.b('paver2');
+    pav.plane(LOT0 + 0.3, LOT0 + 0.3, LOT1 - 0.3, LOT1 - 0.3, CURB + 0.01, '#b9b5ac', 2);
+    const x0 = LOT0 + 10, w = 28, z0 = LOT0 + 1, d = 16, H = 5.4, x1 = x0 + w, z1 = z0 + d, cx = x0 + w / 2;
+    PL.box(cx, CURB + H / 2, z0 + d / 2, w, H, d, '#2b2e34');
+    G.box(cx, CURB + H + 0.2, z0 + d / 2, w + 0.5, 0.4, d + 0.5, '#17181b');
+    G.box(cx, CURB + 4.0, z0 - 0.06, w + 0.1, 0.45, 0.14, '#ff7a1a');
+    G.box(cx, CURB + 0.2, z0 - 0.06, w + 0.1, 0.4, 0.14, '#17181b');
+    // lit shop window front + mullions
+    SG.box(cx, CURB + 1.9, z0 - 0.04, w - 3, 3.0, 0.06, '#ffe2b0');
+    for (let i = 0; i <= 8; i++) G.box(x0 + 1.5 + ((w - 3) * i) / 8, CURB + 1.9, z0 - 0.08, 0.1, 3.1, 0.1, '#17181b');
+    G.box(cx, CURB + 3.45, z0 - 0.08, w - 3, 0.1, 0.1, '#17181b'); G.box(cx, CURB + 0.38, z0 - 0.08, w - 3, 0.1, 0.1, '#17181b');
+    // double door
+    G.box(cx, CURB + 1.15, z0 - 0.1, 2.6, 2.3, 0.1, '#0f1013'); G.box(cx - 0.05, CURB + 1.1, z0 - 0.17, 0.06, 1.0, 0.04, '#cfd2d6'); G.box(cx + 0.05, CURB + 1.1, z0 - 0.17, 0.06, 1.0, 0.04, '#cfd2d6');
+    SG.box(cx, CURB + 1.2, z0 - 0.15, 2.3, 2.0, 0.02, '#ffd9a0');
+    G.box(cx, CURB + 2.55, z0 - 1.0, 4.4, 0.14, 2.0, '#ff7a1a'); // canopy
+    for (const sx of [-1, 1]) G.box(cx + sx * 2.1, CURB + 1.3, z0 - 1.9, 0.08, 2.6, 0.08, '#17181b');
+    // big sign above the entrance
+    const sw = 14, sh = 3.5, sy = CURB + H + 2.1;
+    G.box(cx, sy, z0 - 0.4, sw + 0.4, sh + 0.4, 0.3, '#101114');
+    SS.quad([cx - sw / 2, sy - sh / 2, z0 - 0.58], [cx + sw / 2, sy - sh / 2, z0 - 0.58], [cx + sw / 2, sy + sh / 2, z0 - 0.58], [cx - sw / 2, sy + sh / 2, z0 - 0.58], '#ffffff', [1, 0, 0, 0, 0, 1, 1, 1], [cx, sy, z0 + 3]);
+    for (const sx of [-1, 1]) G.box(cx + sx * 5.5, CURB + H + 0.7, z0 - 0.2, 0.3, 1.4, 0.3, '#101114');
+    L.box(cx, sy - sh / 2 - 0.25, z0 - 0.58, sw, 0.1, 0.1, '#ffffff'); // neon under sign
+    this.colliders.push({ t: 0, x0, x1, z0, z1 });
+    // display scooters + pedestals on the plaza
+    const cols = ['#ff7a1a', '#1fd0ff', '#ffffff'];
+    for (let i = 0; i < 3; i++) {
+      const px = cx - 7 + i * 7, pz = z0 - 3.6;
+      G.cyl(px, CURB, pz, 1.1, 0.3, '#3a3d44', 16);
+      this.miniScooter(px, pz, Math.PI / 2 + (i - 1) * 0.5, cols[i]);
+    }
+    // flags
+    for (const fx of [x0 - 1.5, x1 + 1.5]) {
+      G.cyl(fx, CURB, z0 - 2.5, 0.07, 8, '#cfd2d6', 6);
+      G.box(fx + 0.8, CURB + 7.2, z0 - 2.5, 1.5, 1.0, 0.03, '#ff7a1a');
+      this.circ(fx, z0 - 2.5, 0.12);
+    }
+    // lamps, benches, trees
+    const pool = this.b('pool');
+    for (const lx of [x0 + 5, x1 - 5]) {
+      G.cyl(lx, CURB, z0 - 6.5, 0.08, 6.2, '#33363b', 8);
+      L.box(lx, CURB + 6.2, z0 - 6.5, 0.6, 0.12, 0.6, '#ffffff');
+      pool.plane(lx - 9, z0 - 6.5 - 9, lx + 9, z0 - 6.5 + 9, CURB + 0.03, '#ffffff');
+      this.lamps.push(new THREE.Vector3(lx, CURB + 6.1, z0 - 6.5)); this.glowPts.push(lx, CURB + 6.1, z0 - 6.5);
+      this.circ(lx, z0 - 6.5, 0.2);
+    }
+    for (const bx of [cx - 10, cx + 10]) { G.box(bx, CURB + 0.45, z0 - 6, 1.6, 0.08, 0.45, '#6a4a2c'); G.box(bx, CURB + 0.8, z0 - 6.22, 1.6, 0.4, 0.06, '#6a4a2c'); this.colliders.push({ t: 0, x0: bx - 0.8, x1: bx + 0.8, z0: z0 - 6.3, z1: z0 - 5.7 }); }
+    for (let i = 0; i < 7; i++) this.tree(LOT0 + 3 + rnd() * (LOT1 - LOT0 - 6), z1 + 4 + rnd() * (LOT1 - z1 - 8), CURB);
+    // back area: parked delivery vans + container
+    G.box(LOT1 - 10, CURB + 1.4, LOT1 - 6, 8, 2.8, 3, '#3a6a9a'); this.colliders.push({ t: 0, x0: LOT1 - 14, x1: LOT1 - 6, z0: LOT1 - 7.5, z1: LOT1 - 4.5 });
+  }
+
   shop() {
     const { rnd } = this;
     const G = this.b('generic'), PL = this.b('plain'), GL = this.b('glass'), L = this.b('lotAsphalt'), M = this.b('mark');
@@ -1028,6 +1102,7 @@ class ChunkBuilder {
     else if (t === 'houses') this.houses();
     else if (t === 'park') this.park();
     else if (t === 'modern') this.modern();
+    else if (t === 'vescshop') this.vescShop();
     else this.shop();
     return this;
   }
@@ -1037,7 +1112,7 @@ class ChunkBuilder {
 const MESHDEF = {
   asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], paver2: ['paver2', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
-  glass: ['glass', 0, 1], water: ['water', 0, 1], sign: ['sign', 0, 1], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
+  glass: ['glass', 0, 1], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
 };

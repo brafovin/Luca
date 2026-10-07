@@ -1,0 +1,121 @@
+import * as THREE from 'three';
+import { groundHeight } from './world.js';
+import { pushOut } from './phys.js';
+import { clamp, damp, wrapAngle } from './util.js';
+
+const matCache = new Map();
+function mat(color, o = {}) {
+  const k = color + JSON.stringify(o);
+  let m = matCache.get(k);
+  if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...o }); matCache.set(k, m); }
+  return m;
+}
+
+/** Articulated pedestrian figure (balaclava + goggles + helmet + courier backpack). */
+export class WalkerModel {
+  constructor(o = {}) {
+    const jacket = o.jacket || 0x56606b, pants = o.pants || 0x191b21, helmetCol = o.helmet || 0xf2f2f0, pack = o.pack ?? 0xff7a1a;
+    this.group = new THREE.Group();
+    const g = this.group;
+    const mk = (geo, m, parent = g) => { const me = new THREE.Mesh(geo, m); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; };
+    this.parts = [];
+    // legs (pivot at hip)
+    this.legs = [];
+    for (const sx of [1, -1]) {
+      const piv = new THREE.Group(); piv.position.set(sx * 0.09, 0.9, 0); g.add(piv);
+      const leg = mk(new THREE.CapsuleGeometry(0.088, 0.64, 4, 10), mat(pants), piv); leg.position.y = -0.42;
+      const knee = mk(new THREE.SphereGeometry(0.08, 8, 6), mat(0x2a2a30), piv); knee.position.set(0, -0.4, 0.04); knee.scale.set(1, 0.7, 0.5);
+      const shoe = mk(new THREE.BoxGeometry(0.1, 0.07, 0.26), mat(0xe9e9e9), piv); shoe.position.set(0, -0.86, 0.06);
+      const sole = mk(new THREE.BoxGeometry(0.105, 0.025, 0.27), mat(0x2a2a2d), piv); sole.position.set(0, -0.9, 0.06);
+      this.legs.push(piv);
+    }
+    // torso
+    this.torso = new THREE.Group(); this.torso.position.set(0, 0.9, 0); g.add(this.torso);
+    const body = mk(new THREE.CapsuleGeometry(0.135, 0.3, 4, 12), mat(jacket), this.torso); body.position.y = 0.27; body.scale.set(1.25, 1, 0.82);
+    const stripe = mk(new THREE.BoxGeometry(0.33, 0.022, 0.22), mat(0xdfe5e8, { metalness: 0.3, roughness: 0.4 }), this.torso); stripe.position.y = 0.22;
+    const belt = mk(new THREE.BoxGeometry(0.32, 0.04, 0.22), mat(0x2c3138), this.torso); belt.position.y = 0.05;
+    if (pack !== null) {
+      const bp = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), mat(pack, { roughness: 0.6 }), this.torso); bp.position.set(0, 0.3, -0.19);
+      const bpl = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), mat(0xffffff), this.torso); bpl.position.set(0, 0.38, -0.296);
+      const bpr = mk(new THREE.BoxGeometry(0.3, 0.025, 0.012), mat(0xdfe5e8), this.torso); bpr.position.set(0, 0.18, -0.296);
+    }
+    // head
+    this.head = new THREE.Group(); this.head.position.set(0, 0.64, 0.02); this.torso.add(this.head);
+    const bal = mat(0x0c0c0e, { roughness: 0.97 });
+    const bh = mk(new THREE.SphereGeometry(0.1, 16, 12), bal, this.head); bh.position.y = 0.17; bh.scale.set(1, 1.1, 1.06);
+    const neck = mk(new THREE.CylinderGeometry(0.05, 0.068, 0.13, 10), bal, this.head); neck.position.y = 0.04;
+    const cheeks = mk(new THREE.SphereGeometry(0.09, 10, 8), bal, this.head); cheeks.position.set(0, 0.12, 0.005); cheeks.scale.set(1, 0.8, 0.95);
+    const slit = mk(new THREE.BoxGeometry(0.118, 0.034, 0.03), mat(0xc89878), this.head); slit.position.set(0, 0.185, 0.085);
+    const lens = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 0xff8a2a, { roughness: 0.06, metalness: 0.95 }), this.head); lens.position.set(0, 0.185, 0.098);
+    const frame = mk(new THREE.BoxGeometry(0.172, 0.07, 0.036), mat(0x2c3138), this.head); frame.position.set(0, 0.185, 0.09);
+    const helmet = mk(new THREE.SphereGeometry(0.128, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.43), mat(helmetCol, { roughness: 0.22, metalness: 0.25 }), this.head); helmet.position.set(0, 0.19, -0.01); helmet.scale.set(1, 1.04, 1.12);
+    const peak = mk(new THREE.BoxGeometry(0.16, 0.012, 0.07), mat(helmetCol, { roughness: 0.22 }), this.head); peak.position.set(0, 0.255, 0.125); peak.rotation.x = -0.18;
+    // arms (pivot at shoulder)
+    this.arms = [];
+    for (const sx of [1, -1]) {
+      const piv = new THREE.Group(); piv.position.set(sx * 0.21, 0.5, 0); this.torso.add(piv);
+      mk(new THREE.SphereGeometry(0.066, 8, 6), mat(jacket), piv);
+      const arm = mk(new THREE.CapsuleGeometry(0.05, 0.46, 4, 8), mat(jacket), piv); arm.position.y = -0.3;
+      const band = mk(new THREE.CylinderGeometry(0.057, 0.057, 0.04, 10), mat(0xdfe5e8, { metalness: 0.3 }), piv); band.position.y = -0.34;
+      const hand = mk(new THREE.BoxGeometry(0.075, 0.09, 0.07), mat(0x141517), piv); hand.position.set(0, -0.6, 0.01);
+      this.arms.push(piv);
+    }
+    this.phase = 0;
+  }
+  /** pose: phase (rad), amp 0..1, run (bool) */
+  pose(phase, amp, run, lean = 0, wave = 0) {
+    const sw = Math.sin(phase) * (run ? 0.95 : 0.6) * amp;
+    this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
+    this.arms[0].rotation.x = -sw * (run ? 1.1 : 0.8); this.arms[1].rotation.x = sw * (run ? 1.1 : 0.8);
+    if (run) { this.arms[0].rotation.z = -0.1; this.arms[1].rotation.z = 0.1; } else { this.arms[0].rotation.z = -0.05; this.arms[1].rotation.z = 0.05; }
+    this.torso.rotation.x = (run ? 0.22 : 0.05) * amp + lean;
+    this.torso.position.y = 0.9 + Math.abs(Math.cos(phase)) * 0.025 * amp;
+    this.head.rotation.x = -0.05;
+    if (wave > 0) { this.arms[1].rotation.x = -2.6 + Math.sin(phase * 3) * 0.3 * wave; }
+  }
+}
+
+/** Local on-foot controller. */
+export class Walker {
+  constructor(scene, opts) {
+    this.model = new WalkerModel(opts);
+    this.model.group.visible = false;
+    scene.add(this.model.group);
+    this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
+  }
+  place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
+  update(dt, inp, col, dyn) {
+    if (this.stun > 0) { this.stun -= dt; inp = {}; }
+    // turning (arrow keys / mouse handled outside via yaw)
+    this.yaw = wrapAngle(this.yaw + ((inp.turnL ? 1 : 0) - (inp.turnR ? 1 : 0)) * 2.1 * dt + (inp.yawDelta || 0));
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
+    let mx = 0, mz = 0;
+    if (inp.fwd) { mx += fx; mz += fz; }
+    if (inp.back) { mx -= fx * 0.6; mz -= fz * 0.6; }
+    if (inp.strafeR) { mx += rx; mz += rz; }
+    if (inp.strafeL) { mx -= rx; mz -= rz; }
+    const l = Math.hypot(mx, mz);
+    const run = !!inp.sprint && l > 0;
+    const target = l > 0 ? (run ? 5.4 : 1.9) : 0;
+    this.running = run;
+    const k = l > 0 ? 7 : 10;
+    this.vx = damp(this.vx, l > 0 ? (mx / l) * target * Math.min(1, l) : 0, k, dt);
+    this.vz = damp(this.vz, l > 0 ? (mz / l) * target * Math.min(1, l) : 0, k, dt);
+    this.speed = Math.hypot(this.vx, this.vz);
+    let nx = this.x + this.vx * dt, nz = this.z + this.vz * dt;
+    if (col) { const r = pushOut(nx, nz, 0.3, col, dyn); nx = r.x; nz = r.z; }
+    this.x = nx; this.z = nz;
+    const gy = groundHeight(this.x, this.z);
+    this.y += (gy - this.y) * Math.min(1, dt * 14);
+    if (this.speed > 0.15) this.phase += dt * this.speed * (run ? 2.0 : 3.6);
+    this.apply();
+  }
+  apply() {
+    const g = this.model.group;
+    g.position.set(this.x, this.y, this.z);
+    g.rotation.y = this.yaw;
+    const amp = clamp(this.speed / 1.6, 0, 1);
+    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0);
+  }
+  setVisible(v) { this.model.group.visible = v; }
+}

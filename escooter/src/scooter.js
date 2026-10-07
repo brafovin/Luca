@@ -47,6 +47,7 @@ export function ik2(A, C, l1, l2, pole, out) {
 export class Scooter {
   constructor(tex) {
     this.tex = tex;
+    this.vesc = false;
     this.root = new THREE.Group();
     this.tilt = new THREE.Group();
     this.root.add(this.tilt);
@@ -291,6 +292,22 @@ export class Scooter {
     add(this.rearWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
     add(this.frontWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
 
+    // ---- VESC upgrade parts (hidden until bought)
+    this.vescParts = [];
+    const mVescBlue = new THREE.MeshStandardMaterial({ color: 0x1668ff, roughness: 0.3, metalness: 0.8 });
+    const mCyan = new THREE.MeshBasicMaterial({ color: 0x35e6ff, toneMapped: false });
+    const ctl = add(tilt, box(0.13, 0.075, 0.2), mVescBlue, 0, 0.275, 0.33); ctl.rotation.x = -0.12;
+    const fin = add(tilt, box(0.11, 0.012, 0.16), mAlu, 0, 0.318, 0.33);
+    const vlabel = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.03), (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 40; const x = c.getContext('2d'); x.fillStyle = '#05080c'; x.fillRect(0, 0, 128, 40); x.fillStyle = '#35e6ff'; x.font = '900 30px Arial'; x.textAlign = 'center'; x.fillText('VESC', 64, 31); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, toneMapped: false }); })());
+    vlabel.position.set(0, 0.2755, 0.43); vlabel.rotation.x = -0.12 - 0.05; tilt.add(vlabel);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.7), new THREE.MeshBasicMaterial({ map: T.pool, color: 0x35e6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    glow.rotation.x = -Math.PI / 2; glow.position.set(0, 0.04, 0.0); this.root.add(glow);
+    this.vescGlow = glow;
+    this.vescParts.push(ctl, fin, vlabel, glow);
+    for (const w of [this.rearWheel, this.frontWheel]) for (const sx of [-1, 1]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.0065, 6, 28), mCyan); ring.rotation.y = Math.PI / 2; ring.position.x = sx * 0.04; w.add(ring); this.vescParts.push(ring);
+    }
+    for (const p of this.vescParts) p.visible = false;
     // ---- rider
     this.buildRider();
   }
@@ -469,6 +486,12 @@ export class Scooter {
     }
   }
 
+  setVesc(on) {
+    this.vesc = on;
+    for (const p of this.vescParts) p.visible = on;
+    this.mLed.emissive.set(on ? 0x35e6ff : 0xff9a2a);
+  }
+
   setView(first) {
     this.firstPerson = first;
     const show = !first;
@@ -514,9 +537,10 @@ export class Scooter {
     const boost = !!inp.boost && !!inp.fwd && !empty && this.v > 1;
     this.boosting = boost;
     // KuKirin G4: 65 km/h normal, 100 km/h with turbo
-    const vmax = empty ? 3.2 : boost ? 28.6 : 18.0;
-    const aMax = empty ? 0.7 : boost ? 5.2 : 2.6;
-    const vKnee = boost ? 11 : 6.0;
+    const V = this.vesc;
+    const vmax = empty ? 3.2 : boost ? (V ? 42.4 : 28.6) : (V ? 25 : 18.0);
+    const aMax = empty ? 0.7 : boost ? (V ? 7.8 : 5.2) : (V ? 3.4 : 2.6);
+    const vKnee = boost ? (V ? 17 : 11) : (V ? 8 : 6.0);
 
     // throttle / brake smoothing
     const thrT = inp.fwd ? 1 : 0;
@@ -601,6 +625,7 @@ export class Scooter {
     // lean (physical: tan(phi)=a_lat/g) with critically damped-ish spring
     let leanT = clamp(Math.atan2(aLat, G) * 0.8 + 0.1 * this.steerIn * Math.min(1, av / 2), -0.55, 0.55);
     if (this.fallT > 0) leanT = this.fallDir * 1.3;
+    else if (this.parked && Math.abs(this.v) < 0.2) leanT = 0.14; // side stand
     const w0 = 11, zeta = 0.8;
     this.leanV += (w0 * w0 * (leanT - this.lean) - 2 * zeta * w0 * this.leanV) * dt;
     this.lean += this.leanV * dt;
@@ -721,7 +746,8 @@ export class Scooter {
     this.mHead.emissiveIntensity = on ? 1.6 + night * 3 : 0.15;
     const brake = this.braking ? 1 : 0;
     this.mTail.emissiveIntensity = (on ? 1.2 : 0.4) + brake * 3;
-    this.mLed.emissiveIntensity = night * 2.4;
+    this.mLed.emissiveIntensity = this.vesc ? 1.6 + night * 2.5 : night * 2.4;
+    if (this.vescGlow) this.vescGlow.material.opacity = this.vesc ? 0.35 + night * 0.65 : 0;
     this.hud.dispT += dt;
     if (this.hud.dispT > 0.1) { this.hud.dispT = 0; this.drawDisplay(); }
   }

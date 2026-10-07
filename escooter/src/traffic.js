@@ -56,10 +56,10 @@ const BODY_COL = ['#16171a', '#e9e9e6', '#c42a2a', '#2a5fb4', '#2f8a4a', '#e6a21
 const JACKET = ['#c9482b', '#2f6aa6', '#e2c13a', '#3a8a55', '#8a3a8a', '#3c4048', '#d6d6d2', '#e0702a'];
 const SKINS = ['#e8bd9a', '#c98d62', '#8d5a3b', '#f1cfb2'];
 
-function buildAiScooter(M, rnd) {
+export function buildAiScooter(M, rnd, o = {}) {
   const set = new BatchSet(); const B = set.get('body'), LT = set.get('light');
   const pick = (a) => a[Math.floor(rnd() * a.length)];
-  const body = pick(BODY_COL), jacket = pick(JACKET), pants = pick(['#1c1f26', '#2b3550', '#3a3a3e', '#4a3f35']);
+  const body = o.body || pick(BODY_COL), jacket = o.jacket || pick(JACKET), pants = o.pants || pick(['#1c1f26', '#2b3550', '#3a3a3e', '#4a3f35']);
   const dark = '#17181b';
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   // deck + frame
@@ -92,7 +92,7 @@ function buildAiScooter(M, rnd) {
   const tq = 0.45;
   const torso = new THREE.CapsuleGeometry(0.125, 0.25, 4, 12);
   partAt(B, torso, 0, 1.08, -0.1, jacket, 1.2, 1, 0.78, tq);
-  if (rnd() < 0.55) B.box(0, 1.16, -0.25, 0.32, 0.4, 0.19, pick(['#ff7a1a', '#1d1d20', '#d8d8d4']));
+  if (o.pack !== undefined ? o.pack : rnd() < 0.55) B.box(0, 1.16, -0.25, 0.32, 0.4, 0.19, o.pack || pick(['#ff7a1a', '#1d1d20', '#d8d8d4']));
   const shoulder = [V(0.2, 1.33, -0.03), V(-0.2, 1.33, -0.03)], grip = [V(0.265, 1.11, 0.29), V(-0.265, 1.11, 0.29)];
   for (let i = 0; i < 2; i++) {
     ik2(shoulder[i], grip[i], 0.3, 0.3, V(i ? -0.45 : 0.45, -0.55, -0.45), knee);
@@ -103,11 +103,11 @@ function buildAiScooter(M, rnd) {
   // head: helmet / balaclava / bare
   const skin = pick(SKINS);
   const headY = 1.53, headZ = 0.05;
-  const style = rnd();
+  const style = o.style ?? rnd();
   partAt(B, new THREE.SphereGeometry(0.1, 12, 10), 0, headY, headZ, style < 0.35 ? '#0d0d0f' : skin, 1, 1.1, 1.06);
   partAt(B, new THREE.CylinderGeometry(0.06, 0.075, 0.14, 8), 0, headY - 0.11, headZ - 0.02, style < 0.35 ? '#0d0d0f' : skin);
   if (style < 0.35) B.box(0, headY + 0.012, headZ + 0.09, 0.12, 0.035, 0.02, skin);
-  if (style < 0.85) partAt(B, new THREE.SphereGeometry(0.125, 12, 8, 0, 6.283, 0, 1.8), 0, headY + 0.014, headZ, pick(['#f2f2f0', '#c42a2a', '#16171a', '#2a5fb4', '#e6a21e']), 1, 1.04, 1.1);
+  if (style < 0.85) partAt(B, new THREE.SphereGeometry(0.125, 12, 8, 0, 6.283, 0, 1.8), 0, headY + 0.014, headZ, o.helmet || pick(['#f2f2f0', '#c42a2a', '#16171a', '#2a5fb4', '#e6a21e']), 1, 1.04, 1.1);
   else B.box(0, headY + 0.04, headZ - 0.005, 0.2, 0.09, 0.2, pick(['#2a2f3a', '#6a4a30']));
   const g = new THREE.Group();
   const tilt = new THREE.Group();
@@ -210,6 +210,7 @@ export class Traffic {
         consider(ox, oz, ov, thr);
       }
       consider(px, pz, Math.max(0, player.v * 0.2), isS ? 0.9 : 1.45);
+      if (this.extra) for (const e of this.extra) consider(e.x, e.z, 0, isS ? 0.9 : 1.45);
       if (this.peds) for (const p of this.peds.list) if (p.active) consider(p.x, p.z, 0, isS ? 0.9 : 1.35);
       if (c.down > 0) { c.down -= dt; vt = 0; }
       // --- integrate
@@ -241,106 +242,3 @@ export class Traffic {
   }
 }
 
-/* ------------------------------------------------------------------ pedestrians */
-const SKIN = ['#e8bd9a', '#c98d62', '#8d5a3b', '#f1cfb2', '#6b4630'];
-const CLOTH = ['#2f4a7a', '#8a2f2f', '#2f6a4a', '#d6b24a', '#4a4a4f', '#c9c9c9', '#6a3f7a', '#e07a2e', '#244e5f', '#7a6a58'];
-const PANTS = ['#2a3142', '#3b3b3f', '#5a4a3a', '#1f2430', '#4a5568'];
-
-export class Pedestrians {
-  constructor(scene, M, count = 16) {
-    this.list = [];
-    this.count = count;
-    const mk = (geo, shade) => {
-      const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.85 }), count);
-      m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true;
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      scene.add(m);
-      return m;
-    };
-    const box = (w, h, d, pivotTop) => { const g = new THREE.BoxGeometry(w, h, d); if (pivotTop) g.translate(0, -h / 2, 0); return g; };
-    this.parts = {
-      torso: mk(box(0.36, 0.56, 0.2)),
-      head: mk(new THREE.SphereGeometry(0.11, 10, 8)),
-      legL: mk(box(0.15, 0.82, 0.17, true)), legR: mk(box(0.15, 0.82, 0.17, true)),
-      armL: mk(box(0.1, 0.58, 0.12, true)), armR: mk(box(0.1, 0.58, 0.12, true)),
-    };
-    const c = new THREE.Color();
-    for (let i = 0; i < count; i++) {
-      const p = { active: false, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, cloth: Math.random(), skin: Math.random(), pants: Math.random() };
-      this.list.push(p);
-      this.parts.torso.setColorAt(i, c.set(CLOTH[i % CLOTH.length]));
-      this.parts.head.setColorAt(i, c.set(SKIN[i % SKIN.length]));
-      for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(PANTS[i % PANTS.length]));
-      for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(CLOTH[i % CLOTH.length]));
-      this.parts.torso.setMatrixAt(i, new THREE.Matrix4().makeScale(0, 0, 0));
-    }
-    for (const k of Object.values(this.parts)) if (k.instanceColor) k.instanceColor.needsUpdate = true;
-    this.dyn = [];
-    this._m = new THREE.Matrix4(); this._b = new THREE.Matrix4(); this._l = new THREE.Matrix4(); this._r = new THREE.Matrix4();
-    this._q = new THREE.Quaternion(); this._v = new THREE.Vector3(); this._one = new THREE.Vector3(1, 1, 1);
-  }
-
-  spawn(p, px, pz, R) {
-    for (let tries = 0; tries < 10; tries++) {
-      const axis = Math.random() < 0.5 ? 'x' : 'z';
-      const line = Math.round((axis === 'x' ? pz : px) / P) + Math.floor(Math.random() * 3) - 1;
-      const side = Math.random() < 0.5 ? 1 : -1;
-      const along = (axis === 'x' ? px : pz) + (Math.random() * 2 - 1) * R;
-      const r = ((along % P) + P) % P;
-      if (r < 12 || r > P - 12) continue;
-      p.axis = axis; p.side = side; p.dir = Math.random() < 0.5 ? 1 : -1;
-      p.lane = line * P + side * 8.4;
-      p.s = along;
-      const x = axis === 'x' ? p.s : p.lane, z = axis === 'x' ? p.lane : p.s;
-      if (Math.hypot(x - px, z - pz) < 25) continue;
-      p.active = true; p.speed = 1.1 + Math.random() * 0.6; p.wait = 0; p.down = 0;
-      return;
-    }
-  }
-
-  update(dt, player, sig, t, R = 160) {
-    const px = player.x, pz = player.z;
-    const { torso, head, legL, legR, armL, armR } = this.parts;
-    this.dyn.length = 0;
-    const m = this._m, b = this._b, l = this._l;
-    for (let i = 0; i < this.count; i++) {
-      const p = this.list[i];
-      if (!p.active) { this.spawn(p, px, pz, R); }
-      if (!p.active) { torso.setMatrixAt(i, m.makeScale(0, 0, 0)); for (const k of [head, legL, legR, armL, armR]) k.setMatrixAt(i, m); continue; }
-      let x = p.axis === 'x' ? p.s : p.lane, z = p.axis === 'x' ? p.lane : p.s;
-      if (Math.hypot(x - px, z - pz) > R * 1.4) { p.active = false; continue; }
-      // may we cross the street ahead? wait at the kerb while the cross traffic could still be moving
-      let moving = true;
-      const r = ((p.s % P) + P) % P;
-      const inWait = p.dir > 0 ? r >= P - 7.1 && r < P - 5.9 : r > 5.9 && r <= 7.1;
-      if (inWait) {
-        const unsafe = p.axis === 'x' ? sig.bG || sig.bY || sig.bSoon : sig.aG || sig.aY || sig.aSoon;
-        if (unsafe) moving = false;
-      }
-      if (p.down > 0) { p.down -= dt; moving = false; }
-      if (moving) { p.s += p.dir * p.speed * dt; p.phase += dt * p.speed * 5.2; }
-      x = p.axis === 'x' ? p.s : p.lane; z = p.axis === 'x' ? p.lane : p.s;
-      p.x = x; p.z = z;
-      const yaw = p.axis === 'x' ? (p.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (p.dir > 0 ? 0 : Math.PI);
-      const sw = moving ? Math.sin(p.phase) * 0.55 : 0;
-      b.makeRotationY(yaw).setPosition(x, 0.12, z);
-      const ps = this._v;
-      const set = (mesh, ox, oy, oz, rotX) => {
-        l.makeRotationX(rotX).setPosition(ox, oy, oz);
-        m.multiplyMatrices(b, l);
-        mesh.setMatrixAt(i, m);
-      };
-      const lie = p.down > 0 ? Math.min(1, (p.down) * 3) : 0;
-      if (lie > 0) { b.makeRotationY(yaw); b.multiply(l.makeRotationX(-Math.PI / 2 * lie)); b.setPosition(x, 0.12 + 0.2 * lie, z); }
-      set(torso, 0, 1.12, 0, 0);
-      set(head, 0, 1.55, 0.02, 0);
-      set(legL, 0.09, 0.84, 0, sw);
-      set(legR, -0.09, 0.84, 0, -sw);
-      set(armL, 0.24, 1.38, 0, -sw);
-      set(armR, -0.24, 1.38, 0, sw);
-      this.dyn.push({ x, z, r: 0.32, vx: 0, vz: 0, ped: p });
-    }
-    for (const mesh of Object.values(this.parts)) { mesh.instanceMatrix.needsUpdate = true; }
-    return this.dyn;
-  }
-}
