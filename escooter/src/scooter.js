@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
+import { buildG4, buildDT3 } from './models.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
@@ -59,259 +60,45 @@ export class Scooter {
 
   /* ------------------------------------------------------------ model */
   buildModel() {
-    const T = this.tex;
-    const mBlack = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.32, metalness: 0.65, envMapIntensity: 1.2 });
-    const mMatte = new THREE.MeshStandardMaterial({ color: 0x1b1c20, roughness: 0.7, metalness: 0.25 });
-    const mRubber = new THREE.MeshStandardMaterial({ color: 0x0c0c0d, roughness: 0.95, metalness: 0, vertexColors: true });
-    const mAlu = new THREE.MeshStandardMaterial({ color: 0xb9bec4, roughness: 0.28, metalness: 0.92 });
-    const mRed = new THREE.MeshStandardMaterial({ color: 0xe1352b, roughness: 0.4, metalness: 0.5 });
-    const mGripTex = T.grip.clone(); mGripTex.needsUpdate = true; mGripTex.repeat.set(1.5, 6);
-    const mDeck = new THREE.MeshStandardMaterial({ map: mGripTex, roughness: 0.9, metalness: 0.1 });
     this.mHead = new THREE.MeshStandardMaterial({ color: 0xeeeeee, emissive: 0xfff2d8, emissiveIntensity: 0.3, roughness: 0.2 });
     this.mTail = new THREE.MeshStandardMaterial({ color: 0x5a0a0a, emissive: 0xff1010, emissiveIntensity: 0.5, roughness: 0.3 });
     this.mLed = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xff9a2a, emissiveIntensity: 0, roughness: 0.4 });
-    const tilt = this.tilt;
-    const add = (parent, geo, mat, x = 0, y = 0, z = 0) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(x, y, z);
-      m.castShadow = true; m.receiveShadow = true;
-      parent.add(m);
-      return m;
-    };
-    const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-    const cylX = (r, l, seg = 16) => { const g = new THREE.CylinderGeometry(r, r, l, seg); g.rotateZ(Math.PI / 2); return g; };
-
-    // ---- wheels
-    const tireGeo = mergedGeometry((b) => {
-      const torus = new THREE.TorusGeometry(0.094, 0.047, 14, 36);
-      torus.rotateY(Math.PI / 2);
-      b.geo(torus, new THREE.Matrix4(), [0.045, 0.045, 0.048]);
-      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
-      for (let i = 0; i < 40; i++) {
-        const a = (i / 40) * Math.PI * 2;
-        for (const side of [-1, 1]) {
-          const aa = a + (side > 0 ? Math.PI / 40 : 0);
-          q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), aa);
-          const pos = new THREE.Vector3(side * 0.022, 0.1385, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), aa);
-          m4.compose(pos, q, new THREE.Vector3(1, 1, 1));
-          const blk = new THREE.BoxGeometry(0.036, 0.014, 0.03);
-          b.geo(blk, m4, [0.06, 0.06, 0.065]);
-        }
-      }
-    });
-    const makeWheel = () => {
-      const w = new THREE.Group();
-      add(w, tireGeo, mRubber);
-      add(w, cylX(0.066, 0.075), mBlack);
-      for (let i = 0; i < 5; i++) {
-        const s = add(w, box(0.045, 0.012, 0.125), mBlack);
-        s.rotation.x = (i / 5) * Math.PI * 2;
-        s.rotation.order = 'XYZ';
-      }
-      add(w, cylX(0.026, 0.09), mAlu);
-      const disc = add(w, cylX(0.07, 0.004, 28), mAlu, 0.042, 0, 0);
-      // slotted disc holes
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const h = add(w, cylX(0.011, 0.006, 8), mBlack, 0.042, Math.cos(a) * 0.05, Math.sin(a) * 0.05);
-        h.castShadow = false;
-      }
-      return w;
-    };
-    const R = 0.138;
-    this.rearWheel = makeWheel();
-    this.rearWheel.position.set(0, R, -0.58);
-    tilt.add(this.rearWheel);
-
-    // ---- deck + battery pod
-    const deck = add(tilt, box(0.205, 0.075, 0.74), mBlack, 0, 0.185, -0.04);
-    add(tilt, box(0.19, 0.05, 0.66), mMatte, 0, 0.13, -0.04);
-    const pad = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.62), mDeck);
-    pad.rotation.x = -Math.PI / 2; pad.position.set(0, 0.2255, -0.06); pad.receiveShadow = true;
-    tilt.add(pad);
-    // side LED strips
-    for (const sx of [-1, 1]) add(tilt, box(0.012, 0.014, 0.62), this.mLed, sx * 0.108, 0.178, -0.05);
-    // deck nose / neck
-    const neck = add(tilt, box(0.12, 0.1, 0.16), mBlack, 0, 0.21, 0.36);
-    neck.rotation.x = -0.15;
-    // rear swingarm + shock
-    for (const sx of [-1, 1]) {
-      const arm = add(tilt, box(0.022, 0.05, 0.3), mBlack, sx * 0.075, 0.18, -0.5);
-      arm.rotation.x = 0.28;
-    }
-    const shock = add(tilt, new THREE.CylinderGeometry(0.02, 0.02, 0.2, 10), mRed, 0, 0.27, -0.42);
-    shock.rotation.x = 0.85;
-    add(tilt, new THREE.CylinderGeometry(0.011, 0.011, 0.22, 8), mAlu, 0, 0.27, -0.42).rotation.x = 0.85;
-    // rear fender + tail light
-    const mFender = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide });
-    const fenderGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.105, 28, 1, true, Math.PI * 0.3, Math.PI * 0.95);
-    fenderGeo.rotateZ(Math.PI / 2);
-    add(tilt, fenderGeo, mFender, 0, R, -0.58);
-    const tailArm = add(tilt, box(0.09, 0.02, 0.2), mFender, 0, 0.275, -0.69);
-    tailArm.rotation.x = 0.12;
-    const tail = add(tilt, box(0.11, 0.032, 0.02), this.mTail, 0, 0.27, -0.79);
-    tail.castShadow = false;
-    add(tilt, box(0.05, 0.026, 0.01), mRed, 0, 0.245, -0.795);
-    // rear disc caliper
-    add(tilt, box(0.02, 0.05, 0.035), mRed, 0.05, 0.19, -0.5);
-    // kickstand
-    const stand = add(tilt, box(0.012, 0.012, 0.16), mAlu, -0.12, 0.13, -0.28);
-    stand.rotation.z = 0.5;
-
-    // ---- steering assembly
-    const pivot = new THREE.Group();
-    pivot.position.set(0, R, 0.58);
-    pivot.rotation.x = -0.28; // rake (top leans back)
-    tilt.add(pivot);
-    const steer = new THREE.Group();
-    pivot.add(steer);
-    this.steer = steer;
-    this.frontWheel = makeWheel();
-    steer.add(this.frontWheel);
-    // fork legs with springs
-    for (const sx of [-1, 1]) {
-      add(steer, new THREE.CylinderGeometry(0.017, 0.017, 0.33, 10), mAlu, sx * 0.068, 0.2, 0);
-      add(steer, new THREE.CylinderGeometry(0.026, 0.026, 0.13, 12), mRed, sx * 0.068, 0.3, 0);
-      add(steer, new THREE.CylinderGeometry(0.03, 0.03, 0.08, 12), mBlack, sx * 0.068, 0.04, 0);
-      const cal = add(steer, box(0.022, 0.055, 0.04), mRed, sx > 0 ? 0.052 : 0, 0.05, 0.06);
-      cal.visible = sx > 0;
-    }
-    add(steer, box(0.2, 0.05, 0.07), mBlack, 0, 0.38, 0); // crown
-    // front fender
-    const ffGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.105, 28, 1, true, -Math.PI * 0.25, Math.PI * 0.95);
-    ffGeo.rotateZ(Math.PI / 2);
-    add(steer, ffGeo, mFender, 0, 0, 0);
-    // stem
-    const stem = add(steer, new THREE.CylinderGeometry(0.026, 0.032, 0.7, 14), mBlack, 0, 0.7, 0);
-    stem.scale.set(1.15, 1, 0.9);
-    const hinge = add(steer, box(0.09, 0.085, 0.075), mMatte, 0, 0.5, 0);
-    add(steer, box(0.014, 0.1, 0.03), mRed, 0.054, 0.5, 0.02);
-    add(steer, box(0.1, 0.03, 0.06), mAlu, 0, 0.43, 0);
-    // decal on stem sides
-    const decalCv = document.createElement('canvas');
-    decalCv.width = 256; decalCv.height = 64;
-    const dx = decalCv.getContext('2d');
-    dx.clearRect(0, 0, 256, 64);
-    dx.font = '700 40px Arial, sans-serif'; dx.textAlign = 'center'; dx.textBaseline = 'middle';
-    dx.fillStyle = '#ffffff'; dx.fillText('KuKirin', 100, 34);
-    dx.fillStyle = '#e1352b'; dx.fillText('G4', 218, 34);
-    const decalTex = new THREE.CanvasTexture(decalCv);
-    decalTex.colorSpace = THREE.SRGBColorSpace;
-    const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, depthWrite: false, toneMapped: false });
-    for (const sx of [-1, 1]) {
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), decalMat);
-      d.position.set(sx * 0.0345, 0.72, 0);
-      d.rotation.y = sx * Math.PI / 2;
-      d.rotation.z = Math.PI / 2;
-      steer.add(d);
-    }
-    // handlebar
-    const bars = add(steer, cylX(0.012, 0.64, 10), mBlack, 0, 1.06, -0.02);
-    this.bar = bars;
-    add(steer, box(0.1, 0.07, 0.08), mBlack, 0, 1.05, 0); // clamp
-    for (const sx of [-1, 1]) {
-      add(steer, cylX(0.0175, 0.13, 12), mRubber, sx * 0.265, 1.06, -0.02);
-      add(steer, cylX(0.021, 0.02, 12), mRed, sx * 0.19, 1.06, -0.02);
-      const lever = add(steer, box(0.012, 0.012, 0.13), mAlu, sx * 0.22, 1.035, 0.07);
-      lever.rotation.y = sx * 0.12;
-      add(steer, box(0.03, 0.03, 0.04), mMatte, sx * 0.2, 1.055, 0.0);
-    }
-    add(steer, box(0.04, 0.02, 0.05), mMatte, -0.19, 1.08, -0.02); // thumb throttle
-    const bell = add(steer, new THREE.CylinderGeometry(0.018, 0.022, 0.02, 12), mAlu, 0.15, 1.085, -0.02);
-    // display
-    const disp = new THREE.Group();
-    disp.position.set(0, 1.105, 0.0);
-    disp.rotation.x = 0.55;
-    steer.add(disp);
-    add(disp, box(0.115, 0.075, 0.02), mMatte, 0, 0, 0);
     const dcv = document.createElement('canvas');
     dcv.width = 256; dcv.height = 160;
     this.dispCtx = dcv.getContext('2d');
     this.dispTex = new THREE.CanvasTexture(dcv);
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.102, 0.064), new THREE.MeshBasicMaterial({ map: this.dispTex, toneMapped: false }));
-    screen.rotation.y = Math.PI;
-    screen.position.z = -0.0105;
-    disp.add(screen);
-    // head light
-    const hl = add(steer, box(0.1, 0.05, 0.035), this.mHead, 0, 0.62, 0.043);
-    hl.castShadow = false;
-    add(steer, box(0.12, 0.012, 0.04), mBlack, 0, 0.652, 0.04);
+    const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
+    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx) };
+    for (const m of Object.values(this.models)) {
+      this.tilt.add(m.group);
+      this.root.add(m.glow);
+      m.glow.visible = false;
+      for (const p of m.vescParts) p.visible = false;
+    }
     this.spot = new THREE.SpotLight(0xfff0d8, 0, 38, 0.5, 0.6, 1.6);
-    this.spot.position.set(0, 0.78, 0.46);
     this.spotTarget = new THREE.Object3D();
     this.spotTarget.position.set(0, 0, 13);
-    tilt.add(this.spot, this.spotTarget);
+    this.tilt.add(this.spot, this.spotTarget);
     this.spot.target = this.spotTarget;
-    // reflector
-    add(steer, box(0.03, 0.02, 0.008), mRed, 0.06, 0.55, 0.043);
-
-    // ---- extra detail: cables, collars, deck screws, reflectors, plate
-    const mCable = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 0.6 });
-    const tube = (pts, r, parent, mat = mCable) => {
-      const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), 24, r, 6, false);
-      const m = new THREE.Mesh(g, mat); m.castShadow = true; parent.add(m); return m;
-    };
-    for (const sx of [-1, 1]) {
-      // brake hoses from the levers along the stem to the discs
-      tube([[sx * 0.2, 1.04, 0.07], [sx * 0.12, 1.0, 0.06], [sx * 0.045, 0.9, 0.04], [sx * 0.04, 0.6, 0.035], [sx * 0.05, 0.3, 0.05], [sx * 0.05, 0.08, 0.07]], 0.0042, steer);
-    }
-    tube([[0.0, 0.6, -0.034], [0.01, 0.45, -0.036], [0.02, 0.36, -0.03]], 0.0035, steer);
-    // rear brake hose (in body space)
-    tube([[0.03, 0.46, 0.34], [0.04, 0.3, 0.26], [0.04, 0.215, 0.1], [0.045, 0.2, -0.3], [0.05, 0.2, -0.46], [0.05, 0.19, -0.52]], 0.0042, tilt);
-    // collars on the stem
-    for (const y of [0.4, 0.97]) {
-      const c = add(steer, new THREE.CylinderGeometry(0.037, 0.037, 0.022, 16), mRed, 0, y, 0); c.scale.set(1.12, 1, 0.9);
-    }
-    // deck screws + side reflectors + rubber edge
-    for (const sx of [-1, 1]) {
-      for (const z of [-0.34, -0.12, 0.1, 0.28]) add(tilt, new THREE.CylinderGeometry(0.0065, 0.0065, 0.004, 8), mAlu, sx * 0.088, 0.2275, z);
-      add(tilt, box(0.006, 0.02, 0.05), new THREE.MeshStandardMaterial({ color: 0xff8a1a, emissive: 0xff5a00, emissiveIntensity: 0.15, roughness: 0.4 }), sx * 0.1055, 0.19, 0.3);
-      add(tilt, box(0.006, 0.02, 0.05), new THREE.MeshStandardMaterial({ color: 0xff8a1a, emissive: 0xff5a00, emissiveIntensity: 0.15, roughness: 0.4 }), sx * 0.1055, 0.19, -0.36);
-      // fender stays
-      const stay = add(tilt, box(0.008, 0.14, 0.008), mAlu, sx * 0.065, 0.2, -0.64); stay.rotation.x = -0.5;
-    }
-    add(tilt, box(0.206, 0.012, 0.74), mAlu, 0, 0.143, -0.04).scale.set(0.96, 1, 1); // aluminium deck base
-    // German insurance plate on the rear mudguard
-    const plateCv = document.createElement('canvas'); plateCv.width = 128; plateCv.height = 80;
-    const px = plateCv.getContext('2d');
-    px.fillStyle = '#f4f4f0'; px.fillRect(0, 0, 128, 80);
-    px.strokeStyle = '#111'; px.lineWidth = 4; px.strokeRect(3, 3, 122, 74);
-    px.fillStyle = '#16a05a'; px.fillRect(6, 6, 116, 14);
-    px.fillStyle = '#111'; px.font = '700 40px Arial'; px.textAlign = 'center'; px.fillText('123', 64, 52); px.font = '700 24px Arial'; px.fillText('HQM', 64, 72);
-    const plateTex = new THREE.CanvasTexture(plateCv); plateTex.colorSpace = THREE.SRGBColorSpace;
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.0625), new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.5 }));
-    plate.position.set(0, 0.215, -0.745); plate.rotation.set(0.12, Math.PI, 0); tilt.add(plate);
-    // front fork lowers: dust boots
-    for (const sx of [-1, 1]) add(steer, new THREE.CylinderGeometry(0.024, 0.03, 0.09, 12), mMatte, sx * 0.068, 0.15, 0);
-    // bar-end lights + DRL strip on the headlamp
-    for (const sx of [-1, 1]) {
-      const be = add(steer, new THREE.CylinderGeometry(0.013, 0.013, 0.018, 10), this.mHead, sx * 0.335, 1.06, -0.02); be.rotation.z = Math.PI / 2; be.castShadow = false;
-    }
-    const drl = add(steer, box(0.11, 0.008, 0.01), this.mHead, 0, 0.665, 0.05); drl.castShadow = false;
-    // tyre valve + stem logo plate
-    add(this.rearWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
-    add(this.frontWheel, cylX(0.006, 0.02, 6), mRed, 0.05, 0.115, 0.03);
-
-    // ---- VESC upgrade parts (hidden until bought)
-    this.vescParts = [];
-    const mVescBlue = new THREE.MeshStandardMaterial({ color: 0x1668ff, roughness: 0.3, metalness: 0.8 });
-    const mCyan = new THREE.MeshBasicMaterial({ color: 0x35e6ff, toneMapped: false });
-    const ctl = add(tilt, box(0.13, 0.075, 0.2), mVescBlue, 0, 0.275, 0.33); ctl.rotation.x = -0.12;
-    const fin = add(tilt, box(0.11, 0.012, 0.16), mAlu, 0, 0.318, 0.33);
-    const vlabel = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.03), (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 40; const x = c.getContext('2d'); x.fillStyle = '#05080c'; x.fillRect(0, 0, 128, 40); x.fillStyle = '#35e6ff'; x.font = '900 30px Arial'; x.textAlign = 'center'; x.fillText('VESC', 64, 31); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t, toneMapped: false }); })());
-    vlabel.position.set(0, 0.2755, 0.43); vlabel.rotation.x = -0.12 - 0.05; tilt.add(vlabel);
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.7), new THREE.MeshBasicMaterial({ map: T.pool, color: 0x35e6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
-    glow.rotation.x = -Math.PI / 2; glow.position.set(0, 0.04, 0.0); this.root.add(glow);
-    this.vescGlow = glow;
-    this.vescParts.push(ctl, fin, vlabel, glow);
-    for (const w of [this.rearWheel, this.frontWheel]) for (const sx of [-1, 1]) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.0065, 6, 28), mCyan); ring.rotation.y = Math.PI / 2; ring.position.x = sx * 0.04; w.add(ring); this.vescParts.push(ring);
-    }
-    for (const p of this.vescParts) p.visible = false;
-    // ---- rider
     this.buildRider();
+    this.setModel('g4');
   }
+
+  setModel(id) {
+    const m = this.models[id];
+    if (!m) return;
+    this.modelId = id; this.model = m;
+    for (const k in this.models) this.models[k].group.visible = k === id;
+    this.steer = m.steer; this.frontWheel = m.frontWheel; this.rearWheel = m.rearWheel;
+    this.foot = m.foot; this.spec = m.spec; this.wb = m.wheelbase; this.half = m.half;
+    this.vescGlow = m.glow;
+    this.spot.position.set(...m.spotPos);
+    this.setVesc(this.vesc);
+  }
+
+  get topKmh() { const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
+  get vTurbo() { const S = this.spec; return this.vesc ? S.vVT : S.vT; }
 
   buildRider() {
     const tilt = this.tilt;
@@ -462,12 +249,11 @@ export class Scooter {
     const sway = Math.sin(this.odo * 0.8) * 0.004 * Math.min(1, speed / 4);
     this.placeHead(sway);
     const T = this._tmp || (this._tmp = {
-      grips: [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)],
       g: new THREE.Vector3(), pole: [new THREE.Vector3(0.45, -0.55, -0.45), new THREE.Vector3(-0.45, -0.55, -0.45)],
       legPole: [new THREE.Vector3(0.15, 0.1, 1), new THREE.Vector3(-0.15, 0.1, 1)], ankle: new THREE.Vector3(),
     });
     for (let i = 0; i < 2; i++) {
-      const g = T.g.copy(T.grips[i]);
+      const g = T.g.copy(this.model.gripLocal[i]);
       steer.localToWorld(g);
       tilt.worldToLocal(g);
       this.arms[i].hand.position.set(g.x, g.y + 0.012, g.z - 0.02);
@@ -489,7 +275,11 @@ export class Scooter {
 
   setVesc(on) {
     this.vesc = on;
-    for (const p of this.vescParts) p.visible = on;
+    for (const [k, m] of Object.entries(this.models)) {
+      const show = on && k === this.modelId;
+      for (const p of m.vescParts) p.visible = show;
+      m.glow.visible = show;
+    }
     this.mLed.emissive.set(on ? 0x35e6ff : 0xff9a2a);
   }
 
@@ -539,10 +329,10 @@ export class Scooter {
     const boost = !!inp.boost && !!inp.fwd && !empty && this.v > 1;
     this.boosting = boost;
     // KuKirin G4: 65 km/h normal, 100 km/h with turbo
-    const V = this.vesc;
-    const vmax = empty ? 3.2 : boost ? (V ? 42.4 : 28.6) : (V ? 25 : 18.0);
-    const aMax = empty ? 0.7 : boost ? (V ? 7.8 : 5.2) : (V ? 3.4 : 2.6);
-    const vKnee = boost ? (V ? 17 : 11) : (V ? 8 : 6.0);
+    const V = this.vesc, S = this.spec;
+    const vmax = empty ? 3.2 : boost ? (V ? S.vVT : S.vT) : (V ? S.vVN : S.vN);
+    const aMax = empty ? 0.7 : boost ? (V ? S.aVT : S.aT) : (V ? S.aVN : S.aN);
+    const vKnee = boost ? (V ? S.kVT : S.kT) : (V ? S.kVN : S.kN);
 
     // throttle / brake smoothing
     const thrT = inp.fwd ? 1 : 0;
@@ -572,11 +362,11 @@ export class Scooter {
     }
     // coast / drag
     const sgn = Math.sign(v);
-    const drag = (0.12 + 0.0009 * v * v) * sgn;
+    const drag = (0.12 + S.drag2 * v * v) * sgn;
     a -= drag;
     if (this.thr < 0.05 && Math.abs(v) > 0.3 && !this.brk) a -= 0.35 * sgn; // motor regen
     // brakes
-    const brakeA = Math.min(7.6, this.brk * 4.6 + this.space * 6.8) * Math.min(1, Math.abs(v) / 0.6);
+    const brakeA = Math.min(S.cap, this.brk * S.brake + this.space * S.space) * Math.min(1, Math.abs(v) / 0.6);
     a -= brakeA * sgn;
     if (this.fallT > 0) a -= 6 * sgn;
     // stopped by brakes
@@ -592,7 +382,7 @@ export class Scooter {
     // steering
     // wheelie (hold E): front wheel up, rear wheel balances
     const wantW = !!inp.wheelie && !this.parked && !(inp.back || inp.space) && (this.inWheelie ? this.v > 1.0 : this.v > 2.0);
-    const wT = wantW ? 0.8 : 0;
+    const wT = wantW ? S.wheelie : 0;
     this.wheelieV += (38 * (wT - this.wheelie) - 7.5 * this.wheelieV) * dt;
     this.wheelie = clamp(this.wheelie + this.wheelieV * dt, 0, 0.95);
     if (this.wheelie > 0.35) { this.wheelieT += dt; this.inWheelie = true; }
@@ -609,8 +399,8 @@ export class Scooter {
     const av = Math.abs(this.v);
     const dMax = (0.14 + 0.46 / (1 + (av / 3.5) ** 2)) * (1 - 0.55 * Math.min(1, this.wheelie / 0.5));
     this.delta = this.steerIn * dMax;
-    let omega = (this.v * Math.tan(this.delta)) / WHEELBASE;
-    const aLatMax = 8.5;
+    let omega = (this.v * Math.tan(this.delta)) / this.wb;
+    const aLatMax = S.aLat;
     if (av > 0.5 && Math.abs(omega) * av > aLatMax) omega = (Math.sign(omega) * aLatMax) / av;
     this.heading = wrapAngle(this.heading + omega * dt);
     const aLat = this.v * omega;
@@ -631,7 +421,7 @@ export class Scooter {
     // odometry & battery
     const ds = Math.abs(this.v) * dt;
     this.odo += ds; this.trip += ds;
-    const pElec = (Math.max(0, motorA) * M_TOTAL * av + M_TOTAL * (0.12 + 0.0009 * av * av) * av * (this.thr > 0.05 ? 1 : 0.0)) / 0.85 + 22;
+    const pElec = (Math.max(0, motorA) * M_TOTAL * av + M_TOTAL * (0.12 + S.drag2 * av * av) * av * (this.thr > 0.05 ? 1 : 0.0)) / 0.85 + 22;
     const used = ((pElec * dt) / 3600) * drainScale;
     this.batt = drainScale === 0 ? BATT_WH : Math.max(0, this.batt - used);
     if (ds > 0.001) this.whPerM = lerp(this.whPerM, used / ds, clamp(ds / 150, 0, 1));
@@ -645,7 +435,8 @@ export class Scooter {
     this.lean += this.leanV * dt;
 
     // terrain + suspension
-    const fx = this.x + sx * 0.58, fz = this.z + cz * 0.58, rx = this.x - sx * 0.58, rz = this.z - cz * 0.58;
+    const hf = this.half;
+    const fx = this.x + sx * hf, fz = this.z + cz * hf, rx = this.x - sx * hf, rz = this.z - cz * hf;
     const k = 1 - Math.exp(-dt / 0.035);
     this.hF += (groundHeight(fx, fz) - this.hF) * k;
     this.hR += (groundHeight(rx, rz) - this.hR) * k;
@@ -661,13 +452,13 @@ export class Scooter {
     // road texture vibration
     const vib = Math.sin(this.odo * 38) * Math.sin(this.odo * 11.3 + 1) * 0.0016 * Math.min(1, av / 8) * (wAvg > 0.01 ? 1.5 : 1);
     // pitch: terrain + weight transfer
-    const pitchT = -Math.atan2(this.hF - this.hR, WHEELBASE) - this.aLong * 0.0075;
+    const pitchT = -Math.atan2(this.hF - this.hR, this.wb) - this.aLong * 0.0075;
     this.pitchV += (150 * (pitchT - this.pitch) - 2 * 0.55 * 12.2 * this.pitchV) * dt;
     this.pitch += this.pitchV * dt;
     this.pitch = clamp(this.pitch, -0.3, 0.3);
     this.yOff = wAvg + this.bob + vib;
 
-    this.wheelAng += (this.v * dt) / 0.138;
+    this.wheelAng += (this.v * dt) / this.model.wheelR;
     this.shake = damp(this.shake, 0, 6, dt);
     if (this.impact > 2) this.shake = Math.min(1, this.shake + this.impact * 0.06);
     this.applyTransform();
@@ -750,7 +541,8 @@ export class Scooter {
     r.rotation.set(0, this.heading, 0);
     const a = this.pitch - this.wheelie; // wheelie rotates the whole bike around the rear tyre contact point
     this.tilt.rotation.set(a, 0, -this.lean);
-    this.tilt.position.set(0, -0.58 * Math.sin(a), -0.58 + 0.58 * Math.cos(a));
+    const hh = this.half;
+    this.tilt.position.set(0, -hh * Math.sin(a), -hh + hh * Math.cos(a));
     this.steer.rotation.y = this.delta * 1.25;
     this.frontWheel.rotation.x = this.wheelAng;
     this.rearWheel.rotation.x = this.wheelAng;
@@ -793,10 +585,10 @@ export class Scooter {
     c.fillText(Math.round(pct) + '%', 94, 31);
     c.textAlign = 'right';
     c.fillStyle = this.boosting ? '#ff7a2a' : '#8fe4ff';
-    c.fillText(this.boosting ? 'TURBO' : 'D3', 244, 31);
+    c.fillText(this.boosting ? 'TURBO' : this.model.dispMode, 244, 31);
     c.fillStyle = '#9db7c4'; c.font = '600 18px Arial, sans-serif'; c.textAlign = 'left';
     c.fillText('TRIP ' + (this.trip / 1000).toFixed(2) + ' km', 14, 148);
-    c.textAlign = 'right'; c.fillText('52V', 244, 148);
+    c.textAlign = 'right'; c.fillText(this.modelId === 'dt3' ? '72V' : '52V', 244, 148);
     this.dispTex.needsUpdate = true;
   }
 }

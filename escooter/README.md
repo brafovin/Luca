@@ -64,6 +64,15 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Zwei Roller: KuKirin G4 (full black) & Dualtron Thunder 3
+
+* **KuKirin G4** – komplett schwarz, mit sichtbaren Federn (Gabel + Heck-Coil-Over), Faltgelenk mit Verriegelung, Bremsleitungen,
+  geschlitzten Scheiben, Reifenprofil, Batterie-Seitenverkleidung, Deck-LED, Kennzeichen. Normal 65 km/h, Turbo 100 km/h.
+* **Dualtron Thunder 3** (im VESC-Shop für **1000 €**, Taste `Q`): breites Deck, Doppel-Hydraulikgabel mit roten Federn,
+  zwei Heck-Federbeine, Dual-Motor-Naben mit Kühlrippen, Vierkolben-Bremsen, Doppel-Scheinwerfer, großes Display.
+  Normal 110 km/h, Turbo **170 km/h**. Mit dem VESC (500 €, gilt für beide Roller): G4 150 km/h, Dualtron **235 km/h**.
+* `X` wechselt zwischen den gekauften Rollern (im Stand).
+
 ## Neu: Shop, zu Fuß, Oma & Opa, Multiplayer
 
 * **VESC-Shop** (orange markiert auf Minimap und per Leuchtfeuer, ein Block östlich vom Start): Geld verdienst du mit
