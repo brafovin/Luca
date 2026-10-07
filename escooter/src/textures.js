@@ -190,8 +190,9 @@ function beam() {
 const CELL = 192;
 function facade(kind, rnd) {
   const W = CELL * 4;
-  const m = cv(W, W), o = cv(W, W), e = cv(W, W);
-  const mx = m.getContext('2d'), ox = o.getContext('2d'), ex = e.getContext('2d');
+  const m = cv(W, W), o = cv(W, W), e = cv(W, W), bm = cv(W, W);
+  const mx = m.getContext('2d'), ox = o.getContext('2d'), ex = e.getContext('2d'), bx = bm.getContext('2d');
+  bx.fillStyle = 'rgb(140,140,140)'; bx.fillRect(0, 0, W, W);
   ex.fillStyle = '#000'; ex.fillRect(0, 0, W, W);
   const orm = (g, b) => `rgb(255,${g},${b})`;
 
@@ -203,6 +204,7 @@ function facade(kind, rnd) {
     noiseFill(mx, W, W, (px, py) => { const v = 232 + (rnd() - 0.5) * 12 + (b(px, py) - 0.5) * 14; return [v, v - 1, v - 4]; });
   } else if (kind === 'brick') {
     mx.fillStyle = '#b9b3a8'; mx.fillRect(0, 0, W, W);
+    bx.fillStyle = 'rgb(70,70,70)'; bx.fillRect(0, 0, W, W);
     const bh = 8, bw = 17;
     for (let r = 0; r < W / bh; r++) {
       for (let k = -1; k < W / bw + 1; k++) {
@@ -210,6 +212,7 @@ function facade(kind, rnd) {
         const t = rnd();
         mx.fillStyle = hex(150 + t * 40, 68 + t * 22, 52 + t * 14);
         mx.fillRect(x0 + 1, r * bh + 1, bw - 2, bh - 2);
+        bx.fillStyle = 'rgb(165,165,165)'; bx.fillRect(x0 + 1, r * bh + 1, bw - 2, bh - 2);
       }
     }
   } else if (kind === 'panel') {
@@ -255,12 +258,16 @@ function facade(kind, rnd) {
       // drip stain
       mx.fillStyle = 'rgba(70,60,50,0.07)'; mx.fillRect(wx + 8, wy + wh + 14, ww - 16, 40);
       // frame
+      bx.fillStyle = 'rgb(205,205,205)'; bx.fillRect(wx - 3, wy - 3, ww + 6, wh + 6);
+      bx.fillStyle = 'rgb(225,225,225)'; bx.fillRect(wx - 7, wy + wh, ww + 14, 9);
       mx.fillStyle = frame; mx.fillRect(wx, wy, ww, wh);
       ox.fillStyle = orm(120, 20); ox.fillRect(wx, wy, ww, wh);
       // glass (two sashes + transom)
       const gx = wx + 5, gy = wy + 5, gw = ww - 10, gh = wh - 10;
       const g = mx.createLinearGradient(0, gy, 0, gy + gh);
       g.addColorStop(0, '#8fb0c8'); g.addColorStop(0.55, '#3a5368'); g.addColorStop(1, '#1d2d3b');
+      bx.fillStyle = 'rgb(70,70,70)'; bx.fillRect(gx, gy, gw, gh);
+      bx.fillStyle = 'rgb(205,205,205)'; bx.fillRect(gx + gw / 2 - 2, gy, 4, gh); bx.fillRect(gx, gy + gh * 0.28, gw, 4);
       mx.fillStyle = g; mx.fillRect(gx, gy, gw, gh);
       ox.fillStyle = orm(26, 170); ox.fillRect(gx, gy, gw, gh);
       mx.fillStyle = frame; mx.fillRect(gx + gw / 2 - 2, gy, 4, gh); mx.fillRect(gx, gy + gh * 0.28, gw, 4);
@@ -284,7 +291,7 @@ function facade(kind, rnd) {
     mx.fillStyle = 'rgba(60,58,54,0.55)';
     for (let i = 0; i <= 4; i++) { mx.fillRect(0, i * CELL - 1, W, 2); mx.fillRect(i * CELL - 1, 0, 2, W); }
   }
-  return { m, o, e };
+  return { m, o, e, b: bm };
 }
 
 
@@ -340,6 +347,23 @@ function posterAtlas(rnd) {
   return c;
 }
 
+
+function shopSignTex() {
+  const c = cv(1024, 256), x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#1a1c22'); g.addColorStop(1, '#0d0e11');
+  x.fillStyle = g; x.fillRect(0, 0, 1024, 256);
+  x.strokeStyle = '#ff7a1a'; x.lineWidth = 10; x.strokeRect(12, 12, 1000, 232);
+  x.fillStyle = '#ff7a1a';
+  x.beginPath(); x.moveTo(90, 40); x.lineTo(30 + 90, 40); x.lineTo(70 + 30, 130); x.lineTo(130, 130); x.lineTo(70, 220); x.lineTo(80, 150); x.lineTo(40, 150); x.closePath(); x.fill();
+  x.font = '900 128px Arial Black, Arial, sans-serif'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#ffffff'; x.fillText('VESC', 190, 150);
+  x.fillStyle = '#ff7a1a'; x.fillText('SHOP', 560, 150);
+  x.font = '600 40px Arial, sans-serif'; x.fillStyle = '#9fe9ff';
+  x.fillText('Controller · Tuning · 150 km/h', 200, 215);
+  return c;
+}
+
 export function makeTextures(renderer) {
   const rnd = mulberry32(1337);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -356,6 +380,7 @@ export function makeTextures(renderer) {
   T.pool = mk(pool(), { repeat: false });
   T.beam = mk(beam(), { repeat: false });
   T.beam.wrapT = THREE.ClampToEdgeWrapping;
+  T.shopSign = mk(shopSignTex(), { aniso, repeat: false });
   T.signs = mk(signAtlas(), { aniso, repeat: false });
   T.poster = mk(posterAtlas(rnd), { aniso });
   T.facade = {};
@@ -365,6 +390,7 @@ export function makeTextures(renderer) {
       map: mk(f.m, { aniso }),
       orm: mk(f.o, { aniso, srgb: false }),
       emi: mk(f.e, { aniso }),
+      bump: mk(f.b, { aniso, srgb: false }),
     };
   }
   return T;

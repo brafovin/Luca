@@ -17,7 +17,7 @@ const skyVert = `
 const skyFrag = `
   varying vec3 vDir;
   uniform vec3 zenith, horizon, sunDir, moonDir, sunCol;
-  uniform float night, time, cover;
+  uniform float night, time, cover, overcast;
   float h31(vec3 p){ p = fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
   float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
   float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
@@ -52,9 +52,10 @@ const skyFrag = `
       float c = smoothstep(0.52 - cover * 0.18, 0.82, n) * smoothstep(0.0, 0.12, hgt);
       float dayAmt = smoothstep(-0.15, 0.2, sunDir.y);
       vec3 cc = mix(vec3(0.07,0.08,0.13), mix(vec3(1.0,0.62,0.45), vec3(0.97,0.98,1.0), smoothstep(0.05, 0.4, sunDir.y)), dayAmt);
-      cc *= 0.82 + 0.18 * n;
+      cc *= (0.82 + 0.18 * n) * (1.0 - 0.4 * overcast);
       col = mix(col, cc, c * 0.85);
     }
+    col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))) * 0.62, overcast * 0.82);
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -71,11 +72,12 @@ export class Sky {
     this.night = 0;
     this.sunElev = 1;
     this.lampsOn = 0;
+    this.overcast = 0;
 
     this.uniforms = {
       zenith: { value: new THREE.Color() }, horizon: { value: new THREE.Color() },
       sunDir: { value: this.sunDir }, moonDir: { value: this.moonDir }, sunCol: { value: new THREE.Color(1, 0.8, 0.5) },
-      night: { value: 0 }, time: { value: 0 }, cover: { value: 0.45 },
+      night: { value: 0 }, time: { value: 0 }, cover: { value: 0.45 }, overcast: { value: 0 },
     };
     this.mat = new THREE.ShaderMaterial({ uniforms: this.uniforms, vertexShader: skyVert, fragmentShader: skyFrag, side: THREE.BackSide, depthWrite: false, fog: false });
     this.dome = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 20), this.mat);
@@ -107,6 +109,7 @@ export class Sky {
     this.fog = new THREE.Fog(0xaaccee, 30, 190);
     scene.fog = this.fog;
     this._tmpC = new THREE.Color();
+    this._gray = new THREE.Color();
     this._shadowRight = new THREE.Vector3();
     this._shadowUp = new THREE.Vector3();
   }
@@ -146,10 +149,13 @@ export class Sky {
 
     // fog follows horizon colour
     this.fog.color.copy(this.uniforms.horizon.value).multiplyScalar(0.92);
+    if (this.overcast > 0) { const l = this.fog.color.r * 0.3 + this.fog.color.g * 0.59 + this.fog.color.b * 0.11; this.fog.color.lerp(this._gray.setRGB(l * 0.8, l * 0.82, l * 0.86), this.overcast * 0.8); }
     this.scene.background = null;
 
     // key light: sun by day, moon by night
-    const sunI = 3.4 * smoothstep(-0.03, 0.3, e);
+    this.uniforms.overcast.value = this.overcast;
+    this.uniforms.cover.value = 0.45 + 0.5 * this.overcast;
+    const sunI = 3.4 * smoothstep(-0.03, 0.3, e) * (1 - 0.7 * this.overcast);
     const moonI = 0.24 * smoothstep(0.0, -0.22, e);
     const useSun = sunI >= moonI;
     const dir = useSun ? this.sunDir : this.moonDir;

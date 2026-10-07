@@ -20,6 +20,8 @@ export const shade = (c, f) => {
   return [k[0] * f, k[1] * f, k[2] * f];
 };
 
+const AO_NAMES = new Set(['generic', 'paint', 'plain', 'roof', 'f_plaster', 'f_brick', 'f_panel', 'f_glass', 'shopGlow']);
+
 /** A collection of named geometry accumulators sharing one optional transform. */
 export class BatchSet {
   constructor() {
@@ -29,7 +31,8 @@ export class BatchSet {
     this.oz = 0;
   }
   get(name) {
-    return this.b[name] || (this.b[name] = new Batch(this));
+    if (!this.b[name]) { const b = new Batch(this); b.ao = AO_NAMES.has(name) || name === 'body'; this.b[name] = b; }
+    return this.b[name];
   }
   setTransform(m) {
     this.m = m || null;
@@ -61,7 +64,11 @@ export class Batch {
     this.pos.push(x, y, z);
     this.nor.push(nx, ny, nz);
     this.uv.push(u, v);
-    this.col.push(c[0], c[1], c[2]);
+    if (this.ao) { // baked ambient occlusion near the ground / contact areas
+      const t = y < 0.1 ? 0 : y > 1.9 ? 1 : (y - 0.1) / 1.8;
+      const f = 0.58 + 0.42 * (t * t * (3 - 2 * t));
+      this.col.push(c[0] * f, c[1] * f, c[2] * f);
+    } else this.col.push(c[0], c[1], c[2]);
     if (this.extra) this.extra.push(this.extraVal);
   }
 

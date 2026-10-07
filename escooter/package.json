@@ -5,11 +5,15 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs --min",
-    "dev": "node build.mjs && python3 -m http.server 8080",
-    "start": "python3 -m http.server 8080"
+    "dev": "node build.mjs && node server.js",
+    "start": "node server.js"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
     "three": "^0.186.1"
-  }
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "type": "module"
 }

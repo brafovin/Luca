@@ -6,10 +6,15 @@ Checkpoint-Missionen, Akku-Simulation und Ladesäulen.
 
 ## Starten
 
-Es wird **kein Server und keine Installation** benötigt: `index.html` einfach im Browser öffnen
+**Solo:** Kein Server und keine Installation nötig – `index.html` einfach im Browser öffnen
 (Chrome, Edge, Firefox, Safari – WebGL 2 nötig). `game.js` ist bereits fertig gebaut und enthält three.js.
 
-Alternativ lokal ausliefern: `npm start` und `http://localhost:8080` öffnen.
+**Multiplayer:** `npm install && npm start` (Node ≥ 18) und `http://localhost:8080` öffnen.
+Mitspieler im selben WLAN öffnen `http://<deine-IP>:8080`; für das Internet den Server auf einem Host
+deployen (Render, Fly.io, eigener VPS …) oder einen Tunnel nutzen (`cloudflared tunnel --url http://localhost:8080`, ngrok).
+Wer die Seite über den Server öffnet, wird automatisch mit dem Raum „stadt“ verbunden (Name, Raum, Farbe im Menü einstellbar,
+`Enter` = Chat). Die Stadt ist deterministisch, alle sehen dieselben Straßen; Spieler-Positionen werden mit 15 Hz synchronisiert.
+Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 
 ## Steuerung
 
@@ -18,7 +23,10 @@ Alternativ lokal ausliefern: `npm start` und `http://localhost:8080` öffnen.
 | `W` / `↑` | Beschleunigen |
 | `S` / `↓` | Bremsen (im Stand: langsam rückwärts) |
 | `A` `D` / `←` `→` | Lenken |
-| `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) |
+| `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
+| `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
+| `E` | Interagieren – **VESC-Shop** 🛒 (500 €) |
+| `Enter` | Chat (Multiplayer) |
 | Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
 | `C` | Kamera wechseln (hinter dem Roller / Ego-Cockpit mit Display) |
@@ -27,7 +35,7 @@ Alternativ lokal ausliefern: `npm start` und `http://localhost:8080` öffnen.
 | `T` | Tageszeit um 3 h vorstellen |
 | `M` | Ton an/aus |
 | `Esc` / `P` | Pause / Menü (Einstellungen: Qualität, Akku-Modus, Tageszeit, nasse Straße …) |
-| `F` | FPS-Anzeige |
+| `G` | FPS-Anzeige |
 
 Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funktionieren ebenfalls.
 
@@ -56,12 +64,27 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Neu: Shop, zu Fuß, Oma & Opa, Multiplayer
+
+* **VESC-Shop** (orange markiert auf Minimap und per Leuchtfeuer, ein Block östlich vom Start): Geld verdienst du mit
+  Checkpoints (+ Zeitbonus), Touren (+300 €) und Strecke. Für **500 €** baut der Laden einen VESC-Controller ein:
+  Turbo bis **150 km/h** (normal bis 90 km/h), blaue Controller-Box, Cyan-Unterbodenlicht und leuchtende Felgenringe.
+* **Absteigen & laufen** (`F`): Der Roller bleibt mit Seitenständer stehen, du läufst/rennst in 3rd- oder 1st-Person
+  (`C`), kannst in den Shop und wieder aufsteigen.
+* **Oma & Opa**: schlendern mit Rollator, Handtasche oder Gehstock über die Gehwege. Fährst/stehst du länger neben ihnen
+  (schneller = nerviger, Klingel `B` zusätzlich), steigt ihr Ärger-Balken (😠 → 😡). Bei 100 % rennen sie dir mit
+  **10 km/h hinterher** (🤬) – erwischen sie dich, gibt es Prügel mit Handtasche/Stock (−25 €). Fährst du sie um: −100 Punkte.
+* **Multiplayer**: andere Spieler fahren/laufen mit Namensschild, Farbe und VESC-Anzeige, kollidieren mit dir und
+  chatten mit dir.
+* **Grafik**: Wetter (klar/bewölkt/Regen mit Streifen-Regen und nasser Straße), Fassaden mit Bump-Relief,
+  eingebackene Bodenabschattung, SSAO + Bloom auf „Hoch“.
+
 ## Entwickeln
 
 ```
 npm install
 npm run build   # bündelt src/ -> game.js (minifiziert)
-npm run dev     # baut + startet lokalen Server
+npm run dev     # baut + startet den Multiplayer-Server (server.js)
 ```
 
 Quellcode in `src/` (`world.js` Stadt-Generator, `scooter.js` Modell + Physik, `traffic.js` Verkehr,
