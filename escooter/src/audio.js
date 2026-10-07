@@ -53,7 +53,7 @@ export class GameAudio {
   update(s) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    const sp = Math.abs(s.v);
+    const sp = Math.min(Math.abs(s.v), 150);
     const load = Math.min(1, Math.max(0, s.thr));
     const f = 90 + sp * 24 + load * 40;
     this.o1.frequency.setTargetAtTime(f, t, 0.05);

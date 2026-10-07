@@ -45,6 +45,8 @@ export function ik2(A, C, l1, l2, pole, out) {
   return out;
 }
 
+const HYPER_V = 1388.9, HYPER_A = 230; // 5000 km/h
+const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 export class Scooter {
   constructor(tex) {
     this.tex = tex;
@@ -97,7 +99,8 @@ export class Scooter {
     this.setVesc(this.vesc);
   }
 
-  get topKmh() { const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
+  get hyperOn() { return !!this.hyper && this.modelId === 'sonic'; }
+  get topKmh() { if (this.hyperOn) return HYPER_V * 3.6; const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
   get vTurbo() { const S = this.spec; return this.vesc ? S.vVT : S.vT; }
 
   buildRider() {
@@ -299,7 +302,7 @@ export class Scooter {
     this.x = x; this.z = z; this.heading = heading;
     this.v = 0; this.thr = 0; this.brk = 0;
     this.steerIn = 0; this.delta = 0;
-    this.lean = 0; this.leanV = 0;
+    this.lean = 0; this.leanV = 0; this.hyper = false;
     this.pitch = 0; this.pitchV = 0;
     this.bob = 0; this.bobV = 0;
     const hg = groundHeight(x, z);
@@ -330,9 +333,11 @@ export class Scooter {
     this.boosting = boost;
     // KuKirin G4: 65 km/h normal, 100 km/h with turbo
     const V = this.vesc, S = this.spec;
-    const vmax = empty ? 3.2 : boost ? (V ? S.vVT : S.vT) : (V ? S.vVN : S.vN);
-    const aMax = empty ? 0.7 : boost ? (V ? S.aVT : S.aT) : (V ? S.aVN : S.aN);
-    const vKnee = boost ? (V ? S.kVT : S.kT) : (V ? S.kVN : S.kN);
+    const H = this.hyperOn; // Weped Sonic on the race track: 5000 km/h, absurd acceleration
+    const HB = H && boost;
+    const vmax = empty ? 3.2 : HB ? HYPER_V : boost ? (V ? S.vVT : S.vT) : (V ? S.vVN : S.vN);
+    const aMax = empty ? 0.7 : HB ? HYPER_A : boost ? (V ? S.aVT : S.aT) : (V ? S.aVN : S.aN);
+    const vKnee = HB ? HYPER_V : boost ? (V ? S.kVT : S.kT) : (V ? S.kVN : S.kN);
 
     // throttle / brake smoothing
     const thrT = inp.fwd ? 1 : 0;
@@ -362,11 +367,12 @@ export class Scooter {
     }
     // coast / drag
     const sgn = Math.sign(v);
-    const drag = (0.12 + S.drag2 * v * v) * sgn;
+    const drag = (0.12 + (H ? 0.00001 : S.drag2) * v * v) * sgn;
     a -= drag;
     if (this.thr < 0.05 && Math.abs(v) > 0.3 && !this.brk) a -= 0.35 * sgn; // motor regen
     // brakes
-    const brakeA = Math.min(S.cap, this.brk * S.brake + this.space * S.space) * Math.min(1, Math.abs(v) / 0.6);
+    const hb = H ? 1 + 39 * smooth01((Math.abs(v) - 100) / 150) : 1; // hyper brakes: up to 40x
+    const brakeA = Math.min(S.cap * hb, (this.brk * S.brake + this.space * S.space) * hb) * Math.min(1, Math.abs(v) / 0.6);
     a -= brakeA * sgn;
     if (this.fallT > 0) a -= 6 * sgn;
     // stopped by brakes
@@ -402,6 +408,10 @@ export class Scooter {
     let omega = (this.v * Math.tan(this.delta)) / this.wb;
     const aLatMax = S.aLat;
     if (av > 0.5 && Math.abs(omega) * av > aLatMax) omega = (Math.sign(omega) * aLatMax) / av;
+    if (H && av > 60) { // arcade grip: turn rate falls slowly with speed so 5000 km/h stays steerable
+      const wH = smooth01((av - 60) / 60), cap = 0.55 * Math.pow(150 / av, 0.55);
+      omega = omega * (1 - wH) + this.steerIn * cap * Math.sign(this.v) * wH;
+    }
     this.heading = wrapAngle(this.heading + omega * dt);
     const aLat = this.v * omega;
 

@@ -455,10 +455,11 @@ function enterTrack() {
   Object.assign(trk, { idx: -1, running: false, t: 0, lap: 0, bits: 0, sector: 0 });
   trackUpdate(0);
   $('btnTrack').textContent = '🏙️ Zurück in die Stadt teleportieren'; $('trackBtn').textContent = '🏙️ Zurück in die Stadt';
-  toast('🏁 Rennstrecke', `${(TRACK.len / 1000).toFixed(1)} km · frei von Verkehr · fahre über die Ziellinie, um die Zeit zu starten`, 4200);
+  scooter.hyper = true;
+  toast('🏁 Rennstrecke', st.model === 'sonic' ? 'Weped Sonic: HYPER-MODUS – Shift = bis 5000 km/h!' : `${(TRACK.len / 1000).toFixed(1)} km · frei von Verkehr · fahre über die Ziellinie, um die Zeit zu starten${st.sonic ? ' · Tipp: Weped Sonic = bis 5000 km/h (X)' : ''}`, 4200);
 }
 function leaveTrack() {
-  st.track = false;
+  st.track = false; scooter.hyper = false;
   scooter.reset(30, 1.75, Math.PI / 2); scooter.v = 0; camYaw = scooter.heading;
   world.update(30, 1.75, 0); world.preload(30, 1.75);
   startMission(true);
@@ -592,7 +593,8 @@ function setModel(id, silent) {
   scooter.setModel(id);
   $('modelName').textContent = scooter.model.name;
   syncModelSelect();
-  if (!silent) toast(scooter.model.name, `bis ${Math.round(scooter.topKmh)} km/h Turbo`, 1800);
+  scooter.hyper = st.track;
+  if (!silent) toast(scooter.model.name, scooter.hyperOn ? 'HYPER-MODUS: Shift = bis 5000 km/h · Beschleunigung ohne Ende' : `bis ${Math.round(scooter.topKmh)} km/h Turbo`, scooter.hyperOn ? 3600 : 1800);
 }
 function switchModel() {
   const own = MODEL_ORDER.filter((k) => OWNED[k]());
@@ -709,7 +711,7 @@ function updateCamera(dt, first) {
     scooter.root.updateMatrixWorld(true);
     fpLook.getWorldPosition(camera.position);
     fpLook.getWorldQuaternion(camera.quaternion);
-    const sh = s.shake * 0.04 + spd * 0.0007;
+    const sh = s.shake * 0.04 + Math.min(spd, 140) * 0.0007;
     camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh;
     camera.fov = lerp(camera.fov, baseFov + 6, 0.1);
   } else {
@@ -729,7 +731,7 @@ function updateCamera(dt, first) {
     px = s.x - sinY * camDist * f; pz = s.z - cosY * camDist * f;
     const py = Math.max((s.yOff || 0) + h * (0.55 + 0.45 * f), groundHeight(px, pz) + 0.35);
     camera.position.set(px, py, pz);
-    const sh = s.shake * 0.12 + spd * 0.0009;
+    const sh = s.shake * 0.12 + Math.min(spd, 140) * 0.0009;
     camera.position.x += (Math.random() - 0.5) * sh;
     camera.position.y += (Math.random() - 0.5) * sh;
     camera.lookAt(tx, ty, tz);
@@ -823,6 +825,7 @@ function updateHUD(dt) {
   const arc = $('arcFg');
   arc.setAttribute('stroke-dasharray', `${(frac * arcLen).toFixed(1)} 1000`);
   arc.setAttribute('stroke', walking ? '#9fe9a8' : s.boosting ? '#ff7a1a' : kmh > 70 ? '#ffc23d' : '#35e6ff');
+  setText('boostTxt', scooter.hyperOn ? 'HYPER' : 'TURBO');
   $('boostTxt').style.opacity = s.boosting && !walking ? 1 : 0;
   $('speedfx').style.opacity = clamp((kmh - 40) / 50, 0, 1).toFixed(2);
   setText('moneyVal', Math.floor(st.money).toLocaleString('de-DE') + ' €');
@@ -1022,8 +1025,9 @@ function tick(dt, now, render = true) {
     let steps = 0;
     const odo0 = scooter.odo;
     const rideInp = walking ? PARK : inp;
-    while (simAcc > 0 && steps < 10) {
-      const h = Math.min(simAcc, Math.abs(scooter.v) > 80 ? 1 / 320 : Math.abs(scooter.v) > 35 ? 1 / 150 : 1 / 90);
+    scooter.hyper = st.track;
+    while (simAcc > 0 && steps < 14) {
+      const h = Math.min(simAcc, Math.abs(scooter.v) > 300 ? 1 / 600 : Math.abs(scooter.v) > 80 ? 1 / 320 : Math.abs(scooter.v) > 35 ? 1 / 150 : 1 / 90);
       scooter.update(h, rideInp, world, cfg.battMode === 'off' ? 0 : cfg.battMode === 'real' ? 1 : 3, dynAll);
       simAcc -= h; steps++;
       if (!walking && scooter.impact > 1.8) onCrash(scooter.impact);
@@ -1054,7 +1058,7 @@ function tick(dt, now, render = true) {
     simAcc = 0;
     const dOdo = scooter.odo - odo0;
     st.odoTotal += dOdo;
-    st.score += dOdo * 0.2 * (1 + scooter.kmh / 45);
+    st.score += dOdo * 0.2 * (1 + Math.min(scooter.kmh, 300) / 45);
     earn(dOdo * 0.004);
     if (cfg.flow) cfg.hours = (cfg.hours + dt / 90) % 24;
     st.trafficT += dt;
