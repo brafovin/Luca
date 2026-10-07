@@ -1,0 +1,15 @@
+{
+  "name": "kukirin-g4-city-ride",
+  "version": "1.0.0",
+  "description": "3D-E-Scooter-Spiel im Browser: KuKirin G4 durch eine endlose deutsche Stadt",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs --min",
+    "dev": "node build.mjs && python3 -m http.server 8080",
+    "start": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.186.1"
+  }
+}

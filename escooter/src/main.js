@@ -1,0 +1,652 @@
+import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { makeTextures } from './textures.js';
+import { createMaterials } from './materials.js';
+import { Sky } from './sky.js';
+import { World, P, blockType, groundHeight, hasStation } from './world.js';
+import { Scooter } from './scooter.js';
+import { GameAudio } from './audio.js';
+import { Traffic, Pedestrians } from './traffic.js';
+import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('c');
+
+/* ------------------------------------------------------------------ renderer */
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 1800);
+camera.position.set(0, 3, -6);
+
+const tex = makeTextures(renderer);
+const M = createMaterials(tex);
+const sky = new Sky(scene, renderer, camera);
+const world = new World(scene, M);
+const scooter = new Scooter(tex);
+scene.add(scooter.root);
+const audio = new GameAudio();
+const traffic = new Traffic(scene, M, 12);
+const peds = new Pedestrians(scene, M, 16);
+traffic.peds = peds;
+const dynAll = [];
+const sig = { aG: false, aY: false, bG: false, bY: false, aSoon: false, bSoon: false };
+
+// pooled street lights that follow the player
+const lampLights = [];
+for (let i = 0; i < 4; i++) {
+  const l = new THREE.PointLight(0xffb870, 0, 30, 2);
+  scene.add(l);
+  lampLights.push(l);
+}
+
+// checkpoint beacon
+const beacon = new THREE.Group();
+{
+  const bm = new THREE.MeshBasicMaterial({ map: tex.beam, color: 0x2fd8ff, transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const c1 = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 90, 32, 1, true), bm);
+  c1.position.y = 45;
+  const bm2 = new THREE.MeshBasicMaterial({ map: tex.beam, color: 0xdffaff, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 120, 12, 1, true), bm2);
+  c2.position.y = 60;
+  const rm = new THREE.MeshBasicMaterial({ color: 0x35e6ff, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(5.6, 6.6, 64), rm);
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.2;
+  beacon.add(c1, c2, ring);
+  beacon.userData = { ring, c1 };
+  beacon.visible = false;
+  scene.add(beacon);
+}
+
+/* ------------------------------------------------------------------ settings & state */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('g4_' + k, JSON.stringify(v)); } catch (e) { /* ignore */ }
+  },
+};
+const cfg = {
+  quality: store.get('quality', 'med'),
+  mode: store.get('mode', 'mission'),
+  battMode: store.get('battMode', 'game'),
+  wet: false,
+  flow: true,
+  hours: 10,
+  volume: store.get('volume', 0.7),
+};
+const st = {
+  running: false, paused: true, fp: false, userHead: null, resScale: 1,
+  score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
+  trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
+  mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
+};
+
+/* ------------------------------------------------------------------ quality */
+const QUALITY = {
+  low: { pr: 1, shadow: 0, bloom: false, radius: 2, fogFar: 185 },
+  med: { pr: 1.5, shadow: 1024, bloom: false, radius: 2, fogFar: 190 },
+  high: { pr: 2, shadow: 2048, bloom: true, radius: 3, fogFar: 285 },
+};
+let composer = null, bloomPass = null;
+function applyQuality(name) {
+  const q = QUALITY[name] || QUALITY.med;
+  cfg.quality = name;
+  const wasShadow = renderer.shadowMap.enabled;
+  renderer.shadowMap.enabled = q.shadow > 0;
+  sky.setShadowSize(q.shadow || 1024, q.shadow > 0);
+  if (wasShadow !== renderer.shadowMap.enabled) {
+    for (const m of Object.values(M)) m.needsUpdate = true;
+    scooter.root.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => (m.needsUpdate = true)); });
+  }
+  world.radius = q.radius;
+  sky.fog.far = q.fogFar; sky.fog.near = q.fogFar * 0.12;
+  st.maxPR = q.pr;
+  st.bloom = q.bloom;
+  resize();
+}
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const pr = Math.min(window.devicePixelRatio || 1, st.maxPR || 1.5) * st.resScale;
+  renderer.setPixelRatio(pr);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  if (st.bloom) {
+    if (!composer) {
+      const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, { type: THREE.HalfFloatType, samples: 4 });
+      composer = new EffectComposer(renderer, rt);
+      composer.addPass(new RenderPass(scene, camera));
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.42, 0.55, 1.05);
+      composer.addPass(bloomPass);
+      composer.addPass(new OutputPass());
+    }
+    composer.setPixelRatio(pr);
+    composer.setSize(w, h);
+  }
+}
+window.addEventListener('resize', resize);
+
+/* ------------------------------------------------------------------ input */
+const keys = new Set();
+const KEYMAP = { fwd: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], boost: ['ShiftLeft', 'ShiftRight'], space: ['Space'] };
+function readInput() {
+  const o = {};
+  for (const k in KEYMAP) o[k] = KEYMAP[k].some((c) => keys.has(c));
+  // gamepad
+  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
+  if (gp) {
+    const ax = gp.axes[0] || 0;
+    if (ax < -0.25) o.left = true;
+    if (ax > 0.25) o.right = true;
+    if (gp.buttons[7]?.value > 0.15 || gp.buttons[0]?.pressed) o.fwd = true;
+    if (gp.buttons[6]?.value > 0.15) o.back = true;
+    if (gp.buttons[1]?.pressed) o.space = true;
+    if (gp.buttons[5]?.pressed) o.boost = true;
+  }
+  return o;
+}
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) && !(e.target instanceof HTMLSelectElement)) e.preventDefault();
+  if (e.repeat) { keys.add(e.code); return; }
+  keys.add(e.code);
+  if (!st.running) return;
+  switch (e.code) {
+    case 'KeyC': toggleCam(); break;
+    case 'KeyR': resetOnRoad(); break;
+    case 'KeyP': case 'Escape': setPaused(!st.paused); break;
+    case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
+    case 'KeyB': audio.bell(); break;
+    case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
+    case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
+    case 'KeyF': st.showFps = !st.showFps; $('fps').classList.toggle('hidden', !st.showFps); break;
+  }
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('blur', () => { keys.clear(); if (st.running && !st.paused) setPaused(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && st.running && !st.paused) setPaused(true); });
+
+// on-screen controls for touch devices
+$('tpause').addEventListener('click', () => setPaused(true));
+document.querySelectorAll('#touch button[data-k]').forEach((b) => {
+  const k = b.dataset.k;
+  const down = (e) => { e.preventDefault(); keys.add(k); b.classList.add('on'); };
+  const up = (e) => { e.preventDefault(); keys.delete(k); b.classList.remove('on'); };
+  b.addEventListener('pointerdown', down);
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => b.addEventListener(ev, up));
+});
+
+/* ------------------------------------------------------------------ UI helpers */
+let toastTimer = 0;
+function toast(text, sub = '', ms = 1800) {
+  const t = $('toast');
+  t.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+function setPaused(p) {
+  st.paused = p;
+  $('menu').classList.toggle('hidden', !p);
+  $('btnStart').textContent = st.started ? 'Weiter fahren' : 'Fahrt starten';
+  $('menusub').textContent = st.started ? 'Pausiert – passe Einstellungen an oder fahre weiter.' : 'Fahre mit dem E-Scooter frei durch eine endlose deutsche Stadt – oder sammle Checkpoints.';
+  $('best').textContent = st.best ? `Bestwert: ${Math.round(st.best).toLocaleString('de-DE')} Punkte` : '';
+  if (p) keys.clear();
+  else { if (document.activeElement && document.activeElement !== canvas) document.activeElement.blur(); canvas.focus(); }
+  $('hud').classList.toggle('hidden', !st.started);
+}
+function toggleCam() {
+  st.fp = !st.fp;
+  scooter.setView(st.fp);
+  
+  toast(st.fp ? 'Ego-Kamera' : 'Verfolger-Kamera', '', 900);
+}
+function fmtTime(h) {
+  const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+/* ------------------------------------------------------------------ settings UI */
+$('optMode').value = cfg.mode;
+$('optQ').value = cfg.quality;
+$('optBatt').value = cfg.battMode;
+$('optVol').value = cfg.volume;
+$('optMode').onchange = (e) => { cfg.mode = e.target.value; store.set('mode', cfg.mode); startMission(true); };
+$('optQ').onchange = (e) => { applyQuality(e.target.value); store.set('quality', cfg.quality); };
+$('optBatt').onchange = (e) => { cfg.battMode = e.target.value; store.set('battMode', cfg.battMode); };
+$('optTime').oninput = (e) => { cfg.hours = parseFloat(e.target.value); };
+$('optFlow').onchange = (e) => { cfg.flow = e.target.checked; };
+$('optWet').onchange = (e) => { cfg.wet = e.target.checked; applyWet(); };
+$('optVol').oninput = (e) => { cfg.volume = parseFloat(e.target.value); audio.setVolume(cfg.volume); store.set('volume', cfg.volume); };
+$('btnStart').onclick = () => { audio.start(); audio.setVolume(cfg.volume); st.started = true; setPaused(false); };
+$('btnReset').onclick = () => { teleportStart(); audio.start(); st.started = true; setPaused(false); };
+canvas.addEventListener('mousedown', () => canvas.focus());
+
+function applyWet() {
+  const w = cfg.wet;
+  M.asphalt.roughness = M.lotAsphalt.roughness = w ? 0.16 : 0.9;
+  M.asphalt.bumpScale = M.lotAsphalt.bumpScale = w ? 0.4 : 1.2;
+  M.asphalt.envMapIntensity = M.lotAsphalt.envMapIntensity = w ? 1.8 : 1;
+  M.paver.roughness = w ? 0.38 : 0.88;
+  M.asphalt.color.setScalar(w ? 0.62 : 1); M.lotAsphalt.color.setScalar(w ? 0.62 : 1);
+}
+
+/* ------------------------------------------------------------------ gameplay: reset, missions */
+function teleportStart() {
+  scooter.reset(30, 1.75, Math.PI / 2);
+  camYaw = scooter.heading;
+  startMission(true);
+}
+function resetOnRoad() {
+  const s = scooter;
+  const rz = Math.round(s.z / P) * P, rx = Math.round(s.x / P) * P;
+  const dz = Math.abs(s.z - rz), dx = Math.abs(s.x - rx);
+  const fx = Math.sin(s.heading), fz = Math.cos(s.heading);
+  if (dz <= dx) {
+    const east = fx >= 0;
+    const nx = clamp(s.x, rx + 14 * 0, s.x);
+    s.reset(s.x, rz + (east ? 1.75 : -1.75), east ? Math.PI / 2 : -Math.PI / 2);
+  } else {
+    const north = fz >= 0;
+    s.reset(rx + (north ? -1.75 : 1.75), s.z, north ? 0 : Math.PI);
+  }
+  camYaw = s.heading;
+  toast('Zurückgesetzt', 'auf die Straße gestellt', 1100);
+}
+
+const mis = st.mission;
+function nearestGrid() { return [Math.round(scooter.x / P), Math.round(scooter.z / P)]; }
+function pickCheckpoint() {
+  const [gi, gj] = mis.last || nearestGrid();
+  for (let tries = 0; tries < 50; tries++) {
+    const dx = Math.floor(Math.random() * 9) - 4, dj = Math.floor(Math.random() * 9) - 4;
+    const man = Math.abs(dx) + Math.abs(dj);
+    if (man < 3 || man > 6) continue;
+    const c = { gi: gi + dx, gj: gj + dj };
+    c.x = c.gi * P; c.z = c.gj * P; c.man = man * P;
+    return c;
+  }
+  return { gi: gi + 3, gj: gj, x: (gi + 3) * P, z: gj * P, man: 3 * P };
+}
+function startMission(fresh) {
+  if (cfg.mode !== 'mission') {
+    mis.active = false; beacon.visible = false;
+    $('mission').innerHTML = '<b>Freie Fahrt</b> · erkunde die Stadt';
+    $('arrowwrap').style.opacity = 0;
+    return;
+  }
+  mis.active = true;
+  if (fresh) { mis.n = 0; mis.tour = (mis.tour || 0) + 1; mis.last = null; mis.time = 80; }
+  mis.cp = pickCheckpoint();
+  beacon.visible = true;
+  beacon.position.set(mis.cp.x, groundHeight(mis.cp.x, mis.cp.z), mis.cp.z);
+  $('arrowwrap').style.opacity = 1;
+  if (fresh) toast('Kurierfahrt', 'Fahre die Checkpoints ab – das Leuchtfeuer zeigt den Weg', 3200);
+}
+function reachCheckpoint() {
+  mis.n++;
+  const bonus = 200 + Math.floor(mis.time) * 2;
+  st.score += bonus;
+  audio.chime();
+  const add = Math.max(22, mis.cp.man / 5.4 + 10);
+  mis.time += add;
+  mis.last = [mis.cp.gi, mis.cp.gj];
+  if (mis.n >= mis.total) {
+    st.score += 500;
+    audio.chime([523, 659, 784, 1046]);
+    toast(`Tour ${mis.tour} geschafft! +500`, `Checkpoint-Bonus +${bonus}`, 3000);
+    mis.n = 0; mis.tour++;
+    mis.time += 30;
+  } else {
+    toast(`Checkpoint ${mis.n}/${mis.total}`, `+${bonus} Punkte · +${Math.round(add)} s`, 1800);
+  }
+  mis.cp = pickCheckpoint();
+  beacon.position.set(mis.cp.x, groundHeight(mis.cp.x, mis.cp.z), mis.cp.z);
+}
+function missionUpdate(dt) {
+  if (!mis.active || !mis.cp) return;
+  mis.time -= dt;
+  const dx = mis.cp.x - scooter.x, dz = mis.cp.z - scooter.z;
+  const d = Math.hypot(dx, dz);
+  if (d < 8) reachCheckpoint();
+  if (mis.time <= 0) {
+    audio.beep();
+    toast('Zeit abgelaufen!', 'Neue Tour startet', 2600);
+    startMission(true);
+    return;
+  }
+  // beacon pulse
+  const p = 1 + 0.06 * Math.sin(performance.now() * 0.006);
+  beacon.userData.ring.scale.setScalar(p);
+  beacon.userData.c1.rotation.y += dt * 0.5;
+}
+
+/* ------------------------------------------------------------------ camera */
+let camYaw = 0, camDist = 3.2, shakeT = 0;
+const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+const fpAnchor = new THREE.Object3D();
+scooter.root.add(fpAnchor);
+fpAnchor.position.set(0, 1.4, -0.13);
+const fpLook = new THREE.Object3D();
+fpLook.rotation.y = Math.PI; // camera looks down -z, scooter forward is +z
+fpAnchor.add(fpLook);
+const _tmpA = new THREE.Vector3(), _tmpQ = new THREE.Quaternion(), _e2 = new THREE.Euler();
+
+function insideCollider(x, z, pad) {
+  let hit = false;
+  world.colliders.near(x, z, 1, (c) => {
+    if (hit) return;
+    if (c.t === 0) { if (x > c.x0 - pad && x < c.x1 + pad && z > c.z0 - pad && z < c.z1 + pad) hit = true; }
+  });
+  return hit;
+}
+function updateCamera(dt, first) {
+  const s = scooter;
+  if (!st.started && !st.dbgCam) {
+    const a = performance.now() * 0.00012 + 0.6;
+    const dist = 5.2;
+    camera.position.set(s.x + Math.sin(a) * dist, 1.5 + Math.sin(a * 0.7) * 0.25, s.z + Math.cos(a) * dist);
+    camera.lookAt(s.x, 0.85, s.z);
+    camera.fov = 48;
+    camera.updateProjectionMatrix();
+    return;
+  }
+  if (st.dbgCam) {
+    camera.position.set(...st.dbgCam.pos);
+    camera.lookAt(...st.dbgCam.look);
+    camera.fov = st.dbgCam.fov || 50;
+    camera.updateProjectionMatrix();
+    return;
+  }
+  const k = first ? 1 : 1 - Math.exp(-dt * 4.2);
+  camYaw = wrapAngle(camYaw + wrapAngle(s.heading - camYaw) * k);
+  const spd = Math.abs(s.v);
+  const baseFov = 62 + (s.kmh / 62) * 13 + (s.boosting ? 5 : 0);
+  if (st.fp) {
+    fpAnchor.rotation.set(s.pitch * 0.4 + 0.2, 0, -s.lean * 0.5, 'YXZ');
+    scooter.root.updateMatrixWorld(true);
+    fpLook.getWorldPosition(camera.position);
+    fpLook.getWorldQuaternion(camera.quaternion);
+    const sh = s.shake * 0.04 + spd * 0.0007;
+    camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh;
+    camera.fov = lerp(camera.fov, baseFov + 6, 0.1);
+  } else {
+    const dist = 3.5 + Math.min(spd / 17, 1) * 1.0;
+    camDist = damp(camDist, dist, 3, dt);
+    const h = 1.95 + Math.min(spd / 17, 1) * 0.2;
+    const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
+    const tx = s.x + sinY * 3.4, tz = s.z + cosY * 3.4, ty = (s.yOff || 0) + 0.15;
+    let f = 1;
+    let px, pz;
+    for (let i = 0; i < 6; i++) {
+      px = s.x - sinY * camDist * f; pz = s.z - cosY * camDist * f;
+      if (!insideCollider(px, pz, 0.35)) break;
+      f -= 0.17;
+    }
+    f = Math.max(f, 0.15);
+    px = s.x - sinY * camDist * f; pz = s.z - cosY * camDist * f;
+    const py = Math.max((s.yOff || 0) + h * (0.55 + 0.45 * f), groundHeight(px, pz) + 0.35);
+    camera.position.set(px, py, pz);
+    const sh = s.shake * 0.12 + spd * 0.0009;
+    camera.position.x += (Math.random() - 0.5) * sh;
+    camera.position.y += (Math.random() - 0.5) * sh;
+    camera.lookAt(tx, ty, tz);
+    camera.rotateZ(-s.lean * 0.12);
+    camera.fov = lerp(camera.fov, baseFov, 0.1);
+  }
+  camera.updateProjectionMatrix();
+}
+
+/* ------------------------------------------------------------------ HUD */
+const cache = {};
+function setText(id, v) { if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } }
+const arcLen = 90 * Math.PI * 1.5; // 270° arc
+const mapCtx = $('map').getContext('2d');
+let mapT = 0;
+const BLOCK_COL = { perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56' };
+function drawMap() {
+  const c = mapCtx, W = 356, s = 0.9; // px per metre (retina 2x of 178)
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = '#262c36'; c.fillRect(0, 0, W, W);
+  const sx = scooter.x, sz = scooter.z, psi = scooter.heading;
+  const co = Math.cos(psi), si = Math.sin(psi);
+  // world -> map: dx,dz relative to the player
+  const A = -co * s, B = -si * s, C = si * s, D = -co * s;
+  c.setTransform(A, B, C, D, W / 2, W / 2 + 40);
+  const R = 220;
+  const [ci0, cj0] = [Math.floor((sx - R) / P) - 1, Math.floor((sz - R) / P) - 1];
+  const [ci1, cj1] = [Math.ceil((sx + R) / P) + 1, Math.ceil((sz + R) / P) + 1];
+  for (let i = ci0; i <= ci1; i++) for (let j = cj0; j <= cj1; j++) {
+    c.fillStyle = BLOCK_COL[blockType(i, j)];
+    c.fillRect(i * P + 5.9 - sx, j * P + 5.9 - sz, P - 11.8, P - 11.8);
+    if (hasStation(i, j)) { c.fillStyle = '#42ff8a'; c.beginPath(); c.arc(i * P + 8.4 - sx, j * P + 15 - sz, 6, 0, 6.3); c.fill(); }
+  }
+  // checkpoint
+  if (mis.active && mis.cp) {
+    let dx = mis.cp.x - sx, dz = mis.cp.z - sz;
+    const d = Math.hypot(dx, dz);
+    const lim = 150;
+    if (d > lim) { dx *= lim / d; dz *= lim / d; }
+    c.fillStyle = '#35e6ff'; c.strokeStyle = '#fff'; c.lineWidth = 2 / s;
+    c.beginPath(); c.arc(dx, dz, 11, 0, 6.3); c.fill(); c.stroke();
+  }
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  // player
+  c.save(); c.translate(W / 2, W / 2 + 40);
+  c.fillStyle = '#ff7a1a'; c.strokeStyle = '#fff'; c.lineWidth = 2.5;
+  c.beginPath(); c.moveTo(0, -17); c.lineTo(11, 12); c.lineTo(0, 6); c.lineTo(-11, 12); c.closePath(); c.fill(); c.stroke();
+  c.restore();
+}
+let lastScoreStr = '';
+function updateHUD(dt) {
+  const s = scooter;
+  const kmh = s.kmh;
+  setText('speedNum', String(Math.round(kmh)));
+  const frac = clamp(kmh / 65, 0, 1);
+  const arc = $('arcFg');
+  arc.setAttribute('stroke-dasharray', `${(frac * arcLen).toFixed(1)} 1000`);
+  arc.setAttribute('stroke', s.boosting ? '#ff7a1a' : kmh > 50 ? '#ffc23d' : '#35e6ff');
+  $('boostTxt').style.opacity = s.boosting ? 1 : 0;
+  const pct = s.battPct;
+  setText('battPct', Math.round(pct) + '%');
+  const bar = $('battBar');
+  bar.style.width = pct.toFixed(1) + '%';
+  bar.style.background = pct < 15 ? 'linear-gradient(90deg,#ff3b3b,#ff7a3b)' : pct < 35 ? 'linear-gradient(90deg,#ffb12b,#ffd75a)' : '';
+  const range = cfg.battMode === 'off' ? Infinity : s.batt / Math.max(s.whPerM, 0.0008) / 1000;
+  setText('rangeTxt', range === Infinity ? '∞ km' : '~ ' + (range > 99 ? '99+' : range.toFixed(1)) + ' km');
+  setText('tripTxt', (s.trip / 1000).toFixed(2));
+  setText('odoTxt', (st.odoTotal / 1000).toFixed(1));
+  setText('chargeTxt', st.charging ? '⚡ lädt …' : '');
+  $('lowbatt').classList.toggle('hidden', !(pct < 12 && cfg.battMode !== 'off'));
+  const sc = Math.floor(st.score).toLocaleString('de-DE');
+  if (sc !== lastScoreStr) { lastScoreStr = sc; $('scoreVal').textContent = sc; }
+  if (document.activeElement !== $('optTime')) $('optTime').value = cfg.hours;
+  setText('clock', (sky.night > 0.5 ? '☾ ' : '☀ ') + fmtTime(sky.hours));
+  $('timeLbl').textContent = fmtTime(sky.hours);
+  // mission
+  if (mis.active && mis.cp) {
+    const dx = mis.cp.x - s.x, dz = mis.cp.z - s.z;
+    const d = Math.hypot(dx, dz);
+    const m = Math.floor(mis.time / 60), ss = Math.floor(mis.time % 60);
+    const html = `<b>Tour ${mis.tour}</b> · Checkpoint ${mis.n + 1}/${mis.total}<br>Zeit <span class="t" style="color:${mis.time < 15 ? '#ff6a6a' : 'inherit'}">${m}:${String(ss).padStart(2, '0')}</span>`;
+    if (cache.mission !== html) { cache.mission = html; $('mission').innerHTML = html; }
+    setText('dist', d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m');
+    const ang = Math.atan2(dx, dz); // world bearing
+    const rel = wrapAngle(ang - camYaw);
+    $('arrow').firstElementChild.style.transform = `rotate(${(rel * 180) / Math.PI}deg)`;
+  }
+  mapT += dt;
+  if (mapT > 0.08) { mapT = 0; drawMap(); }
+}
+
+/* ------------------------------------------------------------------ main loop */
+const lampTmp = [];
+let lampTimer = 0;
+let last = performance.now();
+let simAcc = 0;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  if (!st.ready) return;
+  tick(dt, now);
+}
+
+function tick(dt, now, render = true) {
+
+  // fps / adaptive resolution
+  st.fpsT += dt;
+  st.fpsAvg = lerp(st.fpsAvg, 1 / Math.max(dt, 1e-3), 0.05);
+  if (st.fpsT > 2.5 && !st.paused) {
+    st.fpsT = 0;
+    if (st.fpsAvg < 38 && st.resScale > 0.55) { st.resScale = Math.max(0.55, st.resScale - 0.1); resize(); }
+    else if (st.fpsAvg > 57 && st.resScale < 1) { st.resScale = Math.min(1, st.resScale + 0.05); resize(); }
+  }
+  if (st.showFps) setText('fps', `${Math.round(st.fpsAvg)} fps · ${st.resScale.toFixed(2)}x`);
+
+  const active = st.running && !st.paused;
+  const inp = st.inputOverride || readInput();
+  {
+    const tt = st.trafficT % 26;
+    sig.aG = tt < 9; sig.aY = tt >= 9 && tt < 11; sig.bG = tt >= 13 && tt < 22; sig.bY = tt >= 22 && tt < 24;
+    sig.aSoon = 26 - tt < 9; sig.bSoon = (tt < 13 ? 13 - tt : 39 - tt) < 9;
+  }
+  if (active) {
+    const dt2 = Math.min(dt, 0.05);
+    const cars = traffic.update(dt2, scooter, sig);
+    const pl = peds.update(dt2, scooter, sig, now);
+    dynAll.length = 0;
+    for (const c of cars) dynAll.push(c);
+    for (const c of pl) dynAll.push(c);
+
+    // physics in small steps
+    simAcc += dt;
+    let steps = 0;
+    const odo0 = scooter.odo;
+    while (simAcc > 0 && steps < 6) {
+      const h = Math.min(simAcc, 1 / 90);
+      scooter.update(h, inp, world, cfg.battMode === 'off' ? 0 : cfg.battMode === 'real' ? 1 : 3, dynAll);
+      simAcc -= h; steps++;
+      if (scooter.impact > 1.8) onCrash(scooter.impact);
+    }
+    if (scooter.pedHit) {
+      const p = scooter.pedHit; scooter.pedHit = null;
+      if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast('Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); }
+    }
+    simAcc = 0;
+    const dOdo = scooter.odo - odo0;
+    st.odoTotal += dOdo;
+    st.score += dOdo * 0.2 * (1 + scooter.kmh / 45);
+    if (cfg.flow) cfg.hours = (cfg.hours + dt / 90) % 24;
+    st.trafficT += dt;
+    missionUpdate(dt);
+    // stuck hint
+    if (inp.fwd && Math.abs(scooter.v) < 0.25) { st.stuckT += dt; if (st.stuckT > 3) { toast('Steckst du fest?', 'Drücke R, um dich auf die Straße zu setzen', 2500); st.stuckT = -6; } } else if (st.stuckT > 0) st.stuckT = 0;
+    // charging
+    const stn = world.nearestStation(scooter.x, scooter.z);
+    st.charging = false;
+    if (stn && stn.d < 4.5 && Math.abs(scooter.v) < 2.5 && scooter.batt < 936) {
+      scooter.batt = Math.min(936, scooter.batt + 160 * dt);
+      st.charging = true;
+    }
+    if (st.score > st.best) { st.best = st.score; }
+    if ((st.saveT = (st.saveT || 0) + dt) > 5) { st.saveT = 0; store.set('best', Math.floor(st.best)); store.set('odo', Math.floor(st.odoTotal)); }
+    if (scooter.battPct < 12 && cfg.battMode !== 'off') { st.lowT = (st.lowT || 0) + dt; if (st.lowT > 6) { st.lowT = 0; audio.beep(); } }
+  } else if (!st.running) {
+    // attract-mode: slow orbit of the city around the idle scooter
+  }
+  // world streaming
+  const missing = world.update(scooter.x, scooter.z, active ? 1 : 2);
+
+  // day / night
+  sky.setTime(cfg.hours);
+  sky.update(dt, camera.position.clone().lerp(scooter.root.position, 0.5).setY(0));
+  const night = sky.night, lamps = sky.lampsOn;
+  const win = lamps * 1.6;
+  for (const k of ['plaster', 'brick', 'panel', 'glass']) M['f_' + k].emissiveIntensity = win;
+  M.lampW.emissiveIntensity = lamps * 3.4;
+  M.pool.opacity = lamps * 0.5;
+  M.glowW.opacity = lamps * 0.85;
+  M.glowG.opacity = 0.55 + 0.35 * Math.sin(now * 0.004);
+  // traffic lights (shared phase)
+  const t = st.trafficT % 26;
+  const aG = t < 9, aY = t >= 9 && t < 11, bG = t >= 13 && t < 22, bY = t >= 22 && t < 24;
+  const u = M.tlight.uniforms.uOn.value;
+  u[0] = !aG && !aY ? 1 : 0; u[1] = aY ? 1 : 0; u[2] = aG ? 1 : 0;
+  u[3] = !bG && !bY ? 1 : 0; u[4] = bY ? 1 : 0; u[5] = bG ? 1 : 0;
+
+  // dynamic lamp lights
+  lampTimer += dt;
+  if (lampTimer > 0.2) {
+    lampTimer = 0;
+    world.nearestLamps(scooter.x, scooter.z, 4, lampTmp);
+    for (let i = 0; i < 4; i++) {
+      const L = lampLights[i];
+      if (lampTmp[i]) L.position.copy(lampTmp[i][1]);
+    }
+  }
+  for (const L of lampLights) L.intensity = lamps * 260;
+  const head = st.userHead ?? lamps > 0.4;
+  scooter.updateLights(night, head, dt, sky.hours);
+  scooter.updateRider(dt, Math.abs(scooter.v));
+
+  if (active || !st.started) updateCamera(dt, false);
+  else updateCamera(dt, false);
+
+  audio.update({ v: scooter.v, thr: scooter.thr, braking: scooter.braking, brakeAmt: Math.max(scooter.brk, scooter.space || 0), paused: !active, battEmpty: scooter.batt <= 0.2 });
+
+  if (st.crashT > 0) { st.crashT -= dt; if (st.crashT <= 0) $('crash').style.opacity = 0; }
+  if (active) updateHUD(dt);
+
+  if (!render) return;
+  if (composer && st.bloom) composer.render();
+  else renderer.render(scene, camera);
+}
+
+function onCrash(power) {
+  if (!st.crashCool || performance.now() - st.crashCool > 350) {
+    st.crashCool = performance.now();
+    audio.thud(power);
+    $('crash').style.opacity = clamp(power / 8, 0.25, 0.9);
+    st.crashT = 0.35;
+    if (power > 5) toast('Kollision!', '', 700);
+  }
+}
+
+/* ------------------------------------------------------------------ boot */
+async function boot() {
+  const bar = $('loadbar'), txt = $('loadtxt');
+  applyQuality(cfg.quality);
+  applyWet();
+  scooter.reset(30, 1.75, Math.PI / 2);
+  camYaw = scooter.heading;
+  scooter.setView(false);
+  sky.setTime(cfg.hours);
+  sky.update(0.01, new THREE.Vector3(30, 0, 0), true);
+  const total = (2 * world.radius + 1) ** 2;
+  let left = 1;
+  while (left > 0) {
+    left = world.update(scooter.x, scooter.z, 1);
+    const done = total - left;
+    bar.style.width = ((done / total) * 100).toFixed(0) + '%';
+    txt.textContent = `Stadt wird gebaut … ${done}/${total}`;
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  startMission(true);
+  scooter.updateLights(0, false, 1, 10);
+  updateCamera(0.016, true);
+  $('loading').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  st.ready = true;
+  st.running = true;
+  setPaused(true);
+  requestAnimationFrame(frame);
+}
+boot();
+
+// debugging / testing hook
+window.__game = { traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>KuKirin G4 – City Ride</title>
+<style>
+  :root{
+    --accent:#ff7a1a; --cyan:#35e6ff; --ok:#42ff8a; --bad:#ff4a4a;
+    --glass:rgba(10,14,20,.62); --line:rgba(255,255,255,.12); --txt:#eef3f7; --dim:#9db0bd;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#06090d;color:var(--txt);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;user-select:none;-webkit-user-select:none}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}
+  .hidden{display:none!important}
+
+  /* ------------ loading */
+  #loading{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 40%,#13202c,#05080b);}
+  #loading h1{font-size:34px;letter-spacing:.04em;font-weight:800}
+  #loading h1 b{color:var(--accent)}
+  .bar{width:min(360px,70vw);height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#ffc36b);transition:width .15s}
+  #loadtxt{color:var(--dim);font-size:14px}
+
+  /* ------------ menu */
+  #menu{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(4,7,11,.55),rgba(4,7,11,.82));backdrop-filter:blur(6px)}
+  .card{width:min(920px,94vw);max-height:94vh;overflow:auto;background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:28px 30px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .card h1{font-size:34px;font-weight:800;letter-spacing:.02em}
+  .card h1 b{color:var(--accent)}
+  .card .sub{color:var(--dim);margin:4px 0 20px}
+  .cols{display:grid;grid-template-columns:1.05fr 1fr;gap:26px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  h3{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);margin:0 0 10px}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;font-size:14px;align-items:center}
+  kbd{display:inline-block;min-width:28px;padding:3px 8px;text-align:center;border:1px solid var(--line);border-bottom-width:3px;border-radius:7px;background:rgba(255,255,255,.07);font:600 12px/1.3 ui-monospace,Menlo,Consolas,monospace}
+  .set{display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;font-size:14px}
+  select,input[type=range]{accent-color:var(--accent)}
+  select{background:#141b24;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
+  input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+  .btns{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;align-items:center}
+  button.big{background:linear-gradient(180deg,#ff9a3d,var(--accent));border:0;color:#1a0d00;font-weight:800;font-size:17px;letter-spacing:.03em;padding:13px 30px;border-radius:12px;cursor:pointer;box-shadow:0 8px 24px rgba(255,122,26,.35)}
+  button.big:hover{filter:brightness(1.08)}
+  button.ghost{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--txt);font-weight:600;font-size:14px;padding:11px 18px;border-radius:12px;cursor:pointer}
+  button.ghost:hover{background:rgba(255,255,255,.13)}
+  .best{color:var(--dim);font-size:13px;margin-left:auto}
+
+  /* ------------ HUD */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none}
+  .panel{background:var(--glass);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(8px)}
+  #score{position:absolute;left:18px;top:16px;padding:12px 16px;min-width:210px}
+  #score .lbl{font-size:11px;letter-spacing:.14em;color:var(--dim)}
+  #score .val{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+  #mission{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:#cfe0ea;line-height:1.5}
+  #mission b{color:var(--accent)}
+  #mission .t{font-variant-numeric:tabular-nums}
+  #mapbox{position:absolute;right:18px;top:16px;width:178px;text-align:center}
+  #mapbox .ring{width:178px;height:178px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.22);box-shadow:0 8px 28px rgba(0,0,0,.45);background:#202630}
+  #map{width:178px;height:178px;display:block}
+  #clock{margin-top:8px;display:inline-block;padding:5px 14px;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px}
+  #arrowwrap{position:absolute;left:50%;top:16px;transform:translateX(-50%);text-align:center;transition:opacity .3s}
+  #arrow{width:46px;height:46px;margin:0 auto}
+  #arrow svg{width:100%;height:100%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));transition:transform .08s linear}
+  #dist{font-weight:800;font-size:18px;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+  #speedo{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:230px;height:150px}
+  #speedo svg{position:absolute;inset:0;width:100%;height:100%}
+  #speedo .num{position:absolute;left:0;right:0;top:52px;text-align:center;font-size:62px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;text-shadow:0 3px 12px rgba(0,0,0,.6)}
+  #speedo .unit{position:absolute;left:0;right:0;top:114px;text-align:center;font-size:12px;letter-spacing:.2em;color:var(--dim)}
+  #speedo .mode{position:absolute;left:0;right:0;top:132px;text-align:center;font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--accent);opacity:0;transition:opacity .2s}
+  #batt{position:absolute;left:18px;bottom:16px;width:250px;padding:12px 14px}
+  #batt .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--dim);letter-spacing:.1em}
+  #batt .big{font-size:26px;font-weight:800;color:var(--txt);letter-spacing:0}
+  .bbar{height:12px;border-radius:7px;background:rgba(255,255,255,.1);margin:7px 0;overflow:hidden}
+  .bbar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#2bd96b,#9bff5a);transition:width .2s,background .3s}
+  #batt .odo{display:flex;justify-content:space-between;font-size:12px;color:#cfe0ea;font-variant-numeric:tabular-nums}
+  #hints{position:absolute;right:18px;bottom:16px;padding:10px 14px;font-size:12px;line-height:1.9;color:#cfe0ea}
+  #hints kbd{font-size:11px;min-width:22px;padding:1px 6px}
+  #toast{position:absolute;left:50%;top:26%;transform:translate(-50%,0);padding:12px 24px;font-size:22px;font-weight:800;text-align:center;opacity:0;transition:opacity .3s,transform .3s;text-shadow:0 2px 12px rgba(0,0,0,.6);white-space:pre-line}
+  #toast.show{opacity:1;transform:translate(-50%,-8px)}
+  #toast small{display:block;font-size:14px;font-weight:600;color:var(--dim);margin-top:2px}
+  #crash{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(255,40,20,0) 45%,rgba(255,40,20,.55));opacity:0;transition:opacity .35s}
+  #lowbatt{position:absolute;left:50%;bottom:180px;transform:translateX(-50%);padding:8px 18px;color:var(--bad);font-weight:800;letter-spacing:.08em;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.35}}
+  #cam{display:none}
+  #fps{position:absolute;left:18px;top:164px;font-size:11px;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums}
+  @media(max-width:900px){#hints{display:none}#batt{width:200px}}
+  #touch{position:fixed;inset:auto 0 0 0;height:190px;z-index:20;pointer-events:none;display:none}
+  @media(pointer:coarse){#touch{display:block}#hints{display:none}}
+  #touch button{position:absolute;pointer-events:auto;width:76px;height:76px;border-radius:50%;border:1px solid var(--line);background:rgba(10,14,20,.55);color:#fff;font-size:28px;font-weight:700;backdrop-filter:blur(6px);touch-action:none}
+  #touch button.on{background:rgba(255,122,26,.7)}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="0"></canvas>
+
+<div id="loading">
+  <h1><b>KuKirin G4</b> City Ride</h1>
+  <div class="bar"><i id="loadbar"></i></div>
+  <div id="loadtxt">Stadt wird gebaut …</div>
+</div>
+
+<div id="menu" class="hidden">
+  <div class="card">
+    <h1><b>KuKirin G4</b> · City Ride</h1>
+    <p class="sub" id="menusub">Fahre mit dem E-Scooter frei durch eine endlose deutsche Stadt – oder sammle Checkpoints.</p>
+    <div class="cols">
+      <div>
+        <h3>Steuerung</h3>
+        <div class="keys">
+          <span><kbd>W</kbd> <kbd>↑</kbd></span><span>Beschleunigen</span>
+          <span><kbd>S</kbd> <kbd>↓</kbd></span><span>Bremsen / Rückwärts</span>
+          <span><kbd>A</kbd> <kbd>←</kbd> <kbd>D</kbd> <kbd>→</kbd></span><span>Lenken</span>
+          <span><kbd>Shift</kbd></span><span>Boost / Turbo</span>
+          <span><kbd>Leertaste</kbd></span><span>Stark bremsen</span>
+          <span><kbd>C</kbd></span><span>Kamera (hinten / Ego)</span>
+          <span><kbd>R</kbd></span><span>Reset auf die Straße</span>
+          <span><kbd>L</kbd> <kbd>B</kbd></span><span>Licht · Klingel</span>
+          <span><kbd>T</kbd> <kbd>M</kbd></span><span>Tageszeit +3 h · Ton an/aus</span>
+          <span><kbd>Esc</kbd> <kbd>P</kbd></span><span>Pause / Menü</span>
+        </div>
+      </div>
+      <div>
+        <h3>Einstellungen</h3>
+        <div class="set">
+          <label for="optMode">Spielmodus</label>
+          <select id="optMode"><option value="mission">Checkpoint-Kurierfahrt</option><option value="free">Freie Fahrt</option></select>
+          <label for="optQ">Grafikqualität</label>
+          <select id="optQ"><option value="low">Niedrig</option><option value="med" selected>Mittel</option><option value="high">Hoch (Schatten+Bloom)</option></select>
+          <label for="optBatt">Akku-Verbrauch</label>
+          <select id="optBatt"><option value="game" selected>Spiel (schnell)</option><option value="real">Realistisch</option><option value="off">Unendlich</option></select>
+          <label for="optTime">Tageszeit <span id="timeLbl" style="color:var(--dim)"></span></label>
+          <input id="optTime" type="range" min="0" max="24" step="0.05" value="10" />
+          <label for="optFlow">Tageszeit läuft</label>
+          <input id="optFlow" type="checkbox" checked />
+          <label for="optWet">Nasse Straße (Reflexionen)</label>
+          <input id="optWet" type="checkbox" />
+          <label for="optVol">Lautstärke</label>
+          <input id="optVol" type="range" min="0" max="1" step="0.05" value="0.7" />
+        </div>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="big" id="btnStart">Fahrt starten</button>
+      <button class="ghost" id="btnReset">Zurück zum Start</button>
+      <span class="best" id="best"></span>
+    </div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="score" class="panel">
+    <div class="lbl">PUNKTE</div>
+    <div class="val" id="scoreVal">0</div>
+    <div id="mission"></div>
+  </div>
+  <div id="cam"></div>
+  <div id="fps"></div>
+  <div id="arrowwrap">
+    <div id="arrow"><svg viewBox="0 0 48 48"><path d="M24 4 L40 40 L24 31 L8 40 Z" fill="#35e6ff" stroke="#06202a" stroke-width="2.5" stroke-linejoin="round"/></svg></div>
+    <div id="dist"></div>
+  </div>
+  <div id="mapbox">
+    <div class="ring"><canvas id="map" width="356" height="356"></canvas></div>
+    <div id="clock" class="panel">☀ 10:00</div>
+  </div>
+  <div id="speedo">
+    <svg viewBox="0 0 230 150">
+      <path id="arcBg" d="M 30 128 A 90 90 0 1 1 200 128" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="10" stroke-linecap="round"/>
+      <path id="arcFg" d="M 30 128 A 90 90 0 1 1 200 128" fill="none" stroke="#35e6ff" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 1000"/>
+    </svg>
+    <div class="num" id="speedNum">0</div>
+    <div class="unit">KM/H</div>
+    <div class="mode" id="boostTxt">TURBO</div>
+  </div>
+  <div id="batt" class="panel">
+    <div class="row"><span>AKKU · 52 V 18 Ah</span><span id="rangeTxt">~ 0 km</span></div>
+    <div class="row"><span class="big" id="battPct">100%</span><span id="chargeTxt"></span></div>
+    <div class="bbar"><i id="battBar"></i></div>
+    <div class="odo"><span>Fahrt <b id="tripTxt">0.00</b> km</span><span>Gesamt <b id="odoTxt">0.0</b> km</span></div>
+  </div>
+  <div id="hints" class="panel">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fahren · <kbd>Shift</kbd> Turbo</div>
+    <div><kbd>␣</kbd> Vollbremsung · <kbd>C</kbd> Kamera · <kbd>R</kbd> Reset</div>
+    <div><kbd>L</kbd> Licht · <kbd>B</kbd> Klingel · <kbd>Esc</kbd> Menü</div>
+  </div>
+  <div id="lowbatt" class="hidden">AKKU FAST LEER – LADESÄULE ⚡ SUCHEN</div>
+  <div id="toast" class="panel"></div>
+  <div id="crash"></div>
+</div>
+<div id="touch">
+  <button id="tpause" style="left:50%;bottom:130px;transform:translateX(-50%);width:54px;height:54px;font-size:18px">II</button>
+  <button data-k="KeyA" style="left:14px;bottom:60px">◀</button>
+  <button data-k="KeyD" style="left:100px;bottom:20px">▶</button>
+  <button data-k="KeyS" style="right:200px;bottom:20px;font-size:18px">BREMSE</button>
+  <button data-k="KeyW" style="right:14px;bottom:50px;width:96px;height:96px">GAS</button>
+  <button data-k="ShiftLeft" style="right:114px;bottom:112px;font-size:14px">TURBO</button>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
