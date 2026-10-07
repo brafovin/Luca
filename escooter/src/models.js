@@ -476,3 +476,180 @@ export function buildDT3(ctx) {
     spec: { vN: 30.6, vT: 47.2, vVN: 41.7, vVT: 65.3, aN: 4.4, aT: 8.5, aVN: 6.0, aVT: 11.5, kN: 10, kT: 18, kVN: 14, kVT: 28, drag2: 0.00045, brake: 6.2, space: 8.6, cap: 10, aLat: 11, mass: 128, wheelie: 0.72 },
   };
 }
+
+/* ============================================================================
+   Weped Sonic – hyper scooter: matte black, lime hydraulics, big 11" wheels,
+   rear wing + turbine nozzle (500 km/h with VESC)
+   ============================================================================ */
+export function buildSonic(ctx) {
+  const { T, mats, dispTex } = ctx;
+  const { add, tube, spring } = tools();
+  const group = new THREE.Group();
+  const mGloss = std({ color: 0x08090b, roughness: 0.2, metalness: 0.8, envMapIntensity: 1.4 });
+  const mMatte = std({ color: 0x121316, roughness: 0.72, metalness: 0.3 });
+  const mDark = std({ color: 0x1a1b1f, roughness: 0.3, metalness: 0.9 });
+  const mTrim = std({ color: 0x2a2c32, roughness: 0.4, metalness: 0.7 });
+  const mLime = std({ color: 0x9dff1a, roughness: 0.35, metalness: 0.5, emissive: 0x244a00, emissiveIntensity: 0.4 });
+  const mLimeLed = new THREE.MeshBasicMaterial({ color: 0xb6ff3a, toneMapped: false });
+  const mSpring = std({ color: 0x8ae600, roughness: 0.3, metalness: 0.7 });
+  const mRubber = std({ color: 0x0b0b0c, roughness: 0.95, vertexColors: true });
+  const mCable = std({ color: 0x050506, roughness: 0.55 });
+  const mFender = std({ color: 0x0a0b0d, roughness: 0.3, metalness: 0.7, side: THREE.DoubleSide });
+  const mMotor = std({ color: 0x2c2e34, roughness: 0.35, metalness: 0.9 });
+  const mAmber = new THREE.MeshBasicMaterial({ color: 0xffa21a, toneMapped: false });
+  const mCarbon = std({ color: 0x0c0d0f, roughness: 0.28, metalness: 0.55 });
+  const gripTex = T.grip.clone(); gripTex.needsUpdate = true; gripTex.repeat.set(2, 8);
+  const mDeck = std({ map: gripTex, roughness: 0.92 });
+  const R = 0.2, HALF = 0.72, rake = 0.28, BY = 1.2;
+
+  const makeWheel = () => {
+    const w = new THREE.Group();
+    add(w, tireGeometry(0.14, 0.06, 0.04), mRubber);
+    add(w, cylX(0.104, 0.12, 30), mMotor);                       // hub motor
+    for (let i = 0; i < 18; i++) { const a = (i / 18) * 6.283; const fin = add(w, box(0.12, 0.006, 0.06), mDark, 0, Math.cos(a) * 0.075, Math.sin(a) * 0.075); fin.rotation.x = a; fin.castShadow = false; }
+    add(w, cylX(0.112, 0.012, 30), mGloss, 0.06, 0, 0);
+    add(w, cylX(0.112, 0.012, 30), mGloss, -0.06, 0, 0);
+    for (let i = 0; i < 5; i++) { const sp = add(w, box(0.016, 0.018, 0.2), mLime, 0.068, 0, 0); sp.rotation.x = (i / 5) * 3.14159; }
+    add(w, cylX(0.03, 0.13, 14), mTrim);
+    add(w, cylX(0.11, 0.0045, 36), mDark, 0.082, 0, 0);          // big disc
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * 6.283; const h = add(w, cylX(0.01, 0.006, 8), mMatte, 0.0825, Math.cos(a) * 0.09, Math.sin(a) * 0.09); h.castShadow = false; }
+    add(w, cylX(0.007, 0.02, 6), mLime, 0.07, 0.17, 0.03);
+    return w;
+  };
+  const rearWheel = makeWheel(); rearWheel.position.set(0, R, -HALF); group.add(rearWheel);
+
+  /* ---- wide deck with big battery pods */
+  add(group, box(0.34, 0.09, 1.1), mGloss, 0, 0.24, -0.02);
+  add(group, box(0.31, 0.07, 1.0), mMatte, 0, 0.17, -0.02);
+  add(group, box(0.35, 0.012, 1.1), mDark, 0, 0.19, -0.02).scale.set(0.97, 1, 1);
+  const pad = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.92), mDeck);
+  pad.rotation.x = -Math.PI / 2; pad.position.set(0, 0.2855, -0.06); pad.receiveShadow = true; group.add(pad);
+  for (const sx of [-1, 1]) {
+    add(group, box(0.025, 0.045, 1.08), mTrim, sx * 0.17, 0.255, -0.02);
+    add(group, box(0.012, 0.014, 1.0), mLimeLed, sx * 0.1835, 0.24, -0.02).castShadow = false;       // lime edge light
+    add(group, box(0.05, 0.1, 0.78), mCarbon, sx * 0.19, 0.18, -0.06);                                    // battery pod
+    for (let i = 0; i < 10; i++) add(group, box(0.056, 0.085, 0.012), mTrim, sx * 0.19, 0.18, -0.4 + i * 0.087);
+    add(group, box(0.03, 0.012, 0.5), mLime, sx * 0.21, 0.225, -0.06);
+    for (const z of [-0.44, -0.2, 0.04, 0.28]) add(group, new THREE.CylinderGeometry(0.008, 0.008, 0.004, 8), mTrim, sx * 0.135, 0.2905, z);
+    add(group, box(0.006, 0.026, 0.07), mAmber, sx * 0.1865, 0.24, 0.48).castShadow = false;
+    add(group, box(0.006, 0.026, 0.07), new THREE.MeshBasicMaterial({ color: 0xff2020, toneMapped: false }), sx * 0.1865, 0.24, -0.52).castShadow = false;
+  }
+  const neck = add(group, box(0.2, 0.14, 0.24), mGloss, 0, 0.28, 0.5); neck.rotation.x = -0.15;
+  add(group, box(0.25, 0.035, 0.18), mTrim, 0, 0.345, 0.44);
+  const plate = plateMesh(); plate.position.set(0, 0.3, -1.03); plate.rotation.set(0.1, Math.PI, 0); plate.scale.setScalar(1.15); group.add(plate);
+
+  /* ---- rear: swingarm, twin lime coil-overs, wing, turbine nozzle */
+  for (const sx of [-1, 1]) {
+    const arm = add(group, box(0.034, 0.075, 0.46), mGloss, sx * 0.11, 0.25, -0.62); arm.rotation.x = 0.28;
+    const sp = new THREE.Group(); sp.position.set(sx * 0.135, 0.27, -0.42); sp.rotation.x = -0.65; group.add(sp);
+    add(sp, new THREE.CylinderGeometry(0.018, 0.018, 0.4, 12), mDark, 0, 0.2, 0);
+    add(sp, new THREE.CylinderGeometry(0.03, 0.03, 0.14, 14), mTrim, 0, 0.07, 0);
+    spring(sp, mSpring, 0, 0.07, 0, 0.04, 0.28, 9, 0.006);
+    add(sp, new THREE.CylinderGeometry(0.024, 0.024, 0.07, 12), mLime, 0, 0.41, 0);
+    add(group, new THREE.CylinderGeometry(0.03, 0.03, 0.2, 12), mDark, sx * 0.2, 0.36, -0.52).rotation.x = Math.PI / 2; // remote reservoir
+    add(group, new THREE.CylinderGeometry(0.032, 0.032, 0.02, 12), mLime, sx * 0.2, 0.36, -0.42).rotation.x = Math.PI / 2;
+    const stay = add(group, box(0.012, 0.2, 0.012), mDark, sx * 0.09, 0.3, -0.9); stay.rotation.x = -0.5;
+  }
+  const fenderGeo = new THREE.CylinderGeometry(0.235, 0.235, 0.15, 32, 1, true, Math.PI * 0.28, Math.PI * 1.0); fenderGeo.rotateZ(Math.PI / 2);
+  add(group, fenderGeo, mFender, 0, R, -HALF);
+  const tailArm = add(group, box(0.2, 0.03, 0.3), mFender, 0, 0.38, -0.95); tailArm.rotation.x = 0.18;
+  const tail = add(group, box(0.26, 0.04, 0.02), mats.tail, 0, 0.36, -1.1); tail.castShadow = false;
+  add(group, box(0.26, 0.012, 0.012), mLimeLed, 0, 0.395, -1.1).castShadow = false;
+  // rear wing
+  for (const sx of [-1, 1]) add(group, box(0.014, 0.14, 0.04), mCarbon, sx * 0.14, 0.45, -1.02);
+  const wing = add(group, box(0.44, 0.012, 0.13), mCarbon, 0, 0.52, -1.04); wing.rotation.x = -0.12;
+  add(group, box(0.012, 0.045, 0.14), mLime, 0.225, 0.515, -1.04);
+  add(group, box(0.012, 0.045, 0.14), mLime, -0.225, 0.515, -1.04);
+  // turbine nozzle (decoration)
+  const nozz = add(group, new THREE.CylinderGeometry(0.05, 0.065, 0.16, 20), mDark, 0, 0.3, -1.08); nozz.rotation.x = Math.PI / 2;
+  const nz = add(group, new THREE.CylinderGeometry(0.036, 0.036, 0.01, 18), new THREE.MeshBasicMaterial({ color: 0x3a1500, toneMapped: false }), 0, 0.3, -1.165); nz.rotation.x = Math.PI / 2; nz.castShadow = false;
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283; const bl = add(group, box(0.05, 0.004, 0.006), mTrim, Math.cos(a) * 0.017, 0.3 + Math.sin(a) * 0.017, -1.17); bl.rotation.z = a; bl.castShadow = false; }
+  // calipers
+  add(group, box(0.034, 0.09, 0.06), mLime, 0.075, 0.25, -0.62);
+  add(group, box(0.012, 0.01, 0.05), mDark, 0.085, 0.3, -0.62);
+  // diffuser fins under tail
+  for (let i = -2; i <= 2; i++) add(group, box(0.008, 0.04, 0.2), mCarbon, i * 0.05, 0.27, -0.96);
+
+  /* ---- steering assembly: dual hydraulic fork */
+  const pivot = new THREE.Group(); pivot.position.set(0, R, HALF); pivot.rotation.x = -rake; group.add(pivot);
+  const steer = new THREE.Group(); pivot.add(steer);
+  const frontWheel = makeWheel(); steer.add(frontWheel);
+  for (const sx of [-1, 1]) {
+    add(steer, new THREE.CylinderGeometry(0.026, 0.026, 0.52, 14), mDark, sx * 0.125, 0.28, 0);
+    add(steer, new THREE.CylinderGeometry(0.042, 0.042, 0.12, 16), mGloss, sx * 0.125, 0.06, 0);
+    add(steer, new THREE.CylinderGeometry(0.034, 0.034, 0.12, 14), mMatte, sx * 0.125, 0.22, 0);
+    spring(steer, mSpring, sx * 0.125, 0.28, 0, 0.04, 0.26, 8, 0.0058);
+    add(steer, new THREE.CylinderGeometry(0.03, 0.03, 0.05, 14), mLime, sx * 0.125, 0.54, 0);
+    add(steer, box(0.04, 0.08, 0.06), mLime, sx > 0 ? 0.105 : 0, 0.06, 0.09).visible = sx > 0; // caliper
+    add(steer, new THREE.CylinderGeometry(0.011, 0.011, 0.05, 8), mDark, 0.12, 0.09, 0.09).rotation.z = Math.PI / 2;
+    const link = add(steer, box(0.016, 0.014, 0.2), mDark, sx * 0.125, 0.32, 0.12); link.rotation.x = 0.55;
+    add(steer, new THREE.CylinderGeometry(0.02, 0.02, 0.18, 10), mDark, sx * 0.17, 0.48, -0.02).rotation.z = Math.PI / 2; // remote reservoir
+  }
+  add(steer, box(0.34, 0.07, 0.12), mGloss, 0, 0.58, 0);
+  add(steer, box(0.24, 0.03, 0.1), mTrim, 0, 0.625, 0);
+  const ffGeo = new THREE.CylinderGeometry(0.235, 0.235, 0.15, 32, 1, true, -Math.PI * 0.2, Math.PI * 0.9); ffGeo.rotateZ(Math.PI / 2);
+  add(steer, ffGeo, mFender, 0, 0, 0);
+  // fork brace arch
+  add(steer, box(0.26, 0.02, 0.03), mDark, 0, 0.38, 0.065);
+  // stem: tall, ends below the handlebar clamp
+  const stem = add(steer, new THREE.CylinderGeometry(0.034, 0.046, 0.62, 18), mGloss, 0, 0.9, 0); stem.scale.set(1.25, 1, 0.9);
+  add(steer, box(0.14, 0.15, 0.12), mMatte, 0, 0.72, 0);
+  add(steer, box(0.16, 0.024, 0.13), mTrim, 0, 0.805, 0);
+  add(steer, box(0.16, 0.024, 0.13), mTrim, 0, 0.645, 0);
+  add(steer, box(0.022, 0.15, 0.045), mLime, 0.08, 0.72, 0.02).rotation.z = -0.1;
+  for (const y of [0.64, 1.14]) { const c = add(steer, new THREE.CylinderGeometry(0.052, 0.052, 0.028, 18), mLime, 0, y, 0); c.scale.set(1.2, 1, 0.9); }
+  add(steer, box(0.014, 0.4, 0.006), mLimeLed, 0, 0.93, 0.056).castShadow = false;
+  const decalTex = textCanvas(384, 64, (x) => { x.font = '900 38px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#9dff1a'; x.fillText('WEPED', 110, 34); x.fillStyle = '#e8e8ea'; x.fillText('SONIC', 300, 34); });
+  const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, depthWrite: false, toneMapped: false });
+  for (const sx of [-1, 1]) { const d = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.056), decalMat); d.position.set(sx * 0.058, 0.95, 0); d.rotation.y = sx * Math.PI / 2; d.rotation.z = Math.PI / 2; steer.add(d); }
+  // bars: wide with big grips
+  add(steer, cylX(0.0145, 0.84, 14), mGloss, 0, BY, -0.02);
+  add(steer, box(0.15, 0.085, 0.11), mGloss, 0, BY - 0.012, 0);
+  add(steer, box(0.09, 0.025, 0.11), mTrim, 0, BY + 0.035, 0);
+  for (const sx of [-1, 1]) {
+    add(steer, cylX(0.02, 0.15, 14), mRubber, sx * 0.37, BY, -0.02);
+    for (const o of [-0.06, -0.02, 0.02, 0.06]) add(steer, cylX(0.0215, 0.006, 12), mMatte, sx * (0.37 + o), BY, -0.02);
+    add(steer, cylX(0.025, 0.024, 14), mLime, sx * 0.275, BY, -0.02);
+    const lever = add(steer, box(0.015, 0.015, 0.16), mGloss, sx * 0.31, BY - 0.03, 0.085); lever.rotation.y = sx * 0.14;
+    add(steer, box(0.044, 0.04, 0.055), mMatte, sx * 0.285, BY - 0.002, 0.0);
+    add(steer, new THREE.CylinderGeometry(0.015, 0.015, 0.032, 10), mDark, sx * 0.285, BY + 0.032, 0.0);
+    add(steer, box(0.055, 0.032, 0.055), mMatte, sx * 0.205, BY + 0.02, -0.03);
+    add(steer, new THREE.CylinderGeometry(0.006, 0.006, 0.01, 8), mLimeLed, sx * 0.205, BY + 0.038, -0.03).castShadow = false;
+    const be = add(steer, new THREE.CylinderGeometry(0.015, 0.015, 0.024, 10), mLimeLed, sx * 0.445, BY, -0.02); be.rotation.z = Math.PI / 2; be.castShadow = false;
+    for (const dz of [-0.03, 0.03]) add(steer, new THREE.CylinderGeometry(0.005, 0.005, 0.01, 8), mDark, sx * 0.055, BY + 0.045, dz);
+    tube(steer, [[sx * 0.31, BY - 0.03, 0.085], [sx * 0.2, BY - 0.06, 0.065], [sx * 0.075, 1.0, 0.05], [sx * 0.06, 0.7, 0.045], [sx * 0.075, 0.35, 0.06], [sx * 0.11, 0.08, 0.09]], 0.0055, mCable);
+    // twin LED headlamps
+    add(steer, box(0.075, 0.065, 0.055), mGloss, sx * 0.06, 0.86, 0.055);
+    const l = add(steer, box(0.06, 0.042, 0.012), mats.head, sx * 0.06, 0.86, 0.085); l.castShadow = false;
+  }
+  add(steer, box(0.22, 0.012, 0.014), mats.head, 0, 0.91, 0.075).castShadow = false;
+  // display on a post above the clamp (stem ends below)
+  add(steer, box(0.055, 0.06, 0.045), mGloss, 0, BY + 0.075, 0.0).rotation.x = 0.5;
+  const disp = new THREE.Group(); disp.position.set(0, BY + 0.14, 0.0); disp.rotation.x = 0.5; steer.add(disp);
+  add(disp, box(0.19, 0.115, 0.028), mGloss, 0, 0, 0);
+  add(disp, box(0.196, 0.006, 0.03), mLime, 0, 0.06, 0);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.168, 0.1), new THREE.MeshBasicMaterial({ map: dispTex, toneMapped: false }));
+  screen.rotation.y = Math.PI; screen.position.z = -0.0145; disp.add(screen);
+
+  /* ---- VESC upgrade parts */
+  const vescParts = [];
+  const mBlue = std({ color: 0x1668ff, roughness: 0.3, metalness: 0.8 });
+  const mCyan = new THREE.MeshBasicMaterial({ color: 0x35e6ff, toneMapped: false });
+  const ctl = add(group, box(0.19, 0.09, 0.3), mBlue, 0, 0.36, 0.46); ctl.rotation.x = -0.12;
+  const fin = add(group, box(0.17, 0.012, 0.23), mDark, 0, 0.412, 0.46);
+  const vlabel = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.04), new THREE.MeshBasicMaterial({ map: textCanvas(128, 40, (x) => { x.fillStyle = '#05080c'; x.fillRect(0, 0, 128, 40); x.fillStyle = '#35e6ff'; x.font = '900 30px Arial'; x.textAlign = 'center'; x.fillText('VESC', 64, 31); }), toneMapped: false }));
+  vlabel.position.set(0, 0.362, 0.612); vlabel.rotation.x = -0.17; group.add(vlabel);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 2.4), new THREE.MeshBasicMaterial({ map: T.pool, color: 0x35e6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  glow.rotation.x = -Math.PI / 2; glow.position.set(0, 0.04, 0);
+  vescParts.push(ctl, fin, vlabel);
+  for (const w of [rearWheel, frontWheel]) for (const sx of [-1, 1]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.009, 6, 36), mCyan); ring.rotation.y = Math.PI / 2; ring.position.x = sx * 0.07; w.add(ring); vescParts.push(ring); }
+
+  return {
+    id: 'sonic', name: 'Weped Sonic', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.95, 2.4],
+    gripLocal: [new THREE.Vector3(0.37, BY, -0.02), new THREE.Vector3(-0.37, BY, -0.02)],
+    foot: [new THREE.Vector3(0.09, 0.32, 0.14), new THREE.Vector3(-0.09, 0.32, -0.36)],
+    half: HALF, wheelbase: 1.44, wheelR: R, spotPos: [0, 0.9, 0.68], dispMode: 'DUAL', stemDecal: 'SONIC',
+    // 200 / 300 km/h stock, 350 / 500 km/h with VESC
+    spec: { vN: 55.6, vT: 83.3, vVN: 97.2, vVT: 138.9, aN: 6.5, aT: 10, aVN: 9, aVT: 20, kN: 16, kT: 24, kVN: 24, kVT: 50, drag2: 0.00012, brake: 7.5, space: 10, cap: 11.5, aLat: 14, mass: 150, wheelie: 0.7 },
+  };
+}

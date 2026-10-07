@@ -1232,12 +1232,14 @@ export class World {
     this.chunks.delete(k);
   }
   /** Ensure chunks around (x,z). `max` = chunks that may be built synchronously per call (fallback mode). Returns number still missing. */
-  update(x, z, max = 1) {
+  update(x, z, max = 1, vx = 0, vz = 0) {
     const [ci, cj] = this.chunkAt(x, z);
     this._focus = [ci, cj];
     const need = [];
     const R = this.radius;
-    for (let i = ci - R; i <= ci + R; i++) for (let j = cj - R; j <= cj + R; j++) if (!this.chunks.has(this.key(i, j))) need.push([i, j, Math.hypot(i - ci, j - cj)]);
+    // fast riders: load the chunks in the direction of travel first
+    const pi = ci + (vx * 1.2) / P, pj = cj + (vz * 1.2) / P;
+    for (let i = ci - R; i <= ci + R; i++) for (let j = cj - R; j <= cj + R; j++) if (!this.chunks.has(this.key(i, j))) need.push([i, j, Math.hypot(i - pi, j - pj)]);
     need.sort((a, b) => a[2] - b[2]);
     if (this.workers.length) {
       const cap = this.workers.length * 2;

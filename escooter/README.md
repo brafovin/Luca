@@ -66,7 +66,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
-## Zwei Roller: KuKirin G4 (full black) & Dualtron Thunder 3
+## Drei Roller: KuKirin G4, Dualtron Thunder 3 & Weped Sonic
 
 * **KuKirin G4** – komplett schwarz, mit sichtbaren Federn (Gabel + Heck-Coil-Over), Faltgelenk mit Verriegelung, Bremsleitungen,
   geschlitzten Scheiben, Reifenprofil, Batterie-Seitenverkleidung, Deck-LED, Kennzeichen. Normal 65 km/h, Turbo 100 km/h.
@@ -74,6 +74,9 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   zwei Heck-Federbeine, Dual-Motor-Naben mit Kühlrippen, Vierkolben-Bremsen, Doppel-Scheinwerfer, großes Display.
   LED-Leiste am Rohr, Blinker, Gabelbrücke, Ausgleichsbehälter, Lüftungsschlitze, Rücklicht mit Reflektoren u. v. m.
   Normal 110 km/h, Turbo **170 km/h**. Mit dem VESC (500 €, gilt für beide Roller): G4 150 km/h, Dualtron **235 km/h**.
+* **Weped Sonic** (im VESC-Shop für **1500 €**, Taste `U`): Hyper-Scooter in Mattschwarz mit Lime-Akzenten, 11-Zoll-Rädern, langen
+  Lime-Federbeinen, Akku-Pods, Heckflügel und Turbinen-Düse. Normal 200 km/h, Turbo 300 km/h. **Mit VESC 350 km/h normal und 500 km/h Turbo.**
+  (Bei dem Tempo lädt die Stadt weiter voraus; Hindernisse bei 500 km/h = Sturz.)
 * `X` oder das Menü (Pause → „Roller“) wechselt zwischen den gekauften Rollern.
 
 ## Polizei 🚓

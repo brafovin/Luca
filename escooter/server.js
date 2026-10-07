@@ -57,7 +57,7 @@ wss.on('connection', (ws) => {
     }
     if (m.t === 's') {
       me.vesc = m.vs ? 1 : 0;
-      me.state = [me.id, num(m.x), num(m.z), num(m.h, 7), num(m.v, 100), num(m.l, 2), m.m ? 1 : 0, me.vesc, num(m.sx), num(m.sz), num(m.sh, 7), num(m.w, 1.2), m.md ? 1 : 0];
+      me.state = [me.id, num(m.x), num(m.z), num(m.h, 7), num(m.v, 100), num(m.l, 2), m.m ? 1 : 0, me.vesc, num(m.sx), num(m.sz), num(m.sh, 7), num(m.w, 1.2), Math.max(0, Math.min(2, m.md | 0))];
     } else if (m.t === 'chat') {
       const now = Date.now();
       if (now - me.lastChat < 600) return;
