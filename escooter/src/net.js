@@ -63,7 +63,9 @@ class Remote {
     sc.group.visible = true;
     sc.group.position.set(ride ? this.x : this.sx, 0.12, ride ? this.z : this.sz);
     sc.group.rotation.y = ride ? this.h : this.sh;
-    sc.tilt.rotation.z = ride ? -lean : -0.14;
+    const w = ride ? lerp(A.w || 0, B.w || 0, k) : 0;
+    sc.tilt.rotation.set(-w, 0, ride ? -lean : -0.14);
+    sc.tilt.position.set(0, 0.58 * Math.sin(w), -0.58 + 0.58 * Math.cos(w));
     this.wheel += (ride ? this.v : 0) * dt / 0.138;
     sc.wf.rotation.x = sc.wr.rotation.x = this.wheel;
     this.walker.group.visible = !ride;
@@ -130,7 +132,7 @@ export class Net {
         const t = performance.now();
         for (const a of m.s) {
           const r = this.remotes.get(a[0]);
-          if (r) r.push({ x: a[1], z: a[2], h: a[3], v: a[4], l: a[5], m: a[6], vs: a[7], sx: a[8], sz: a[9], sh: a[10] }, t);
+          if (r) r.push({ x: a[1], z: a[2], h: a[3], v: a[4], l: a[5], m: a[6], vs: a[7], sx: a[8], sz: a[9], sh: a[10], w: a[11] || 0 }, t);
         }
         break;
       }
@@ -142,7 +144,7 @@ export class Net {
   sendState(s) {
     if (!this.connected) return;
     const f = (n) => Math.round(n * 100) / 100;
-    this.ws.send(JSON.stringify({ t: 's', x: f(s.x), z: f(s.z), h: f(s.h), v: f(s.v), l: f(s.l), m: s.m, vs: s.vs, sx: f(s.sx), sz: f(s.sz), sh: f(s.sh) }));
+    this.ws.send(JSON.stringify({ t: 's', x: f(s.x), z: f(s.z), h: f(s.h), v: f(s.v), l: f(s.l), m: s.m, vs: s.vs, sx: f(s.sx), sz: f(s.sz), sh: f(s.sh), w: f(s.w || 0) }));
   }
   sendChat(text) { if (this.connected) this.ws.send(JSON.stringify({ t: 'chat', text })); }
   sendEvent(k) { if (this.connected) this.ws.send(JSON.stringify({ t: 'ev', k })); }
