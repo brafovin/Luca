@@ -55,11 +55,21 @@ export class GameAudio {
     const t = this.ctx.currentTime;
     const sp = Math.min(Math.abs(s.v), 150);
     const load = Math.min(1, Math.max(0, s.thr));
+    if (!!s.moped !== !!this.mopedOn) { this.mopedOn = !!s.moped; this.o1.type = s.moped ? 'square' : 'sawtooth'; this.o2.type = s.moped ? 'sawtooth' : 'triangle'; }
+    if (s.moped) { // two-stroke: low rattling idle that rises with speed, with a ring-ding wobble
+      const wob = 1 + Math.sin(t * (14 + sp * 0.9)) * 0.045;
+      const f = (46 + sp * 5.2 + load * 24) * wob;
+      this.o1.frequency.setTargetAtTime(f, t, 0.03);
+      this.o2.frequency.setTargetAtTime(f * 2.02, t, 0.03);
+      this.mf.frequency.setTargetAtTime(420 + sp * 55 + load * 650, t, 0.06);
+      this.mg.gain.setTargetAtTime(s.paused ? 0 : 0.045 + Math.min(sp / 14, 1) * 0.04 + load * 0.04, t, 0.05);
+    } else {
     const f = 90 + sp * 24 + load * 40;
     this.o1.frequency.setTargetAtTime(f, t, 0.05);
     this.o2.frequency.setTargetAtTime(f * 2.01, t, 0.05);
     this.mf.frequency.setTargetAtTime(380 + sp * 70 + load * 500, t, 0.08);
     this.mg.gain.setTargetAtTime(s.paused ? 0 : (0.018 + Math.min(sp / 14, 1) * 0.05 + load * 0.035) * (s.battEmpty ? 0.4 : 1), t, 0.06);
+    }
     this.rainN.g.gain.setTargetAtTime(s.paused ? 0 : (s.rain || 0) * 0.07, t, 0.3);
     this.tire.g.gain.setTargetAtTime(s.paused ? 0 : Math.min(sp / 15, 1) * 0.16, t, 0.1);
     this.tire.f.frequency.setTargetAtTime(300 + sp * 45, t, 0.1);

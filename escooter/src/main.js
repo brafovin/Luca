@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { makeTextures } from './textures.js';
 import { createMaterials } from './materials.js';
 import { Sky } from './sky.js';
-import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop, PLAY } from './world.js';
+import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop, PLAY, SHOP2, SHOP2_IN, SHOP2_TABLES, inShop2 } from './world.js';
 import { Walker } from './walker.js';
 import { Net } from './net.js';
 import { Scooter } from './scooter.js';
@@ -18,6 +18,7 @@ import { Rain } from './weather.js';
 import { Birds } from './birds.js';
 import { Blood } from './blood.js';
 import { Emergency } from './ambulance.js';
+import { Smoke } from './smoke.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
 
@@ -63,6 +64,7 @@ traffic.peds = peds;
 const rain = new Rain(scene);
 const birds = new Birds(scene, 18);
 const blood = new Blood(scene);
+const smoke = new Smoke(scene);
 const ems = new Emergency(scene, M, tex.glow);
 ems.onTaken = () => toast('🚑 Krankenwagen', 'hat die verletzte Person mitgenommen', 2600);
 const dynAll = [];
@@ -99,6 +101,8 @@ function makeBeacon(colA, colB, colRing) {
 const beacon = makeBeacon(0x2fd8ff, 0xdffaff, 0x35e6ff);
 const shopBeacon = makeBeacon(0xff8a1a, 0xffe2b0, 0xff7a1a);
 shopBeacon.scale.set(0.55, 1, 0.55);
+const shopBeacon2 = makeBeacon(0x2a8ad8, 0xd8ecff, 0x2a8ad8);
+shopBeacon2.scale.set(0.55, 1, 0.55);
 
 /* ------------------------------------------------------------------ settings & state */
 const store = {
@@ -127,14 +131,16 @@ const SHOP_MODELS = {
   g2: { price: 300, key: 'O', name: 'Kukirin G2', sound: [392, 523, 659, 784] },
   dt3: { price: DT3_PRICE, key: 'Q', name: 'Dualtron Thunder 3', sound: [392, 523, 659, 784, 1046, 1568] },
   sonic: { price: SONIC_PRICE, key: 'U', name: 'Weped Sonic', sound: [330, 392, 523, 659, 784, 1046, 1568, 2093] },
+  simson: { price: 800, key: '', name: 'Simson S51', sound: [196, 247, 294, 392], shop: 2 },
 };
+const MTX_PRICE = 600, PZ_PRICE = 250, CIG_PRICE = 8;
 const st = {
   running: false, paused: true, fp: false, userHead: null, resScale: 1,
   score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
   wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
-  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), model: store.get('model', 'g4'),
+  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
 };
 
 /* ------------------------------------------------------------------ quality */
@@ -240,6 +246,7 @@ window.addEventListener('keydown', (e) => {
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
     case 'KeyH': setWbar(!cfg.wbar); break;
     case 'KeyN': toggleKnife(); break;
+    case 'KeyZ': toggleSmoke(); break;
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
@@ -617,6 +624,7 @@ function dismount() {
   walker.place(scooter.x + Math.sin(h) * 0.1 - Math.cos(h) * 0.95, scooter.z + Math.cos(h) * 0.1 + Math.sin(h) * 0.95, h);
   walker.setVisible(!st.fp);
   camYaw = h;
+  applySmoke();
   toast('Abgestiegen', 'WASD laufen · Shift rennen · F wieder aufsteigen', 2600);
 }
 function mount() {
@@ -626,6 +634,7 @@ function mount() {
   scooter.parked = false; scooter.rider.visible = true; scooter.v = 0;
   walker.setVisible(false);
   camYaw = scooter.heading;
+  applySmoke();
   toast('Aufgestiegen', '', 800);
 }
 function toggleMount() { if (st.mode === 'ride') dismount(); else mount(); }
@@ -633,10 +642,10 @@ function setVesc(on) {
   st.vesc = on;
   scooter.setVesc(on);
   shopBeacon.visible = !(on && allOwned());
-  $('vescBadge').classList.toggle('hidden', !on);
+  $('vescBadge').classList.toggle('hidden', !(on && !scooter.model.noVesc));
 }
-const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3 };
-const MODEL_ORDER = ['g4', 'g2', 'zt3', 'dt3', 'sonic'];
+const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3, simson: () => st.simson };
+const MODEL_ORDER = ['g4', 'g2', 'zt3', 'simson', 'dt3', 'sonic'];
 const allOwned = () => false; // paint jobs are always for sale, so the shop never runs out
 const atShop = () => Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9;
 function syncModelSelect() {
@@ -656,6 +665,7 @@ function setModel(id, silent) {
   st.model = id; store.set('model', id);
   scooter.setModel(id);
   $('modelName').textContent = scooter.model.name;
+  $('vescBadge').classList.toggle('hidden', !(st.vesc && !scooter.model.noVesc));
   syncModelSelect();
   scooter.hyper = st.track;
   if (!silent) toast(scooter.model.name, scooter.hyperOn ? 'HYPER-MODUS: Shift = bis 5000 km/h · Beschleunigung ohne Ende' : `bis ${Math.round(scooter.topKmh)} km/h${scooter.spec.vT > scooter.spec.vN ? ' Turbo' : ''}`, scooter.hyperOn ? 3600 : 1800);
@@ -736,9 +746,10 @@ function buyPaint(id, part, colorId) {
   toast(`🎨 ${PAINTS.find((q) => q.id === colorId).name}`, price ? `−${price} €` : 'Werkslackierung', 1200);
   renderShop();
 }
+const ALL_TABLES = [...SHOP_TABLES, ...SHOP2_TABLES];
 function nearestTable() {
   if (st.track || st.shopOpen) return null;
-  for (const t of SHOP_TABLES) {
+  for (const t of ALL_TABLES) {
     const dx = Math.max(Math.abs(me.x - t.x) - 1.75, 0), dz = Math.max(Math.abs(me.z - t.z) - 0.68, 0);
     if (Math.hypot(dx, dz) < 1.6) return t;
   }
@@ -757,16 +768,29 @@ function closeShop() {
   lockMouse();
 }
 function renderShop() {
-  const t = SHOP_TABLES.find((q) => q.id === st.shopTab) || SHOP_TABLES[0];
+  const t = ALL_TABLES.find((q) => q.id === st.shopTab) || SHOP_TABLES[0];
   const el = $('shopBody');
   const money = Math.floor(st.money).toLocaleString('de-DE');
   let h = `<div class="shead"><h2>🛒 ${t.name}</h2><div class="smoney">${money} €</div><button id="shopClose" class="ghost">Schließen (Esc)</button></div>`;
-  const tabs = SHOP_TABLES.map((q) => `<button class="stab ${q.id === t.id ? 'on' : ''}" data-tab="${q.id}">${q.name}</button>`).join('');
+  const tabs = ALL_TABLES.filter((q) => (q.shop || 1) === (t.shop || 1)).map((q) => `<button class="stab ${q.id === t.id ? 'on' : ''}" data-tab="${q.id}">${q.name}</button>`).join('');
   h += `<div class="stabs">${tabs}</div>`;
   if (t.id === 'parts') {
     h += `<div class="srow"><div class="sinfo"><b>VESC-Controller Umbau</b><small>Turbo schneller: G4 150 km/h · Dualtron 235 km/h · Sonic 500 km/h · ZT3 Pro & G2 70 km/h. Gilt für alle Roller.</small></div>`
       + (st.vesc ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="vesc" ${st.money < VESC_PRICE ? 'disabled' : ''}>Kaufen · ${VESC_PRICE} €</button>`) + `</div>`;
     h += `<div class="srow"><div class="sinfo"><b>Wheelie-Bar</b><small>Stützrad hinten (an/aus mit H) – gratis dabei.</small></div><span class="sown">✓ dabei</span></div>`;
+  } else if (t.id === 'moped') {
+    const own = st.simson;
+    h += `<div class="srow"><div class="sinfo"><b>Simson S51 Enduro</b><small>Der Klassiker: 50-cm³-Zweitakter, <b>60 km/h</b> · Auspuff qualmt · <b>kein VESC möglich</b> (Moped!) · Tuning am Nachbartisch · bis 85 km/h mit MTX10.</small></div>`
+      + (st.model === 'simson' ? `<span class="sown">● aktiv</span>` : own ? `<button class="buy" data-act="use" data-id="simson">Fahren</button>` : `<button class="buy" data-act="buy" data-id="simson" ${st.money < SHOP_MODELS.simson.price ? 'disabled' : ''}>Kaufen · ${SHOP_MODELS.simson.price} €</button>`) + `</div>`;
+    h += `<div class="srow"><div class="sinfo"><b>Helm & Handschuhe</b><small>Gratis dabei – du trägst beides schon.</small></div><span class="sown">✓ dabei</span></div>`;
+  } else if (t.id === 'tuning') {
+    h += `<div class="srow"><div class="sinfo"><b>MTX10 Motor-Tuning</b><small>Großer Zylinder, Vergaser, roter Resonanzauspuff: <b>85 km/h</b> statt 60, kräftigere Beschleunigung, mehr Qualm. Für die Simson S51.</small></div>`
+      + (st.mtx ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="up" data-id="mtx" ${st.money < MTX_PRICE ? 'disabled' : ''}>Kaufen · ${MTX_PRICE} €</button>`) + `</div>`;
+    h += `<div class="srow"><div class="sinfo"><b>PZ-Tuning Lenker</b><small>Breiter, flacher Rennlenker mit Querstrebe und goldenen Klemmen – lenkt direkter (mehr Kurvengrip).</small></div>`
+      + (st.pz ? `<span class="sown">✓ montiert</span>` : `<button class="buy" data-act="up" data-id="pz" ${st.money < PZ_PRICE ? 'disabled' : ''}>Kaufen · ${PZ_PRICE} €</button>`) + `</div>`;
+    h += st.simson ? '' : `<div class="srow"><div class="sinfo"><small>Du besitzt noch keine Simson – die Teile werden eingebaut, sobald du sie hast.</small></div></div>`;
+  } else if (t.id === 'kiosk') {
+    h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'disabled' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
   } else if (t.id === 'scooters') {
     const rows = [['g4', 'KuKirin G4', 0, 'Starter · 65 km/h (Turbo 100) · VESC 150'], ['zt3', 'ZT3 Pro', SHOP_MODELS.zt3.price, '40 km/h · VESC 70'], ['g2', 'Kukirin G2', SHOP_MODELS.g2.price, '55 km/h · VESC 70'], ['dt3', 'Dualtron Thunder 3', SHOP_MODELS.dt3.price, '110 km/h (Turbo 170) · VESC 235'], ['sonic', 'Weped Sonic', SHOP_MODELS.sonic.price, '200 km/h (Turbo 300) · VESC 500 · Rennstrecke: bis 5000 km/h']];
     for (const [id, name, price, info] of rows) {
@@ -792,16 +816,63 @@ function renderShop() {
     if (a === 'vesc') { buyVesc(); renderShop(); }
     else if (a === 'buy') { buyModelUI(b.dataset.id); }
     else if (a === 'use') { setModel(b.dataset.id); renderShop(); }
+    else if (a === 'up') buyUpgrade(b.dataset.id);
+    else if (a === 'cig') { if (st.money >= CIG_PRICE) { earn(-CIG_PRICE); st.cigs += 20; store.set('cigs', st.cigs); audio.chime([523, 659]); renderShop(); } }
     else if (a === 'paint') buyPaint(st.paintSel, b.dataset.part, b.dataset.color);
   }));
   const sel = $('paintSel'); if (sel) sel.onchange = () => { st.paintSel = sel.value; renderShop(); };
   $('shopClose').onclick = closeShop;
 }
+function buyUpgrade(id) {
+  const price = id === 'mtx' ? MTX_PRICE : PZ_PRICE;
+  if (st[id]) return;
+  if (st.money < price) { toast('Zu wenig Geld', `${id === 'mtx' ? 'MTX10' : 'PZ-Lenker'} kostet ${price} €`, 2000); audio.beep(); return; }
+  earn(-price); st[id] = true; store.set(id, true);
+  scooter.setSimsonUpgrades(st.mtx, st.pz);
+  audio.chime([392, 523, 784]);
+  toast(id === 'mtx' ? '🔧 MTX10 eingebaut' : '🔧 PZ-Lenker montiert', id === 'mtx' ? 'Simson jetzt bis 85 km/h' : 'mehr Grip in Kurven', 2600);
+  renderShop();
+}
+function toggleSmoke() {
+  if (st.smokeT > 0) { st.smokeT = 0; applySmoke(); toast('Zigarette ausgedrückt', '', 1100); return; }
+  if (st.cigs <= 0) { toast('Keine Zigaretten mehr', 'Am Kiosk im Simson-Laden gibt es Nachschub (8 €)', 2200); return; }
+  st.cigs--; store.set('cigs', st.cigs); st.smokeT = 45; st.puffT = 2;
+  applySmoke(); toast('🚬 Zigarette an', `noch ${st.cigs} · Z = ausdrücken`, 1600);
+}
+function applySmoke() { const on = st.smokeT > 0; scooter.setSmoking(on); walker.model.cig.visible = on && st.mode === 'walk' && !st.fp; }
+function updateSmoke(dt) {
+  const active = st.running && !st.paused;
+  if (active && scooter.model.moped && st.mode === 'ride') {
+    const m = scooter.model, up = st.mtx, thr = scooter.thr || 0;
+    st.exAcc = (st.exAcc || 0) + (4 + thr * 24 + (up ? 6 : 0) + Math.min(Math.abs(scooter.v), 15) * 0.4) * dt;
+    while (st.exAcc >= 1) {
+      st.exAcc--;
+      _sp.copy(up ? m.exhaust.mtx : m.exhaust.stock); m.group.localToWorld(_sp);
+      const sh = Math.sin(scooter.heading), ch = Math.cos(scooter.heading);
+      smoke.emit(_sp.x, _sp.y, _sp.z, -sh * (0.5 + thr * 1.1) + sh * scooter.v * 0.4, 0.28 + thr * 0.3, -ch * (0.5 + thr * 1.1) + ch * scooter.v * 0.4, 'exhaust', Math.min(1, 0.2 + thr * 0.8 + (up ? 0.2 : 0)));
+    }
+  }
+  if (st.smokeT > 0 && active) {
+    st.smokeT -= dt;
+    const tipObj = st.mode === 'walk' ? walker.model.cigTip : scooter.cigTip;
+    tipObj.getWorldPosition(_sp);
+    st.cigAcc = (st.cigAcc || 0) + 5 * dt;
+    while (st.cigAcc >= 1) { st.cigAcc--; smoke.emit(_sp.x, _sp.y, _sp.z, 0, 0.12, 0, 'cig'); }
+    st.puffT -= dt;
+    if (st.puffT <= 0) { st.puffT = 5 + Math.random() * 3; const yaw = st.mode === 'walk' ? walker.yaw : scooter.heading; for (let i = 0; i < 7; i++) smoke.emit(_sp.x, _sp.y + 0.03, _sp.z, Math.sin(yaw) * 0.45, 0.2, Math.cos(yaw) * 0.45, 'cig'); }
+    if (st.smokeT <= 0) { applySmoke(); toast('Zigarette aufgeraucht', '', 1200); }
+  }
+  smoke.update(dt);
+}
+const _sp = new THREE.Vector3();
 function buyModelUI(id) { const v = scooter.v; scooter.v = 0; buyModel(id); scooter.v = v; renderShop(); }
 // interior light so the shop is not dark in daylight
 const shopLight = new THREE.PointLight(0xfff1d8, 0, 34, 1.6);
 shopLight.position.set((SHOP_IN.x0 + SHOP_IN.x1) / 2, 4.0, (SHOP_IN.z0 + SHOP_IN.z1) / 2);
 scene.add(shopLight);
+const shopLight2 = new THREE.PointLight(0xfff1d8, 0, 34, 1.6);
+shopLight2.position.set((SHOP2_IN.x0 + SHOP2_IN.x1) / 2, 4.0, (SHOP2_IN.z0 + SHOP2_IN.z1) / 2);
+scene.add(shopLight2);
 
 /* ------------------------------------------------------------------ camera */
 let camYaw = 0, camDist = 3.2, shakeT = 0;
@@ -942,7 +1013,7 @@ const arcLen = 90 * Math.PI * 1.5; // 270° arc
 const mapCtx = $('map').getContext('2d');
 let mapT = 0;
 const trkTmp = [];
-const BLOCK_COL = { perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56', vescshop: '#b3601c' };
+const BLOCK_COL = { mopedshop: '#2a6aa8', perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56', vescshop: '#b3601c' };
 function drawMap() {
   const c = mapCtx, W = 356, s = 0.9; // px per metre (retina 2x of 178)
   c.setTransform(1, 0, 0, 1, 0, 0);
@@ -969,6 +1040,10 @@ function drawMap() {
     c.fillStyle = BLOCK_COL[blockType(i, j)];
     c.fillRect(i * P + 5.9 - sx, j * P + 5.9 - sz, P - 11.8, P - 11.8);
     if (hasStation(i, j)) { c.fillStyle = '#42ff8a'; c.beginPath(); c.arc(i * P + 8.4 - sx, j * P + 15 - sz, 6, 0, 6.3); c.fill(); }
+  }
+  if (!st.track) { // Simson shop marker
+    let dx = SHOP2.x - sx, dz = SHOP2.z - sz; const d = Math.hypot(dx, dz); if (d > 150) { dx *= 150 / d; dz *= 150 / d; }
+    c.fillStyle = '#2a8ad8'; c.strokeStyle = '#fff'; c.lineWidth = 2 / s; c.beginPath(); c.rect(dx - 10, dz - 10, 20, 20); c.fill(); c.stroke();
   }
   // VESC shop marker
   if (!st.track && !allOwned()) {
@@ -1039,9 +1114,11 @@ function updateHUD(dt) {
   const tbl = nearestTable();
   if (tbl) prompt = `<kbd>F</kbd> ${tbl.name} – ansehen & kaufen`;
   else if (ds < 16 && !inShop(me.x, me.z)) prompt = '🛒 Geh in den Laden – an den Tischen kaufst du VESC, Roller & Farben';
+  else if (Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z) < 16 && !inShop2(me.x, me.z)) prompt = '🛵 Simson-Laden – hinein: Simson, MTX10, PZ-Lenker, Zigaretten';
   else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < 3.4) prompt = '<kbd>F</kbd> Aufsteigen';
   if (cache.prompt !== prompt) { cache.prompt = prompt; $('prompt').innerHTML = prompt; $('prompt').classList.toggle('hidden', !prompt); }
-  const shopLine = (st.track || allOwned()) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
+  const ds2 = Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z), fmtD = (d) => (d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m');
+  const shopLine = st.track ? '' : `<br>🛒 VESC-Shop: ${fmtD(ds)} · 🛵 Simson: ${fmtD(ds2)}`;
   if (cache.shopLine !== shopLine) { cache.shopLine = shopLine; $('shopline').innerHTML = shopLine; }
   const pct = s.battPct;
   setText('battPct', Math.round(pct) + '%');
@@ -1279,7 +1356,7 @@ function tick(dt, now, render = true) {
     if (net.sendT > 1 / 15) {
       net.sendT = 0;
       const walking = st.mode === 'walk';
-      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: { g4: 0, dt3: 1, sonic: 2, g2: 3, zt3: 4 }[st.model] || 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
+      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: { g4: 0, dt3: 1, sonic: 2, g2: 3, zt3: 4, simson: 5 }[st.model] || 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
     }
   }
   net.update(dt, performance.now());
@@ -1303,7 +1380,7 @@ function tick(dt, now, render = true) {
   }
   // day / night
   sky.setTime(cfg.hours);
-  blood.update(dt);
+  blood.update(dt); updateSmoke(dt);
   { const d = ems.active ? Math.hypot(ems.x - me.x, ems.z - me.z) : 1e9; audio.sirenEms(ems.active ? clamp(1 - d / 200, 0, 1) * (ems.state === 'medics' ? 0.4 : 1) : 0); }
   birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
   sky.update(dt, _focus.copy(camera.position).lerp(_focus2.set(me.x, 0, me.z), 0.5).setY(0));
@@ -1333,7 +1410,7 @@ function tick(dt, now, render = true) {
     }
   }
   for (const L of lampLights) L.intensity = lamps * 260;
-  { const dS = Math.hypot(me.x - (SHOP_IN.x0 + SHOP_IN.x1) / 2, me.z - (SHOP_IN.z0 + SHOP_IN.z1) / 2); shopLight.intensity = dS < 40 ? 330 * (1 - Math.max(0, dS - 22) / 18) : 0; }
+  { const dS = Math.hypot(me.x - (SHOP_IN.x0 + SHOP_IN.x1) / 2, me.z - (SHOP_IN.z0 + SHOP_IN.z1) / 2); shopLight.intensity = dS < 40 ? 330 * (1 - Math.max(0, dS - 22) / 18) : 0; const d2 = Math.hypot(me.x - (SHOP2_IN.x0 + SHOP2_IN.x1) / 2, me.z - (SHOP2_IN.z0 + SHOP2_IN.z1) / 2); shopLight2.intensity = d2 < 40 ? 330 * (1 - Math.max(0, d2 - 22) / 18) : 0; }
   const head = st.userHead ?? lamps > 0.4;
   scooter.updateLights(night, head, dt, sky.hours);
   scooter.updateRider(dt, Math.abs(scooter.v));
@@ -1341,11 +1418,11 @@ function tick(dt, now, render = true) {
   if (active || !st.started) updateCamera(dt, false);
   else updateCamera(dt, false);
 
-  audio.update({ v: st.mode === 'walk' ? 0 : scooter.v, thr: scooter.thr, rain: st.rainAmt || 0, braking: scooter.braking, brakeAmt: Math.max(scooter.brk, scooter.space || 0), paused: !active, battEmpty: scooter.batt <= 0.2 });
+  audio.update({ moped: !!scooter.model.moped && st.mode === 'ride', v: st.mode === 'walk' ? 0 : scooter.v, thr: scooter.thr, rain: st.rainAmt || 0, braking: scooter.braking, brakeAmt: Math.max(scooter.brk, scooter.space || 0), paused: !active, battEmpty: scooter.batt <= 0.2 });
 
   if (st.crashT > 0) { st.crashT -= dt; if (st.crashT <= 0) $('crash').style.opacity = 0; }
   if (active) { updateHUD(dt); updateBubbles(); }
-  { const sp = 1 + 0.06 * Math.sin(now * 0.005); shopBeacon.userData.ring.scale.setScalar(sp); shopBeacon.userData.c1.rotation.y += dt * 0.4; const dsb = Math.hypot(me.x - SHOP.x, me.z - SHOP.z); shopBeacon.visible = !allOwned() && dsb > 14; }
+  { const sp = 1 + 0.06 * Math.sin(now * 0.005); shopBeacon.userData.ring.scale.setScalar(sp); shopBeacon.userData.c1.rotation.y += dt * 0.4; const dsb = Math.hypot(me.x - SHOP.x, me.z - SHOP.z); shopBeacon.visible = !allOwned() && dsb > 14; shopBeacon2.userData.ring.scale.setScalar(sp); shopBeacon2.userData.c1.rotation.y += dt * 0.4; shopBeacon2.visible = !st.track && Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z) > 14; shopBeacon.visible = shopBeacon.visible && !st.track; }
 
   if (!render) return;
   if (composer && st.bloom) composer.render();
@@ -1374,8 +1451,10 @@ async function boot() {
   setModel(OWNED[st.model] && OWNED[st.model]() ? st.model : 'g4', true);
   setPolice(cfg.police);
   setWbar(cfg.wbar);
+  scooter.setSimsonUpgrades(st.mtx, st.pz);
   for (const id of Object.keys(st.paint)) applyPaint(id);
   shopBeacon.position.set(SHOP.x, groundHeight(SHOP.x, SHOP.z), SHOP.z);
+  shopBeacon2.position.set(SHOP2.x, groundHeight(SHOP2.x, SHOP2.z), SHOP2.z);
   sky.setTime(cfg.hours);
   sky.update(0.01, new THREE.Vector3(30, 0, 0), true);
   const total = (2 * world.radius + 1) ** 2;
@@ -1403,4 +1482,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { blockType, PLAY, blood, ems, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

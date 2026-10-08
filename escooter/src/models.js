@@ -742,3 +742,157 @@ export function paintModel(m, body, accent) {
   apply(m.paint.body, body);
   apply(m.paint.accent, accent);
 }
+
+/* ============================================================================
+   Simson S51 – East-German moped (50 cc two-stroke, 60 km/h). No VESC possible.
+   Upgrades: MTX10 engine (expansion exhaust, bigger cylinder) and PZ-Tuning handlebars.
+   ============================================================================ */
+export function buildSimson(ctx) {
+  const { T, mats, dispTex } = ctx;
+  const { add, tube, spring } = tools();
+  const group = new THREE.Group();
+  const mPaint = std({ color: 0x2a62c4, roughness: 0.28, metalness: 0.45, envMapIntensity: 1.2 });
+  const mAcc = std({ color: 0xf2f2ee, roughness: 0.35, metalness: 0.3 });
+  const mChrome = std({ color: 0xcfd2d6, roughness: 0.16, metalness: 1, envMapIntensity: 1.6 });
+  const mBlack = std({ color: 0x0e0f11, roughness: 0.6, metalness: 0.2 });
+  const mAlu = std({ color: 0x9da1a6, roughness: 0.4, metalness: 0.9 });
+  const mFrame = std({ color: 0x17181b, roughness: 0.45, metalness: 0.6 });
+  const mSeat = std({ color: 0x141416, roughness: 0.85 });
+  const mRubber = std({ color: 0x0b0b0c, roughness: 0.95, vertexColors: true });
+  const mCable = std({ color: 0x050506, roughness: 0.55 });
+  const mHot = std({ color: 0x5a2a12, roughness: 0.5, metalness: 0.8 });
+  const mTan = new THREE.MeshBasicMaterial({ color: 0xffa21a, toneMapped: false });
+  const R = 0.29, HALF = 0.6, rake = 0.4;
+
+  const makeWheel = () => {
+    const w = new THREE.Group();
+    add(w, tireGeometry(0.25, 0.043, 0.036), mRubber);
+    const rim = new THREE.TorusGeometry(0.236, 0.011, 8, 36); rim.rotateY(Math.PI / 2); add(w, rim, mChrome);
+    const spk = new THREE.CylinderGeometry(0.0022, 0.0022, 0.22, 4);
+    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; const sp = add(w, spk, mChrome, i % 2 ? 0.012 : -0.012, Math.cos(a) * 0.125, Math.sin(a) * 0.125); sp.rotation.x = a; sp.castShadow = false; }
+    add(w, cylX(0.085, 0.09, 20), mAlu);                              // hub drum brake
+    add(w, cylX(0.095, 0.01, 20), mFrame).position.x = 0.05;
+    add(w, cylX(0.02, 0.15, 10), mChrome);
+    return w;
+  };
+  const rearWheel = makeWheel(); rearWheel.position.set(0, R, -HALF); group.add(rearWheel);
+
+  /* ---- frame, engine, tank, seat */
+  const spine = tube(group, [[0, 0.5, 0.42], [0, 0.56, 0.15], [0, 0.55, -0.15], [0, 0.5, -0.45]], 0.026, mFrame);
+  tube(group, [[0.0, 0.5, 0.4], [0, 0.34, 0.25], [0, 0.26, 0.0], [0, 0.34, -0.3], [0, 0.46, -0.5]], 0.022, mFrame);
+  add(group, box(0.3, 0.3, 0.34), mAlu, 0, 0.34, 0.0);                                 // crankcase
+  add(group, box(0.32, 0.2, 0.16), mAlu, 0, 0.3, -0.18);                               // gearbox
+  for (const sx of [-1, 1]) { add(group, new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16), mAlu, sx * 0.17, 0.33, -0.01).rotateZ(Math.PI / 2); add(group, new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), mChrome, sx * 0.19, 0.33, -0.01).rotateZ(Math.PI / 2); }
+  const cyl = new THREE.Group(); cyl.position.set(0, 0.42, 0.12); cyl.rotation.x = -0.75; group.add(cyl); // cylinder with cooling fins, pointing forward/up
+  add(cyl, new THREE.CylinderGeometry(0.05, 0.055, 0.14, 12), mAlu, 0, 0.1, 0);
+  for (let i = 0; i < 8; i++) add(cyl, new THREE.CylinderGeometry(0.085, 0.085, 0.008, 14), mAlu, 0, 0.04 + i * 0.016, 0);
+  add(cyl, new THREE.CylinderGeometry(0.06, 0.07, 0.05, 12), mBlack, 0, 0.19, 0);       // head
+  add(cyl, new THREE.CylinderGeometry(0.012, 0.012, 0.05, 6), mChrome, 0.0, 0.23, 0);   // spark plug
+  add(group, box(0.1, 0.1, 0.16), mAlu, 0, 0.52, 0.0);                                  // air filter
+  add(group, box(0.06, 0.06, 0.07), mChrome, 0, 0.42, -0.05);                           // carb
+  add(group, box(0.24, 0.18, 0.5), mPaint, 0, 0.67, 0.13).scale.set(1, 1, 1);           // tank
+  add(group, new THREE.SphereGeometry(0.12, 12, 8), mPaint, 0, 0.7, 0.13).scale.set(1, 0.78, 2.2);
+  add(group, new THREE.CylinderGeometry(0.035, 0.035, 0.02, 12), mChrome, 0, 0.775, 0.1); // fuel cap
+  add(group, box(0.25, 0.01, 0.4), mAcc, 0, 0.737, 0.13);                               // tank stripe
+  for (const sx of [-1, 1]) { add(group, box(0.02, 0.18, 0.3), mPaint, sx * 0.14, 0.42, -0.28); add(group, box(0.012, 0.1, 0.1), mAcc, sx * 0.152, 0.43, -0.28); } // side covers
+  add(group, box(0.26, 0.09, 0.78), mSeat, 0, 0.78, -0.33);                              // long seat
+  add(group, box(0.26, 0.04, 0.2), mSeat, 0, 0.83, -0.58).rotation.x = 0.2;
+  add(group, box(0.24, 0.015, 0.76), mFrame, 0, 0.732, -0.33);
+  // rear fender, grab rail, tail light, plate
+  const rf = new THREE.CylinderGeometry(0.19, 0.19, 0.12, 20, 1, true, Math.PI * 0.25, Math.PI * 0.9); rf.rotateZ(Math.PI / 2);
+  add(group, rf, std({ color: 0x2a62c4, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }), 0, R + 0.02, -HALF);
+  for (const sx of [-1, 1]) tube(group, [[sx * 0.1, 0.8, -0.1], [sx * 0.13, 0.82, -0.5], [sx * 0.1, 0.8, -0.78], [0, 0.78, -0.82]], 0.009, mChrome);
+  add(group, box(0.1, 0.06, 0.04), mats.tail, 0, 0.64, -0.84).castShadow = false;
+  const plate = plateMesh(); plate.position.set(0, 0.5, -0.86); plate.rotation.set(0.05, Math.PI, 0); plate.scale.setScalar(1.2); group.add(plate);
+  // pedals + cranks (S51 has them)
+  for (const sx of [-1, 1]) { add(group, box(0.018, 0.16, 0.02), mChrome, sx * 0.21, 0.28, 0.0).rotation.x = sx * 0.9; add(group, box(0.08, 0.02, 0.05), mBlack, sx * 0.25, 0.24 + sx * 0.04, 0.07 * sx); }
+  // footrests
+  for (const sx of [-1, 1]) { add(group, cylX(0.014, 0.12, 8), mChrome, sx * 0.22, 0.3, -0.05); add(group, cylX(0.02, 0.07, 8), mBlack, sx * 0.3, 0.3, -0.05); }
+  // kickstand
+  add(group, box(0.012, 0.012, 0.22), mFrame, -0.1, 0.18, -0.25).rotation.x = -0.4;
+  // stock exhaust: head pipe -> long chrome silencer on the right
+  const exStock = new THREE.Group(); group.add(exStock);
+  tube(exStock, [[0.06, 0.52, 0.2], [0.14, 0.4, 0.32], [0.2, 0.3, 0.2], [0.2, 0.27, -0.1]], 0.016, mChrome);
+  const sil = add(exStock, new THREE.CylinderGeometry(0.052, 0.045, 0.62, 14), mChrome, 0.2, 0.27, -0.42); sil.rotation.x = Math.PI / 2;
+  add(exStock, new THREE.CylinderGeometry(0.035, 0.048, 0.06, 12), mChrome, 0.2, 0.27, -0.74).rotation.x = Math.PI / 2;
+  add(exStock, new THREE.CylinderGeometry(0.03, 0.03, 0.03, 12), mBlack, 0.2, 0.27, -0.765).rotation.x = Math.PI / 2;
+  for (const z of [-0.3, -0.55]) add(exStock, new THREE.CylinderGeometry(0.056, 0.056, 0.015, 14), mAlu, 0.2, 0.27, z).rotation.x = Math.PI / 2;
+  // MTX10 upgrade: big finned cylinder, red expansion chamber, performance carb + reed box
+  const mtx = new THREE.Group(); mtx.visible = false; group.add(mtx);
+  const mRed = std({ color: 0xc42020, roughness: 0.3, metalness: 0.6 });
+  const c2 = new THREE.Group(); c2.position.set(0, 0.42, 0.12); c2.rotation.x = -0.75; mtx.add(c2);
+  add(c2, new THREE.CylinderGeometry(0.07, 0.075, 0.18, 14), mHot, 0, 0.1, 0);
+  for (let i = 0; i < 11; i++) add(c2, new THREE.CylinderGeometry(0.105, 0.105, 0.007, 16), mHot, 0, 0.03 + i * 0.016, 0);
+  add(c2, new THREE.CylinderGeometry(0.075, 0.085, 0.05, 14), mRed, 0, 0.21, 0);
+  add(mtx, box(0.12, 0.09, 0.1), mRed, 0, 0.36, -0.12);
+  add(mtx, new THREE.CylinderGeometry(0.04, 0.04, 0.12, 10), mChrome, 0, 0.47, -0.1).rotation.x = 1.1; // carb
+  const tubeEx = tube(mtx, [[0.06, 0.52, 0.2], [0.17, 0.4, 0.34], [0.24, 0.29, 0.16], [0.24, 0.27, -0.12]], 0.022, mRed);
+  const cone1 = add(mtx, new THREE.CylinderGeometry(0.05, 0.1, 0.26, 16), mRed, 0.24, 0.27, -0.3); cone1.rotation.x = Math.PI / 2;
+  const belly = add(mtx, new THREE.CylinderGeometry(0.1, 0.1, 0.2, 16), mRed, 0.24, 0.27, -0.5); belly.rotation.x = Math.PI / 2;
+  const cone2 = add(mtx, new THREE.CylinderGeometry(0.03, 0.1, 0.22, 16), mRed, 0.24, 0.27, -0.7); cone2.rotation.x = Math.PI / 2;
+  add(mtx, new THREE.CylinderGeometry(0.035, 0.035, 0.18, 10), mChrome, 0.24, 0.27, -0.88).rotation.x = Math.PI / 2;
+  add(mtx, new THREE.CylinderGeometry(0.03, 0.03, 0.03, 10), mBlack, 0.24, 0.27, -0.98).rotation.x = Math.PI / 2;
+  add(mtx, new THREE.BoxGeometry(0.1, 0.03, 0.04), mTan, 0.0, 0.5, 0.0).visible = false;
+
+  /* ---- front fork, wheel, bars */
+  const pivot = new THREE.Group(); pivot.position.set(0, R, HALF); pivot.rotation.x = -rake; group.add(pivot);
+  const steer = new THREE.Group(); pivot.add(steer);
+  const frontWheel = makeWheel(); steer.add(frontWheel);
+  for (const sx of [-1, 1]) {
+    add(steer, new THREE.CylinderGeometry(0.014, 0.014, 0.62, 10), mChrome, sx * 0.08, 0.36, 0);
+    add(steer, new THREE.CylinderGeometry(0.022, 0.022, 0.26, 10), mFrame, sx * 0.08, 0.2, 0);
+    const bo = add(steer, new THREE.CylinderGeometry(0.03, 0.025, 0.13, 10), mBlack, sx * 0.08, 0.5, 0);
+  }
+  add(steer, box(0.22, 0.04, 0.06), mFrame, 0, 0.66, 0);
+  const ffm = new THREE.CylinderGeometry(0.19, 0.19, 0.11, 20, 1, true, -Math.PI * 0.1, Math.PI * 0.7); ffm.rotateZ(Math.PI / 2);
+  add(steer, ffm, std({ color: 0x2a62c4, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }), 0, 0.0, 0);
+  add(steer, new THREE.CylinderGeometry(0.035, 0.035, 0.38, 10), mFrame, 0, 0.78, 0);    // steering column
+  // headlamp: chrome bucket + lens
+  const hb = add(steer, new THREE.CylinderGeometry(0.1, 0.1, 0.1, 18), mChrome, 0, 0.9, 0.1); hb.rotation.x = Math.PI / 2;
+  const hl = add(steer, new THREE.CylinderGeometry(0.083, 0.083, 0.012, 18), mats.head, 0, 0.9, 0.158); hl.rotation.x = Math.PI / 2; hl.castShadow = false;
+  add(steer, box(0.1, 0.05, 0.08), mBlack, 0, 0.84, 0.0);
+  // speedo (live screen) in a round housing
+  const sp = new THREE.Group(); sp.position.set(0, 1.0, -0.02); sp.rotation.x = 0.7; steer.add(sp);
+  add(sp, new THREE.CylinderGeometry(0.06, 0.06, 0.04, 18), mChrome, 0, 0, 0).rotation.x = Math.PI / 2;
+  const scr = new THREE.Mesh(new THREE.CircleGeometry(0.052, 20), new THREE.MeshBasicMaterial({ map: dispTex, toneMapped: false })); scr.rotation.y = Math.PI; scr.position.z = -0.0215; sp.add(scr);
+  // handlebars: stock (narrow, up-swept) and PZ-Tuning (wide, flat, with cross brace)
+  const BY = 0.93;
+  const barStock = new THREE.Group(); steer.add(barStock);
+  for (const sx of [-1, 1]) {
+    tube(barStock, [[0.0, BY - 0.02, 0.0], [sx * 0.12, BY, -0.01], [sx * 0.24, BY + 0.01, -0.04], [sx * 0.33, BY + 0.06, -0.1]], 0.0115, mChrome);
+    add(barStock, cylX(0.02, 0.13, 12), mRubber, sx * 0.375, BY + 0.075, -0.115).rotation.set(0, 0, 0);
+    add(barStock, box(0.03, 0.025, 0.1), mBlack, sx * 0.28, BY + 0.04, 0.03);
+    add(barStock, box(0.012, 0.012, 0.13), mChrome, sx * 0.3, BY + 0.01, 0.08).rotation.y = sx * 0.2;
+  }
+  const barPZ = new THREE.Group(); barPZ.visible = false; steer.add(barPZ);
+  const mGold = std({ color: 0xd8a820, roughness: 0.25, metalness: 0.95 });
+  for (const sx of [-1, 1]) {
+    tube(barPZ, [[sx * 0.04, BY - 0.02, 0.0], [sx * 0.2, BY + 0.02, -0.01], [sx * 0.37, BY + 0.0, -0.05], [sx * 0.46, BY - 0.02, -0.13]], 0.0125, mFrame);
+    add(barPZ, cylX(0.021, 0.14, 12), mRubber, sx * 0.485, BY - 0.025, -0.14);
+    add(barPZ, new THREE.CylinderGeometry(0.019, 0.019, 0.02, 10), mGold, sx * 0.565, BY - 0.025, -0.14).rotation.z = Math.PI / 2;
+    add(barPZ, box(0.03, 0.026, 0.1), mBlack, sx * 0.36, BY + 0.03, 0.03);
+    add(barPZ, box(0.012, 0.012, 0.15), mGold, sx * 0.38, BY + 0.0, 0.1).rotation.y = sx * 0.2;
+    add(barPZ, new THREE.CylinderGeometry(0.02, 0.02, 0.04, 10), mGold, sx * 0.16, BY + 0.02, -0.005).rotation.z = Math.PI / 2;
+  }
+  tube(barPZ, [[-0.3, BY + 0.03, -0.03], [0, BY + 0.14, -0.02], [0.3, BY + 0.03, -0.03]], 0.008, mGold); // cross brace
+  for (const sx of [-1, 1]) tube(steer, [[sx * 0.3, BY + 0.01, 0.08], [sx * 0.15, 0.9, 0.0], [sx * 0.09, 0.7, 0.02], [sx * 0.09, 0.3, 0.04]], 0.004, mCable);
+  // mirror on the left
+  add(steer, new THREE.CylinderGeometry(0.004, 0.004, 0.2, 6), mChrome, -0.3, BY + 0.14, -0.05);
+  add(steer, new THREE.CylinderGeometry(0.04, 0.04, 0.012, 14), mChrome, -0.3, BY + 0.25, -0.05).rotation.x = Math.PI / 2 - 0.2;
+  // indicators
+  for (const sx of [-1, 1]) add(steer, new THREE.SphereGeometry(0.022, 8, 6), mTan, sx * 0.14, 0.9, 0.06).castShadow = false;
+
+  const dummyGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); dummyGlow.rotation.x = -Math.PI / 2;
+  const wheelieBar = new THREE.Group(); group.add(wheelieBar);
+  return {
+    id: 'simson', name: 'Simson S51', group, steer, frontWheel, rearWheel, vescParts: [], glow: dummyGlow, glowSize: [0.1, 0.1],
+    paint: { body: [mPaint], accent: [mAcc] }, noVesc: true, noDecor: true, moped: true, riderDY: -0.2, wheelieBar,
+    exhaust: { stock: new THREE.Vector3(0.2, 0.27, -0.78), mtx: new THREE.Vector3(0.24, 0.27, -1.0) }, exStock, mtx, barStock, barPZ,
+    gripLocal: [new THREE.Vector3(0.375, BY + 0.075, -0.115), new THREE.Vector3(-0.375, BY + 0.075, -0.115)],
+    gripLocalPZ: [new THREE.Vector3(0.485, BY - 0.025, -0.14), new THREE.Vector3(-0.485, BY - 0.025, -0.14)],
+    foot: [new THREE.Vector3(0.3, 0.32, -0.05), new THREE.Vector3(-0.3, 0.32, -0.05)],
+    half: HALF, wheelbase: 1.18, wheelR: R, spotPos: [0, 0.95, 0.62], dispMode: 'S51', fp: { y: 1.62, pitch: 0.28 },
+    spec: { vN: 17.6, vT: 17.6, vVN: 17.6, vVT: 17.6, aN: 1.8, aT: 1.8, aVN: 1.8, aVT: 1.8, kN: 6, kT: 6, kVN: 6, kVT: 6, drag2: 0.0012, brake: 4.4, space: 6.0, cap: 6.4, aLat: 8, mass: 118, wheelie: 0.55 },
+    specMtx: { vN: 25.0, vT: 25.0, vVN: 25.0, vVT: 25.0, aN: 3.0, aT: 3.0, aVN: 3.0, aVT: 3.0, kN: 8, kT: 8, kVN: 8, kVT: 8, drag2: 0.0012, brake: 5.2, space: 7.0, cap: 7.2, aLat: 8, mass: 118, wheelie: 0.7 },
+  };
+}
