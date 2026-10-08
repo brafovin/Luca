@@ -308,6 +308,7 @@ document.querySelectorAll('#touch button[data-k]').forEach((b) => {
 /* ------------------------------------------------------------------ UI helpers */
 let toastTimer = 0;
 function toast(text, sub = '', ms = 1800) {
+  if (st.shopOpen) shopFlash(text + (sub ? ' – ' + sub : ''));
   const t = $('toast');
   t.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   t.classList.add('show');
@@ -778,29 +779,29 @@ function renderShop() {
   h += `<div class="stabs">${tabs}</div>`;
   if (t.id === 'parts') {
     h += `<div class="srow"><div class="sinfo"><b>VESC-Controller Umbau</b><small>Turbo schneller: G4 150 km/h · Dualtron 235 km/h · Sonic 500 km/h · ZT3 Pro & G2 70 km/h. Gilt für alle Roller.</small></div>`
-      + (st.vesc ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="vesc" ${st.money < VESC_PRICE ? 'disabled' : ''}>Kaufen · ${VESC_PRICE} €</button>`) + `</div>`;
+      + (st.vesc ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="vesc" ${st.money < VESC_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${VESC_PRICE} €</button>`) + `</div>`;
     h += `<div class="srow"><div class="sinfo"><b>Wheelie-Bar</b><small>Stützrad hinten (an/aus mit H) – gratis dabei.</small></div><span class="sown">✓ dabei</span></div>`;
   } else if (t.id === 'moped') {
     const mopeds = [['simson', 'Simson S51 Enduro', 'Der Klassiker: 50-cm³-Zweitakter, <b>60 km/h</b>.'], ['sr50', 'Simson SR50', 'Sportliches Roller-Moped in Orange, <b>63 km/h</b>.'], ['schwalbe', 'Simson Schwalbe KR51', 'Der Kultroller mit Verkleidung und Beinschild, <b>61 km/h</b>.']];
     for (const [id, name, info] of mopeds) {
       const price = SHOP_MODELS[id].price;
       h += `<div class="srow"><div class="sinfo"><b>${name}</b><small>${info} Auspuff qualmt · <b>kein VESC</b> (Moped!) · mit MTX10 <b>150 km/h</b>.</small></div>`
-        + (st.model === id ? `<span class="sown">● aktiv</span>` : st[id] ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'disabled' : ''}>Kaufen · ${price} €</button>`) + `</div>`;
+        + (st.model === id ? `<span class="sown">● aktiv</span>` : st[id] ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'data-poor="1"' : ''}>Kaufen · ${price} €</button>`) + `</div>`;
     }
     h += `<div class="srow"><div class="sinfo"><b>Helm & Handschuhe</b><small>Gratis dabei – du trägst beides schon.</small></div><span class="sown">✓ dabei</span></div>`;
   } else if (t.id === 'tuning') {
     h += `<div class="srow"><div class="sinfo"><b>MTX10 Motor-Tuning</b><small>Großer Zylinder, Vergaser, roter Resonanzauspuff: <b>85 km/h</b> statt 60, kräftigere Beschleunigung, mehr Qualm. Für die Simson S51.</small></div>`
-      + (st.mtx ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="up" data-id="mtx" ${st.money < MTX_PRICE ? 'disabled' : ''}>Kaufen · ${MTX_PRICE} €</button>`) + `</div>`;
+      + (st.mtx ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="up" data-id="mtx" ${st.money < MTX_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${MTX_PRICE} €</button>`) + `</div>`;
     h += `<div class="srow"><div class="sinfo"><b>PZ-Tuning Lenker</b><small>Breiter, flacher Rennlenker mit Querstrebe und goldenen Klemmen – lenkt direkter (mehr Kurvengrip).</small></div>`
-      + (st.pz ? `<span class="sown">✓ montiert</span>` : `<button class="buy" data-act="up" data-id="pz" ${st.money < PZ_PRICE ? 'disabled' : ''}>Kaufen · ${PZ_PRICE} €</button>`) + `</div>`;
+      + (st.pz ? `<span class="sown">✓ montiert</span>` : `<button class="buy" data-act="up" data-id="pz" ${st.money < PZ_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${PZ_PRICE} €</button>`) + `</div>`;
     h += (st.simson || st.sr50 || st.schwalbe) ? '' : `<div class="srow"><div class="sinfo"><small>Du besitzt noch keine Simson – die Teile werden eingebaut, sobald du sie hast.</small></div></div>`;
   } else if (t.id === 'kiosk') {
-    h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'disabled' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
+    h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
   } else if (t.id === 'scooters') {
     const rows = [['g4', 'KuKirin G4', 0, 'Starter · 65 km/h (Turbo 100) · VESC 150'], ['zt3', 'ZT3 Pro', SHOP_MODELS.zt3.price, '40 km/h · VESC 70'], ['g2', 'Kukirin G2', SHOP_MODELS.g2.price, '55 km/h · VESC 70'], ['dt3', 'Dualtron Thunder 3', SHOP_MODELS.dt3.price, '110 km/h (Turbo 170) · VESC 235'], ['sonic', 'Weped Sonic', SHOP_MODELS.sonic.price, '200 km/h (Turbo 300) · VESC 500 · Rennstrecke: bis 5000 km/h']];
     for (const [id, name, price, info] of rows) {
       const own = OWNED[id]();
-      const btn = st.model === id ? `<span class="sown">● aktiv</span>` : own ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'disabled' : ''}>Kaufen · ${price} €</button>`;
+      const btn = st.model === id ? `<span class="sown">● aktiv</span>` : own ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'data-poor="1"' : ''}>Kaufen · ${price} €</button>`;
       h += `<div class="srow"><div class="sinfo"><b>${name}</b><small>${info}</small></div>${btn}</div>`;
     }
   } else {
@@ -814,7 +815,9 @@ function renderShop() {
       h += `</div>`;
     }
   }
+  if (st.shopMsg) h = h.replace('</div><div class="stabs">', `</div><div class="smsg">${st.shopMsg}</div><div class="stabs">`);
   el.innerHTML = h;
+  el.querySelectorAll('[data-poor]').forEach((b) => b.classList.add('poor'));
   el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { st.shopTab = b.dataset.tab; renderShop(); }));
   el.querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => {
     const a = b.dataset.act;
@@ -870,6 +873,7 @@ function updateSmoke(dt) {
   smoke.update(dt);
 }
 const _sp = new THREE.Vector3();
+function shopFlash(msg) { st.shopMsg = msg; renderShop(); clearTimeout(st.shopMsgT); st.shopMsgT = setTimeout(() => { st.shopMsg = ''; if (st.shopOpen) renderShop(); }, 2200); }
 function buyModelUI(id) { const v = scooter.v; scooter.v = 0; buyModel(id); scooter.v = v; renderShop(); }
 // interior light so the shop is not dark in daylight
 const shopLight = new THREE.PointLight(0xfff1d8, 0, 34, 1.6);
