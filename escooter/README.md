@@ -69,6 +69,15 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Fahrer & Details
+
+* Fahrer mit geformten Armen/Beinen (Muskel-Kontur), Jacke mit Reißverschluss, Brust-/Hüfttaschen, Schulterpolstern, Kapuzenrolle, Gürtelschnalle,
+  Hose mit Beintaschen und Knieschonern, Sneaker mit Schnürung/Profilsohle, Helm mit Seitenpolstern und Kinnriemen, Ohren/Nase unter der Sturmhaube.
+* Handschuhe: Lederhandfläche, Textilrücken, TPU-Knöchelschutz mit orangem Streifen, Klett-Manschette, 4 Finger mit Gelenken + Daumen mit 3 Gliedern;
+  der Zeigefinger liegt auf dem Bremshebel und zieht beim Bremsen an.
+* Lebendiger Körper: Atmen, Oberkörper dreht/lehnt mit Lenker & Kurven, Kopf schaut in die Kurve, Gewichtsverlagerung beim Beschleunigen/Wheelie.
+* Vögel kreisen über der Stadt (tagsüber, nicht bei Regen/Nacht); Fußgänger-Figur mit Fingern und Knöchelschutz.
+
 ## Fünf Roller
 
 * **ZT3 Pro** (Shop, **150 €**, Taste `I`): 40 km/h, mit VESC 70 km/h. · **Kukirin G2** (Shop, **300 €**, Taste `O`): 55 km/h, mit VESC 70 km/h.

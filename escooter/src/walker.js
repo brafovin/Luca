@@ -58,7 +58,21 @@ export class WalkerModel {
       mk(new THREE.SphereGeometry(0.066, 8, 6), mat(jacket), piv);
       const arm = mk(new THREE.CapsuleGeometry(0.05, 0.46, 4, 8), mat(jacket), piv); arm.position.y = -0.3;
       const band = mk(new THREE.CylinderGeometry(0.057, 0.057, 0.04, 10), mat(0xdfe5e8, { metalness: 0.3 }), piv); band.position.y = -0.34;
-      const hand = mk(new THREE.BoxGeometry(0.075, 0.09, 0.07), mat(0x141517), piv); hand.position.set(0, -0.6, 0.01);
+      const gl = mat(0x141517), gk = mat(0xff7a1a);
+      const hg = new THREE.Group(); hg.position.set(0, -0.6, 0.01); piv.add(hg);
+      const palm = mk(new THREE.BoxGeometry(0.08, 0.075, 0.034), mat(0x3a2f28), hg); palm.position.y = -0.03;
+      const back = mk(new THREE.BoxGeometry(0.082, 0.07, 0.016), mat(0x2b2d33), hg); back.position.set(0, -0.03, -0.022);
+      const kn = mk(new THREE.BoxGeometry(0.075, 0.012, 0.014), mat(0x1b1c20), hg); kn.position.set(0, -0.062, -0.025);
+      const ks = mk(new THREE.BoxGeometry(0.075, 0.004, 0.006), gk, hg); ks.position.set(0, -0.062, -0.034);
+      for (let f = 0; f < 4; f++) {
+        const fl = [1, 1.1, 1.06, 0.88][f];
+        const fg = new THREE.Group(); fg.position.set((f - 1.5) * 0.02, -0.07, 0); fg.rotation.x = -0.25; hg.add(fg);
+        const s1 = mk(new THREE.CapsuleGeometry(0.0095, 0.03 * fl, 3, 6), gl, fg); s1.position.y = -0.026 * fl;
+        const fg2 = new THREE.Group(); fg2.position.y = -0.05 * fl; fg2.rotation.x = -0.5; fg.add(fg2);
+        const s2 = mk(new THREE.CapsuleGeometry(0.009, 0.022 * fl, 3, 6), gl, fg2); s2.position.y = -0.02 * fl;
+      }
+      const tg = new THREE.Group(); tg.position.set(-sx * 0.045, -0.035, 0.012); tg.rotation.set(0.3, 0, sx * 0.55); hg.add(tg);
+      const t1 = mk(new THREE.CapsuleGeometry(0.0105, 0.03, 3, 6), gl, tg); t1.position.y = -0.02;
       this.arms.push(piv);
     }
     this.phase = 0;
