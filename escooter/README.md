@@ -69,6 +69,13 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Kinder, Spielplätze, Messer & Krankenwagen
+
+* **Kinder** laufen mit Mama/Papa an der Hand über die Gehwege. In jedem **Park** gibt es einen **Spielplatz** (Gummiboden, Zaun, Schaukeln, Rutsche, Sandkasten, Wippe, Bänke):
+  Kinder schaukeln, rutschen, buddeln im Sand und rennen herum, Eltern stehen am Rand und winken. **Kinder und ihre Eltern sind tabu** – sie können nicht geschlagen oder gestochen werden.
+* **Messer** (`N` zu Fuß ziehen/wegstecken): `E`/`J` = Stich. Zwei Stiche und Passanten, Oma oder Opa liegen **blutend am Boden** (Blutspritzer + wachsende Blutlache, −250 Punkte).
+  Dann kommt ein **Krankenwagen** (Blaulicht, Sirene), die Sanitäter versorgen die Person, tragen sie auf der Trage hinein und fahren weg. Blut lässt sich im Menü abschalten („Blut anzeigen“).
+
 ## Boxen 🥊
 
 * Zu Fuß (`F` zum Absteigen): **`E` oder `J` halten = Schläge** (abwechselnd links/rechts, Kampfhaltung mit Deckung, in Ego-Sicht sieht man die roten Handschuhe).

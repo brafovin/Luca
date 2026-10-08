@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { makeTextures } from './textures.js';
 import { createMaterials } from './materials.js';
 import { Sky } from './sky.js';
-import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop } from './world.js';
+import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop, PLAY } from './world.js';
 import { Walker } from './walker.js';
 import { Net } from './net.js';
 import { Scooter } from './scooter.js';
@@ -16,6 +16,8 @@ import { TRACK, trackProject, trackAt, trackNear, trackXZ, TRACK_W } from './tra
 import { Pedestrians } from './peds.js';
 import { Rain } from './weather.js';
 import { Birds } from './birds.js';
+import { Blood } from './blood.js';
+import { Emergency } from './ambulance.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
 
@@ -60,6 +62,9 @@ const peds = new Pedestrians(scene, M, 16, 6);
 traffic.peds = peds;
 const rain = new Rain(scene);
 const birds = new Birds(scene, 18);
+const blood = new Blood(scene);
+const ems = new Emergency(scene, M, tex.glow);
+ems.onTaken = () => toast('🚑 Krankenwagen', 'hat die verletzte Person mitgenommen', 2600);
 const dynAll = [];
 const walkDyn = [];
 const PARK = { space: true };
@@ -112,6 +117,7 @@ const cfg = {
   mouse: store.get('mouse', true),
   weather: 'clear',
   wbar: store.get('wbar', true),
+  blood: store.get('blood', true),
   police: store.get('police', true),
 };
 const VESC_PRICE = 500, DT3_PRICE = 1000, SONIC_PRICE = 1500;
@@ -233,6 +239,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyR': toggleOneHand(); break;
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
     case 'KeyH': setWbar(!cfg.wbar); break;
+    case 'KeyN': toggleKnife(); break;
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
@@ -513,20 +520,39 @@ function trackHud() {
 /* ------------------------------------------------------------------ on foot, shop, money */
 /* ------------------------------------------------------------------ boxing */
 let koCount = 0;
+function toggleKnife() {
+  if (st.mode !== 'walk') return;
+  st.knife = !st.knife; walker.setKnife(st.knife);
+  fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = st.knife));
+  toast(st.knife ? '🔪 Messer gezogen' : 'Messer weggesteckt', st.knife ? 'E / J = zustechen · Kinder und Eltern sind tabu · N = wegstecken' : '', 1600);
+}
 function resolvePunch(ev) {
   const fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
+  const knife = st.knife;
   let best = null, bd = 1e9;
   for (const p of peds.list) {
-    if (!p.active || p.down > 0) continue;
+    if (!p.active || p.down > 0 || p.protect) continue; // children and their parents are never targets
     const dx = p.x - ev.x, dz = p.z - ev.z, d = Math.hypot(dx, dz);
-    if (d > 1.45 || d < 0.05) continue;
+    if (d > (knife ? 1.55 : 1.45) || d < 0.05) continue;
     if ((dx * fx + dz * fz) / d < 0.5) continue; // roughly in front
     if (d < bd) { bd = d; best = p; }
   }
   if (!best) { audio.whoosh && audio.whoosh(); return; }
-  const r = peds.hit(best, best.x - ev.x, best.z - ev.z, 12 + Math.random() * 6);
+  const dx = best.x - ev.x, dz = best.z - ev.z;
+  const r = peds.hit(best, dx, dz, knife ? 52 : 12 + Math.random() * 6, { long: knife });
   audio.thud(r === 'ko' ? 9 : 4);
   st.crashT = 0.12; $('crash').style.opacity = 0.25;
+  if (knife) {
+    const l = Math.hypot(dx, dz) || 1;
+    blood.splash(best.x - dx / l * 0.1, 1.15, best.z - dz / l * 0.1, dx / l, dz / l, r === 'ko' ? 26 : 16);
+    if (r === 'ko') {
+      st.score = Math.max(0, st.score - 250);
+      best.bloodPool = blood.pool(best.x, best.z, 1.1);
+      ems.call(best);
+      toast(best.elder ? (best.kind === 'oma' ? 'Oma niedergestochen' : 'Opa niedergestochen') : 'Niedergestochen', 'liegt blutend am Boden – der Krankenwagen ist unterwegs · −250 Punkte', 3200);
+    }
+    return;
+  }
   if (r === 'ko') {
     koCount++;
     st.score = Math.max(0, st.score - 120);
@@ -596,7 +622,7 @@ function dismount() {
 function mount() {
   const d = Math.hypot(scooter.x - walker.x, scooter.z - walker.z);
   if (d > 3.4) { toast('Zu weit weg', 'geh näher an deinen Roller (F)', 1500); return; }
-  st.mode = 'ride';
+  st.mode = 'ride'; if (st.knife) { st.knife = false; walker.setKnife(false); }
   scooter.parked = false; scooter.rider.visible = true; scooter.v = 0;
   walker.setVisible(false);
   camYaw = scooter.heading;
@@ -665,6 +691,9 @@ function setWbar(on) {
   if (st.running) toast(cfg.wbar ? 'Wheelie-Bar an' : 'Wheelie-Bar ab', cfg.wbar ? 'begrenzt den Wheelie auf ~32° – sicherer' : 'Wheelie bis fast zum Überschlag', 1700);
 }
 $('optWbar').onchange = (e) => setWbar(e.target.checked);
+$('optBlood').checked = cfg.blood;
+blood.setEnabled(cfg.blood);
+$('optBlood').onchange = (e) => { cfg.blood = e.target.checked; store.set('blood', cfg.blood); blood.setEnabled(cfg.blood); };
 function buyVesc() {
   if (st.vesc) { toast('VESC ist schon verbaut', 'viel Spaß!', 1800); return; }
   if (st.money < VESC_PRICE) { toast('Zu wenig Geld', `Du hast ${Math.floor(st.money)} € – der VESC kostet ${VESC_PRICE} €. Fahre Checkpoints!`, 3000); audio.beep(); return; }
@@ -790,7 +819,9 @@ const fists = new THREE.Group();
     const fist = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.17), gl); fist.position.z = 0.0;
     const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.1), gl); thumb.position.set(-sx * 0.05, 0.06, -0.02);
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.6), cf); arm.position.z = 0.37;
-    f.add(fist, thumb, arm); f.userData.sx = sx; fists.add(f);
+    const blade = new THREE.Group(); blade.visible = false; f.userData.blade = blade;
+    { const bm = new THREE.MeshStandardMaterial({ color: 0xdfe3e8, metalness: 0.95, roughness: 0.15 }); const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.4), bm); b1.position.set(0, 0.0, -0.3); const hd = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.03), cf); hd.position.set(0, 0, -0.1); blade.add(b1, hd); }
+    f.add(fist, thumb, arm); if (sx < 0) f.add(blade); f.userData.sx = sx; fists.add(f);
   }
   fists.visible = false; scene.add(camera); camera.add(fists);
 }
@@ -1172,10 +1203,13 @@ function tick(dt, now, render = true) {
     const dt2 = Math.min(dt, 0.05);
     const walking = st.mode === 'walk';
     traffic.extra = walking ? [{ x: scooter.x, z: scooter.z }] : [];
+    if (ems.active) traffic.extra.push({ x: ems.x, z: ems.z });
     const cars = st.track ? [] : traffic.update(dt2, me, sig);
     const pl = st.track ? [] : peds.update(dt2, me, sig, now);
     dynAll.length = 0;
     for (const c of cars) dynAll.push(c);
+    ems.update(dt2, traffic);
+    for (const c of ems.dyn) dynAll.push(c);
     for (const c of pl) dynAll.push(c);
     for (const c of net.dynList ? net.dynList() : []) dynAll.push(c);
 
@@ -1269,6 +1303,8 @@ function tick(dt, now, render = true) {
   }
   // day / night
   sky.setTime(cfg.hours);
+  blood.update(dt);
+  { const d = ems.active ? Math.hypot(ems.x - me.x, ems.z - me.z) : 1e9; audio.sirenEms(ems.active ? clamp(1 - d / 200, 0, 1) * (ems.state === 'medics' ? 0.4 : 1) : 0); }
   birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
   sky.update(dt, _focus.copy(camera.position).lerp(_focus2.set(me.x, 0, me.z), 0.5).setY(0));
   const night = sky.night, lamps = sky.lampsOn;
@@ -1367,4 +1403,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { blockType, PLAY, blood, ems, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

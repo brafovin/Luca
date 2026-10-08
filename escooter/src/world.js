@@ -16,6 +16,13 @@ export const SHOP = { x: P + LOT0 + 24, z: 7.5 };
 // walk-in VESC shop: interior rectangle (world coords) and the three counters you can buy at
 export const SHOP_IN = { x0: P + LOT0 + 10 + 0.5, x1: P + LOT0 + 38 - 0.5, z0: LOT0 + 1 + 0.5, z1: LOT0 + 17 - 0.5 };
 const SHOP_CX = P + LOT0 + 24;
+// playground in the north-west quarter of every park block (local chunk coordinates)
+export const PLAY = { cx: 28, cz: 28, half: 10 };
+PLAY.swing = { x: PLAY.cx + 4, z: PLAY.cz - 3, beam: 2.4, len: 1.6, xs: [-0.7, 0.7] };
+PLAY.slide = { x: PLAY.cx - 6, z: PLAY.cz - 5, top: 1.9 };
+PLAY.sand = { x: PLAY.cx - 5, z: PLAY.cz + 5.5, w: 4.4, d: 3.4 };
+PLAY.parents = [[PLAY.cx - 2, PLAY.cz + 7.9], [PLAY.cx + 3, PLAY.cz + 7.9]];
+PLAY.run = { x0: PLAY.cx - 3, x1: PLAY.cx + 2, z0: PLAY.cz - 1, z1: PLAY.cz + 3.2 };
 export const SHOP_TABLES = [
   { id: 'parts', name: 'VESC & Umbauten', x: SHOP_CX - 8, z: LOT0 + 8.6 },
   { id: 'scooters', name: 'Roller', x: SHOP_CX, z: LOT0 + 8.6 },
@@ -932,16 +939,17 @@ class ChunkBuilder {
     const placed = [];
     for (let t = 0; t < 120 && placed.length < 34; t++) {
       const x = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4), z = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4);
-      if (Math.abs(x - c) < 3.8 || Math.abs(z - c) < 3.8 || Math.hypot(x - c, z - c) < 12) continue;
+      if (Math.abs(x - c) < 3.8 || Math.abs(z - c) < 3.8 || Math.hypot(x - c, z - c) < 12 || (Math.abs(x - PLAY.cx) < PLAY.half + 2 && Math.abs(z - PLAY.cz) < PLAY.half + 2)) continue;
       if (placed.some((p) => Math.hypot(p[0] - x, p[1] - z) < 6)) continue;
       placed.push([x, z]);
       this.tree(x, z, CURB);
     }
     for (let i = 0; i < 10; i++) {
       const x = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4), z = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4);
-      if (Math.abs(x - c) < 4 || Math.abs(z - c) < 4) continue;
+      if (Math.abs(x - c) < 4 || Math.abs(z - c) < 4 || (Math.abs(x - PLAY.cx) < PLAY.half + 1 && Math.abs(z - PLAY.cz) < PLAY.half + 1)) continue;
       this.bush(x, z, CURB, 0.8);
     }
+    this.playground();
     // lamps + benches along the paths
     const lampB = this.b('lampW'), pool = this.b('pool');
     for (const d of [-1, 1]) for (const horiz of [0, 1]) {
@@ -959,6 +967,64 @@ class ChunkBuilder {
         else { G.box(x, CURB + 0.45, z, 0.45, 0.08, 1.6, '#6a4a2c'); G.box(x + d * 0.22, CURB + 0.8, z, 0.06, 0.4, 1.6, '#6a4a2c'); this.colliders.push({ t: 0, x0: x - 0.25, x1: x + 0.25, z0: z - 0.8, z1: z + 0.8 }); }
       }
     }
+  }
+
+  /** children's playground: rubber floor, fence, swings, slide, sandbox, seesaw, benches */
+  playground() {
+    const G = this.b('generic'), pav = this.b('paver2');
+    const { cx, cz, half } = PLAY, y0 = CURB + 0.02;
+    pav.plane(cx - half, cz - half, cx + half, cz + half, y0, [0.78, 0.3, 0.24], 2);
+    pav.plane(cx - 3.2, cz - 1.4, cx + 2.6, cz + 3.4, y0 + 0.004, [0.22, 0.45, 0.7], 2);
+    // fence with a gate towards the park paths (east side)
+    const fc = '#2f7a4a';
+    for (const [x0, z0, x1, z1] of [[cx - half, cz - half, cx + half, cz - half], [cx - half, cz + half, cx + half, cz + half], [cx - half, cz - half, cx - half, cz + half]]) {
+      const len = Math.hypot(x1 - x0, z1 - z0), n = Math.round(len / 0.5), horiz = z0 === z1;
+      for (let k = 0; k <= n; k++) { const x = x0 + ((x1 - x0) * k) / n, z = z0 + ((z1 - z0) * k) / n; G.box(x, CURB + 0.5, z, 0.06, 1.0, 0.06, fc); }
+      G.box((x0 + x1) / 2, CURB + 0.9, (z0 + z1) / 2, horiz ? len : 0.05, 0.05, horiz ? 0.05 : len, fc);
+      G.box((x0 + x1) / 2, CURB + 0.45, (z0 + z1) / 2, horiz ? len : 0.04, 0.04, horiz ? 0.04 : len, fc);
+      this.colliders.push({ t: 0, x0: Math.min(x0, x1) - 0.1, x1: Math.max(x0, x1) + 0.1, z0: Math.min(z0, z1) - 0.1, z1: Math.max(z0, z1) + 0.1 });
+    }
+    for (const [za, zb] of [[cz - half, cz - 2], [cz + 2, cz + half]]) { // east side with a 4 m gate
+      const n = Math.round((zb - za) / 0.5);
+      for (let k = 0; k <= n; k++) G.box(cx + half, CURB + 0.5, za + ((zb - za) * k) / n, 0.06, 1.0, 0.06, fc);
+      G.box(cx + half, CURB + 0.9, (za + zb) / 2, 0.05, 0.05, zb - za, fc);
+      this.colliders.push({ t: 0, x0: cx + half - 0.1, x1: cx + half + 0.1, z0: za, z1: zb });
+    }
+    for (const sz of [-1, 1]) { G.box(cx + half, CURB + 1.15, cz + sz * 2, 0.12, 2.3, 0.12, '#e8c020'); }
+    // swing rack
+    const sw = PLAY.swing;
+    for (const sx of [-1, 1]) for (const dz of [-0.9, 0.9]) limbW(G, sw.x + sx * 2.3, CURB, sw.z + dz, sw.x + sx * 2.1, sw.beam, sw.z, 0.06, '#d8d8d4');
+    G.box(sw.x, sw.beam + 0.04, sw.z, 4.8, 0.12, 0.12, '#e8c020');
+    this.colliders.push({ t: 0, x0: sw.x - 2.5, x1: sw.x - 2.0, z0: sw.z - 1, z1: sw.z + 1 }, { t: 0, x0: sw.x + 2.0, x1: sw.x + 2.5, z0: sw.z - 1, z1: sw.z + 1 });
+    // slide tower + ramp
+    const sl = PLAY.slide;
+    for (const sx of [-1, 1]) for (const dz of [-1, 1]) G.box(sl.x + sx * 0.6, CURB + sl.top / 2, sl.z + dz * 0.6, 0.1, sl.top, 0.1, '#1f5cff');
+    G.box(sl.x, CURB + sl.top, sl.z, 1.4, 0.1, 1.4, '#e8c020');
+    for (const sx of [-1, 1]) G.box(sl.x + sx * 0.64, CURB + sl.top + 0.35, sl.z, 0.05, 0.7, 1.3, '#d42020'); // side guards
+    G.box(sl.x, CURB + sl.top + 0.4, sl.z - 0.66, 1.3, 0.7, 0.05, '#d42020');
+    G.box(sl.x, CURB + sl.top + 1.0, sl.z, 1.5, 0.08, 1.5, '#2f7a4a'); // roof
+    for (const sx of [-1, 1]) for (const dz of [-1, 1]) G.box(sl.x + sx * 0.68, CURB + sl.top + 0.5, sl.z + dz * 0.68, 0.05, 1.0, 0.05, '#1f5cff');
+    for (let k = 0; k < 7; k++) G.box(sl.x - 0.95 + (k % 2) * 0.0, CURB + 0.22 + k * 0.25, sl.z - 0.18 - 0.0, 0.08, 0.05, 0.6 * 0 + 0.55, '#c9ccd1'); // ladder rungs at the west side
+    G.box(sl.x - 0.96, CURB + 1.0, sl.z - 0.45, 0.05, 2.0, 0.05, '#c9ccd1'); G.box(sl.x - 0.96, CURB + 1.0, sl.z + 0.2, 0.05, 2.0, 0.05, '#c9ccd1');
+    const ry0 = CURB + sl.top, ry1 = CURB + 0.28, rz0 = sl.z + 0.7, rz1 = sl.z + 4.0;
+    G.quad([sl.x - 0.42, ry0, rz0], [sl.x - 0.42, ry1, rz1], [sl.x + 0.42, ry1, rz1], [sl.x + 0.42, ry0, rz0], '#e8c020', null, [sl.x, -10, sl.z + 2]);
+    for (const sx of [-1, 1]) { G.quad([sl.x + sx * 0.44, ry0, rz0], [sl.x + sx * 0.44, ry1, rz1], [sl.x + sx * 0.44, ry1 + 0.16, rz1], [sl.x + sx * 0.44, ry0 + 0.16, rz0], '#d42020', null, [sl.x, 10, sl.z + 2]); G.quad([sl.x + sx * 0.44, ry0, rz0], [sl.x + sx * 0.44, ry0 + 0.16, rz0], [sl.x + sx * 0.44, ry1 + 0.16, rz1], [sl.x + sx * 0.44, ry1, rz1], '#d42020', null, [sl.x, 10, sl.z + 2]); }
+    for (const [px, pz] of [[sl.x - 0.6, sl.z - 0.6], [sl.x + 0.6, sl.z - 0.6], [sl.x - 0.6, sl.z + 0.6], [sl.x + 0.6, sl.z + 0.6]]) this.circ(px, pz, 0.14);
+    // sandbox
+    const sb = PLAY.sand;
+    for (const [dx, dz, w, d] of [[0, -sb.d / 2, sb.w + 0.2, 0.15], [0, sb.d / 2, sb.w + 0.2, 0.15], [-sb.w / 2, 0, 0.15, sb.d], [sb.w / 2, 0, 0.15, sb.d]]) G.box(sb.x + dx, CURB + 0.16, sb.z + dz, w, 0.32, d, '#8a5a30');
+    G.box(sb.x, CURB + 0.1, sb.z, sb.w, 0.2, sb.d, '#e2cc8a');
+    G.cyl(sb.x + 0.8, CURB + 0.2, sb.z - 0.4, 0.18, 0.2, '#e24a3a', 8, false, 0.12); G.cyl(sb.x - 0.9, CURB + 0.2, sb.z + 0.5, 0.12, 0.12, '#1f9aff', 8, false, 0.08);
+    // seesaw
+    const ss = { x: cx + 6.8, z: cz + 3.2 };
+    G.box(ss.x, CURB + 0.2, ss.z, 0.2, 0.4, 0.2, '#1f5cff');
+    const pl = G.box(ss.x, CURB + 0.55, ss.z, 0.34, 0.08, 3.0, '#e8c020'); if (pl && pl.rotation) pl.rotation.x = 0.0;
+    G.box(ss.x, CURB + 0.63, ss.z + 1.4, 0.3, 0.1, 0.18, '#d42020'); G.box(ss.x, CURB + 0.38, ss.z - 1.4, 0.3, 0.1, 0.18, '#d42020');
+    this.circ(ss.x, ss.z, 0.4);
+    // benches
+    for (const [bx, bz] of PLAY.parents) { G.box(bx, CURB + 0.45, bz + 1.5, 1.6, 0.08, 0.45, '#6a4a2c'); G.box(bx, CURB + 0.8, bz + 1.72, 1.6, 0.4, 0.06, '#6a4a2c'); this.colliders.push({ t: 0, x0: bx - 0.8, x1: bx + 0.8, z0: bz + 1.25, z1: bz + 1.75 }); }
+    // little sign at the gate
+    G.box(cx + half + 0.6, CURB + 1.4, cz + 3.0, 0.06, 1.0, 0.7, '#e8c020');
   }
 
   modern() {
