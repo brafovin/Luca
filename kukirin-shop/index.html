@@ -6,10 +6,18 @@
   <title>Kukirin Shop – E-Scooter kaufen</title>
   <meta name="description" content="Kukirin E-Scooter online kaufen: G2 Pro ABE mit Straßenzulassung, G3 Pro, G4 und mehr. Schneller Versand, 14 Tage Widerruf, Support auf Deutsch." />
   <meta name="theme-color" content="#0b0b0d" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Kukirin Shop" />
+  <meta property="og:title" content="Kukirin Shop – E-Scooter kaufen" />
+  <meta property="og:description" content="G2 Pro ABE mit Straßenzulassung, G3 Pro, G4 und mehr. Schneller Versand, 14 Tage Widerruf." />
+  <meta property="og:image" content="img/g3-pro-1.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preload" as="image" href="img/g3-pro-3.jpg" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <a class="skip" href="#shop">Zum Inhalt springen</a>
 
   <div class="topbar">
     <span>🚚 Versandkostenfrei ab 99 €</span>
@@ -26,6 +34,7 @@
         <a href="#vergleich">Vergleich</a>
         <a href="#recht">Zulassung</a>
         <a href="#faq">FAQ</a>
+        <button class="nav-link" data-service>Kundenservice</button>
       </nav>
       <button class="cart-btn" id="cartToggle" aria-label="Warenkorb öffnen">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 7H6"/></svg>
@@ -173,44 +182,44 @@
     <section class="faq wrap" id="faq">
       <p class="kicker">FAQ</p>
       <h2>Häufige Fragen</h2>
-      <details>
-        <summary>Wie lange dauert der Versand?</summary>
-        <p>Lagernde Artikel verlassen unser Lager in der Regel innerhalb von 1–3 Werktagen. Scooter werden versichert per Spedition oder Paketdienst versendet.</p>
-      </details>
-      <details>
-        <summary>Kann ich meinen Scooter zurückgeben?</summary>
-        <p>Ja, du hast ein 14-tägiges Widerrufsrecht ab Erhalt der Ware. Details findest du in der Widerrufsbelehrung.</p>
-      </details>
-      <details>
-        <summary>Gibt es Garantie und Ersatzteile?</summary>
-        <p>Es gilt die gesetzliche Gewährleistung. Bei Defekten hilft dir unser Support auf Deutsch; Ersatzteile besorgen wir auf Anfrage.</p>
-      </details>
-      <details>
-        <summary>Wie sind die Reichweitenangaben zu verstehen?</summary>
-        <p>Es handelt sich um Herstellerangaben unter Idealbedingungen (ebene Strecke, mittleres Fahrergewicht, Eco-Modus). In der Praxis kann die Reichweite geringer ausfallen.</p>
-      </details>
-      <details>
-        <summary>Brauche ich einen Führerschein?</summary>
-        <p>Für ABE-zugelassene E-Scooter im Straßenverkehr ist kein Führerschein nötig, aber ein Mindestalter von 14 Jahren und das Versicherungskennzeichen. Privatgelände-Modelle unterliegen diesen Regeln nicht – dort gelten die Regeln des Grundstückseigentümers.</p>
-      </details>
+      <div id="faqList"></div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="wrap footer-inner">
-      <div>
+    <div class="wrap footer-grid">
+      <div class="f-brand">
         <a class="logo" href="#top">KUKIRIN<span>SHOP</span></a>
-        <p class="muted">Online-Shop für Kukirin E-Scooter. Kukirin und die Produktbilder sind Eigentum des jeweiligen Rechteinhabers.</p>
+        <p>Online-Shop für Kukirin E-Scooter – mit ehrlichen Angaben zur Straßenzulassung und Support auf Deutsch.</p>
+        <div class="pay" aria-label="Zahlungsarten"><span>Rechnung</span><span>PayPal</span><span>Kreditkarte</span><span>Vorkasse</span></div>
       </div>
-      <nav class="footer-links" aria-label="Rechtliches">
+      <nav class="f-col" aria-label="Shop">
+        <h4>Shop</h4>
+        <a href="#shop">Alle Scooter</a>
+        <a href="#finder">Scooter-Berater</a>
+        <a href="#vergleich">Modellvergleich</a>
+        <a href="#recht">Straßenzulassung</a>
+      </nav>
+      <nav class="f-col" aria-label="Service">
+        <h4>Service</h4>
+        <button data-service>Kundenservice</button>
+        <button data-service="bestellung">Bestellstatus</button>
+        <button data-legal="versand">Versand &amp; Zahlung</button>
+        <button data-legal="widerruf">Rückgabe &amp; Widerruf</button>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <nav class="f-col" aria-label="Rechtliches">
+        <h4>Rechtliches</h4>
         <button data-legal="impressum">Impressum</button>
         <button data-legal="datenschutz">Datenschutz</button>
         <button data-legal="agb">AGB</button>
-        <button data-legal="widerruf">Widerruf</button>
-        <button data-legal="versand">Versand &amp; Zahlung</button>
+        <button data-consent-open>Cookie-Einstellungen</button>
       </nav>
     </div>
-    <p class="copyright">© <span id="year"></span> Kukirin Shop · Alle Preise inkl. MwSt. · Produktfotos: Kukirin</p>
+    <div class="wrap footer-bottom">
+      <p id="footerContact"></p>
+      <p>© <span id="year"></span> Kukirin Shop · Alle Preise inkl. MwSt. · Kukirin und die Produktfotos sind Eigentum des jeweiligen Rechteinhabers.</p>
+    </div>
   </footer>
 
   <!-- Mobile Bottom-Bar -->
@@ -229,7 +238,7 @@
       <div class="row"><span>Versand</span><span id="cartShipping">–</span></div>
       <div class="row total"><span>Gesamt</span><strong id="cartTotal">0,00 €</strong></div>
       <button class="btn btn-primary block" id="checkoutBtn" disabled>Zur Kasse</button>
-      <p class="small muted center">🔒 Sichere Bestellung · 14 Tage Widerruf</p>
+      <p class="small muted center">🔒 Sichere Bestellung · 14 Tage Widerruf · Rechnung, PayPal, Karte</p>
     </div>
   </aside>
 
@@ -243,6 +252,7 @@
         <button type="button" class="icon-btn" data-close aria-label="Schließen">✕</button>
       </div>
       <p class="notice">Demo-Modus: Bestellungen werden nur lokal im Browser gespeichert, es erfolgt keine Zahlung.</p>
+      <div class="summary" id="checkoutSummary"></div>
       <div class="form-grid">
         <label>Vorname<input name="first" required autocomplete="given-name" /></label>
         <label>Nachname<input name="last" required autocomplete="family-name" /></label>
@@ -272,5 +282,6 @@
 
   <script src="products.js"></script>
   <script src="app.js"></script>
+  <script src="service.js"></script>
 </body>
 </html>

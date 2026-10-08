@@ -183,23 +183,58 @@ function openProduct(id) {
     </div>`;
   dlg.showModal();
   dlg.scrollTop = 0;
+  document.title = `${p.name} kaufen – Kukirin Shop`;
+  if (location.hash !== `#p-${id}`) history.replaceState(null, "", `#p-${id}`);
 }
 
-// ---------- Rechtstexte (Platzhalter) ----------
+const BASE_TITLE = document.title;
+$("#productDialog").addEventListener("close", () => {
+  document.title = BASE_TITLE;
+  if (location.hash.startsWith("#p-")) history.replaceState(null, "", location.pathname + location.search);
+});
+function openFromHash() {
+  const m = location.hash.match(/^#p-(.+)$/);
+  if (m && findProduct(m[1]) && !$("#productDialog").open) openProduct(m[1]);
+}
+
+// ---------- Rechtstexte ----------
+// [title, html, isPlaceholder] – die rechtlichen Texte sind Vorlagen und MÜSSEN vor Livegang ersetzt werden.
 const LEGAL = {
-  impressum: ["Impressum", "Angaben gemäß § 5 DDG: [Firmenname, Anschrift, Vertretungsberechtigte, Kontakt, USt-IdNr.] – bitte vor Livegang ergänzen."],
-  datenschutz: ["Datenschutzerklärung", "Hier gehört deine Datenschutzerklärung nach DSGVO hin (verantwortliche Stelle, Verarbeitungszwecke, Hosting, Zahlungsanbieter, Betroffenenrechte). Diese Demo speichert Warenkorb und Testbestellungen nur lokal im Browser."],
-  agb: ["Allgemeine Geschäftsbedingungen", "Platzhalter: Vertragsschluss, Preise, Zahlung, Lieferung, Eigentumsvorbehalt, Gewährleistung. Bitte durch rechtssichere AGB ersetzen (z. B. Händlerbund, IT-Recht-Kanzlei)."],
-  widerruf: ["Widerrufsbelehrung", "Platzhalter: Du hast das Recht, binnen 14 Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Muster-Widerrufsbelehrung und -formular bitte mit deinen Händlerdaten einfügen."],
-  versand: ["Versand & Zahlung", `Versand innerhalb Deutschlands: ${eur.format(SHIPPING_FEE)}, ab ${eur.format(FREE_SHIPPING_FROM)} Warenwert gratis. Lieferzeit 1–3 Werktage Bearbeitung (Platzhalter). Zahlungsarten: Rechnung, PayPal, Kreditkarte, Vorkasse (Demo).`],
+  impressum: ["Impressum", `
+    <p><strong>Angaben gemäß § 5 DDG</strong></p>
+    <p>[Firmenname / Inhaber]<br>[Straße und Hausnummer]<br>[PLZ Ort]</p>
+    <p><strong>Vertreten durch:</strong> [Geschäftsführer]<br><strong>Kontakt:</strong> [E-Mail] · [Telefon]<br><strong>Registergericht / Nr.:</strong> [HRB …]<br><strong>USt-IdNr.:</strong> [DE …]</p>
+    <p><strong>Verbraucherstreitbeilegung:</strong> Wir sind weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen. [ggf. anpassen]</p>`, true],
+  datenschutz: ["Datenschutzerklärung", `
+    <h5>1. Verantwortlicher</h5><p>[Name und Anschrift wie im Impressum]</p>
+    <h5>2. Lokaler Speicher im Browser</h5><p>Dieser Shop speichert deinen Warenkorb und deine Cookie-Auswahl im lokalen Speicher deines Browsers. Diese Daten sind technisch notwendig und verlassen dein Gerät nicht.</p>
+    <h5>3. Kontaktformular &amp; Bestellung</h5><p>Wenn du uns schreibst oder bestellst, verarbeiten wir deine Angaben zur Bearbeitung deiner Anfrage bzw. zur Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO). [Speicherdauer, Empfänger ergänzen]</p>
+    <h5>4. Hosting, Zahlungsanbieter, Versanddienstleister</h5><p>[Anbieter und Rechtsgrundlagen ergänzen]</p>
+    <h5>5. Deine Rechte</h5><p>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch und Beschwerde bei einer Aufsichtsbehörde.</p>`, true],
+  agb: ["Allgemeine Geschäftsbedingungen", `
+    <h5>§ 1 Geltungsbereich</h5><p>[…]</p><h5>§ 2 Vertragsschluss</h5><p>[…]</p><h5>§ 3 Preise und Zahlung</h5><p>[…]</p>
+    <h5>§ 4 Lieferung</h5><p>[…]</p><h5>§ 5 Eigentumsvorbehalt</h5><p>[…]</p><h5>§ 6 Gewährleistung</h5><p>[…]</p>
+    <h5>§ 7 Nutzungshinweis</h5><p>Scooter ohne ABE dürfen nicht im öffentlichen Straßenverkehr genutzt werden. […]</p>`, true],
+  widerruf: ["Widerrufsbelehrung", `
+    <h5>Widerrufsrecht</h5><p>Du hast das Recht, binnen 14 Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt 14 Tage ab dem Tag, an dem du oder ein von dir benannter Dritter die Ware in Besitz genommen hast.</p>
+    <p>[Vollständige Muster-Widerrufsbelehrung und Muster-Widerrufsformular mit deinen Händlerdaten einfügen]</p>`, true],
+  versand: ["Versand & Zahlung", `
+    <table class="specs">
+      <tr><td>Versand innerhalb Deutschlands</td><td>${eur.format(SHIPPING_FEE)}</td></tr>
+      <tr><td>Ab ${eur.format(FREE_SHIPPING_FROM)} Warenwert</td><td>kostenlos</td></tr>
+      <tr><td>Bearbeitungszeit</td><td>1–3 Werktage</td></tr>
+      <tr><td>Versandart</td><td>Spedition / Paketdienst, versichert</td></tr>
+      <tr><td>Zahlungsarten</td><td>Rechnung, PayPal, Kreditkarte, Vorkasse</td></tr>
+    </table>
+    <p class="small muted">Alle Preise inkl. gesetzlicher MwSt. Lieferung in andere Länder auf Anfrage.</p>`, false],
 };
 
 function openLegal(key) {
-  const [title, text] = LEGAL[key];
+  const [title, html, placeholder] = LEGAL[key];
   const dlg = $("#infoDialog");
   dlg.innerHTML = `
     <div class="dialog-head"><h3>${title}</h3><button class="icon-btn" data-close aria-label="Schließen">✕</button></div>
-    <div class="legal"><p>${text}</p><p class="notice">Platzhaltertext – kein Rechtstext.</p></div>`;
+    <div class="legal">${html}${placeholder ? '<p class="notice">Vorlage – kein Rechtstext. Vor Livegang durch rechtssichere Texte ersetzen.</p>' : ""}</div>`;
   if (!dlg.open) dlg.showModal();
 }
 
@@ -210,7 +245,12 @@ function openCheckout() {
   const needsAck = Object.keys(cart).some((id) => !isAbe(findProduct(id)));
   $("#privateGroundCheck").hidden = !needsAck;
   $("#privateGround").required = needsAck;
-  $("#checkoutTotal").textContent = eur.format(totals().total);
+  const t = totals();
+  $("#checkoutSummary").innerHTML = Object.entries(cart).map(([id, q]) => {
+    const p = findProduct(id);
+    return `<div class="sum-line"><img src="${p.gallery[0]}" alt="" width="44" height="44" /><span>${q}× ${p.name}</span><strong>${eur.format(p.price * q)}</strong></div>`;
+  }).join("") + `<div class="sum-line sum-ship"><span>Versand</span><strong>${t.shipping ? eur.format(t.shipping) : "Gratis"}</strong></div>`;
+  $("#checkoutTotal").textContent = eur.format(t.total);
   $("#checkoutDialog").showModal();
 }
 
@@ -303,3 +343,5 @@ $("#year").textContent = new Date().getFullYear();
 renderGrid();
 renderCompare();
 updateCart();
+openFromHash();
+window.addEventListener("hashchange", openFromHash);
