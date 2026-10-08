@@ -1208,7 +1208,7 @@ class ChunkBuilder {
 const MESHDEF = {
   asphalt: ['asphalt', 0, 1], paver: ['paver', 0, 1], paver2: ['paver2', 0, 1], grass: ['grass', 0, 1], mark: ['mark', 0, 1], lotAsphalt: ['lotAsphalt', 0, 1],
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
-  glass: ['glass', 0, 1], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
+  glass: ['glass', 0, 1], cglass: ['carGlass', 0, 0], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
   tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
   trackAsphalt: ['asphalt', 0, 1], trackGround: ['runoff', 0, 1], grassT: ['grassT', 0, 1],

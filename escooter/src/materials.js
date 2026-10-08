@@ -18,6 +18,7 @@ export function createMaterials(T) {
   M.roof = std({ map: T.roof, vertexColors: true, roughness: 0.82, metalness: 0.02 });
   M.foliage = std({ map: T.leaf, vertexColors: true, roughness: 0.92, metalness: 0 });
   M.paint = std({ vertexColors: true, roughness: 0.26, metalness: 0.55, envMapIntensity: 1.3 });
+  M.carGlass = std({ color: 0x9db8cc, roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.28, depthWrite: false, envMapIntensity: 1.6 });
   M.glass = std({ color: 0x6f869a, roughness: 0.07, metalness: 0.9, envMapIntensity: 1.25 });
   M.metal = std({ vertexColors: true, roughness: 0.35, metalness: 0.85 });
   M.water = std({ color: 0x2b5a72, roughness: 0.04, metalness: 0.2, envMapIntensity: 1.4 });

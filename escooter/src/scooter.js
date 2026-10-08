@@ -170,6 +170,14 @@ export class Scooter {
       const pad = mk(new THREE.BoxGeometry(0.012, 0.05, 0.07), mJacketDark); pad.userData.pos = [sx * 0.112, 0.045, 0.0]; head.push(pad);
       const chin = mk(new THREE.BoxGeometry(0.01, 0.1, 0.014), mJacketDark); chin.userData.pos = [sx * 0.085, -0.045, 0.045]; chin.rotation.z = sx * 0.2; head.push(chin);
     }
+    const mEyeW = std({ color: 0xf4f4f2, roughness: 0.3 }), mIris = std({ color: 0x3a6a8a, roughness: 0.2 }), mPupil = std({ color: 0x050505, roughness: 0.2 }), mBrowC = std({ color: 0x2a1d14, roughness: 0.9 });
+    for (const sx of [-1, 1]) { // eyes look out of the balaclava, the goggles sit on the helmet
+      const ew = mk(new THREE.BoxGeometry(0.036, 0.022, 0.01), mEyeW); ew.userData.pos = [sx * 0.037, 0.004, 0.1015]; head.push(ew);
+      const ir = mk(new THREE.BoxGeometry(0.017, 0.018, 0.008), mIris); ir.userData.pos = [sx * 0.039, 0.004, 0.1065]; head.push(ir);
+      const pu = mk(new THREE.BoxGeometry(0.008, 0.01, 0.004), mPupil); pu.userData.pos = [sx * 0.039, 0.004, 0.1108]; head.push(pu);
+      const lid = mk(new THREE.BoxGeometry(0.042, 0.007, 0.012), mBal); lid.userData.pos = [sx * 0.037, 0.0185, 0.1018]; head.push(lid);
+      const bw = mk(new THREE.BoxGeometry(0.05, 0.009, 0.012), mBrowC); bw.userData.pos = [sx * 0.038, 0.029, 0.1], bw.rotation.z = sx * -0.12; head.push(bw);
+    }
     const nose = mk(new THREE.SphereGeometry(0.02, 8, 6), mBal); nose.userData.pos = [0, -0.012, 0.1]; nose.scale.set(0.8, 1.1, 1); head.push(nose);
     const chinPad = mk(new THREE.BoxGeometry(0.07, 0.012, 0.02), mJacketDark); chinPad.userData.pos = [0, -0.08, 0.08]; head.push(chinPad);
     const headG = new THREE.Group(); rider.add(headG); this.headG = headG;
@@ -318,8 +326,8 @@ export class Scooter {
     H.neck.position.set(b.x, y - 0.1, b.z - 0.015);
     H.slit.position.set(b.x, y + 0.012, b.z + 0.085);
     H.brow.position.set(b.x, y + 0.04, b.z + 0.083);
-    H.gogg.position.set(b.x, y + 0.012, b.z + 0.098);
-    H.goggFrame.position.set(b.x, y + 0.012, b.z + 0.09);
+    H.gogg.position.set(b.x, y + 0.104, b.z + 0.112); H.gogg.rotation.x = -0.75;
+    H.goggFrame.position.set(b.x, y + 0.102, b.z + 0.104); H.goggFrame.rotation.x = -0.75;
     H.strap.position.set(b.x, y + 0.012, b.z);
     H.helmet.position.set(b.x, y + 0.012, b.z - 0.012);
     H.peak.position.set(b.x, y + 0.078, b.z + 0.125);

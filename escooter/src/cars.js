@@ -1,7 +1,10 @@
 import * as THREE from 'three';
+import { limb, addSeated, SKINS } from './people.js';
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export const CARCOL = ['#c9ccd1', '#c9ccd1', '#1b1d20', '#1b1d20', '#ececec', '#ececec', '#5a5f66', '#1f3a63', '#8a1c1c', '#2e4a3a', '#d8d2c4', '#6e1f2a', '#33507a'];
 let wheelGeo = null;
+const wheelTorus = new THREE.TorusGeometry(0.2, 0.025, 6, 14);
 
 /**
  * Adds a car (facing +z, origin on ground at the centre) to the batch set.
@@ -10,7 +13,8 @@ let wheelGeo = null;
 export function addCar(S, rnd, opts = {}) {
   const type = opts.type ?? rnd();
   const lightB = opts.lights || 'generic';
-  const PA = S.get('paint'), GL = S.get('glass'), G = S.get('generic');
+  const PA = S.get('paint'), GL = S.get('cglass'), G = S.get('generic');
+  const people = !!opts.people;
   if (!wheelGeo) { wheelGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.22, 8); wheelGeo.rotateZ(Math.PI / 2); }
   const wmat = new THREE.Matrix4();
 
@@ -22,8 +26,28 @@ export function addCar(S, rnd, opts = {}) {
       G.geo(wheelGeo, wmat.makeScale(1.35, 1.35, 1.35).setPosition(sx * (hw - 0.15), 0.44, z), '#161718');
       G.box(sx * (hw - 0.02), 0.44, z, 0.02, 0.5, 0.5, '#9a9da1');
     }
-    PA.box(0, 0.4 + (H - 0.4) / 2, 0, W, H - 0.4, L, col);
+    // hollow shell: solid lower body, roof band, window pillars and rear wall – so the interior can be seen
+    PA.box(0, 0.4 + 0.475, 0, W, 0.95, L, col);
+    G.box(0, 1.352, 0, W - 0.16, 0.02, L - 0.3, '#3b3b40');
+    PA.box(0, (2.35 + H) / 2, 0, W, H - 2.35, L, col);
+    G.box(0, 2.34, 0, W - 0.16, 0.02, L - 0.4, '#d0d0cc', { bottom: true });
+    PA.box(0, 1.85, -L / 2 + 0.1, W, 1.0, 0.2, col);
+    for (const sx of [-1, 1]) for (let i = 0; i <= 5; i++) PA.box(sx * (hw - 0.06), 1.85, -L / 2 + 0.45 + i * 2.15 - (i === 5 ? 0.05 : 0), 0.12, 1.0, 0.3, col);
     PA.box(0, 1.0, 0, W + 0.02, 0.2, L + 0.02, '#f2f2f0'); // white stripe
+    // interior: driver cab, seat rows, grab poles
+    const seatC = '#2c3e5a';
+    for (let i = 0; i < 5; i++) for (const sx of [-1, 1]) {
+      const zc = -L / 2 + 1.4 + i * 2.15;
+      for (const dz of [-0.5, 0.5]) { G.box(sx * 0.85, 1.52, zc + dz, 0.5, 0.14, 0.5, seatC); G.box(sx * 0.85, 1.82, zc + dz - 0.25, 0.5, 0.52, 0.1, seatC); }
+    }
+    for (const x of [-0.3, 0.3]) for (let i = 0; i < 4; i++) G.cyl(x, 1.36, -L / 2 + 2.4 + i * 2.15, 0.025, 1.0, '#e8c020', 6);
+    G.box(0.62, 1.62, L / 2 - 1.3, 0.5, 0.14, 0.5, '#1f2024'); G.box(0.62, 1.95, L / 2 - 1.55, 0.5, 0.5, 0.1, '#1f2024'); // driver seat
+    G.box(0.2, 1.55, L / 2 - 0.45, 0.9, 0.6, 0.5, '#1c1d20'); // cockpit desk
+    G.geo(wheelTorus, new THREE.Matrix4().makeRotationX(0.9).setPosition(0.62, 1.85, L / 2 - 0.62), '#17181a');
+    if (people) {
+      addSeated(G, 0.62, 1.3, L / 2 - 1.3, { wheel: { x: 0.62, y: 1.85, z: L / 2 - 0.62 }, shirt: '#2a3a5a', female: false }, rnd);
+      for (let i = 0; i < 5; i++) for (const sx of [-1, 1]) for (const dz of [-0.5, 0.5]) if (rnd() < 0.3) addSeated(G, sx * 0.85, 1.28, -L / 2 + 1.4 + i * 2.15 + dz, {}, rnd);
+    }
     G.box(0, H + 0.1, 0, W - 0.2, 0.18, L - 0.5, '#d8d8d6'); // roof
     for (const sx of [-1, 1]) {
       const wx = sx * (hw + 0.008);
@@ -63,13 +87,53 @@ export function addCar(S, rnd, opts = {}) {
   else prof = [[-L * 0.34 + (type < 0.35 ? -0.1 : 0), yb], [-L * 0.2 + (type < 0.35 ? -0.18 : 0.05), yt], [L * 0.04 + 0.2, yt], [L * 0.2 + 0.25, yb]];
   const cw = hw - 0.1;
   const mapX = (p, q, t) => [t, q, p];
-  PA.extrude(prof, mapX, -cw, cw, col);
+  // hollow cabin: roof slab + pillars + sills (the sides are glass, so the interior is visible)
+  PA.quad(mapX(prof[1][0], prof[1][1], -cw), mapX(prof[2][0], prof[2][1], -cw), mapX(prof[2][0], prof[2][1], cw), mapX(prof[1][0], prof[1][1], cw), col, null, [0, -10, 0]);
+  G.quad(mapX(prof[1][0], prof[1][1] - 0.02, -cw), mapX(prof[2][0], prof[2][1] - 0.02, -cw), mapX(prof[2][0], prof[2][1] - 0.02, cw), mapX(prof[1][0], prof[1][1] - 0.02, cw), '#8c8a84', null, [0, 10, 0]); // headliner
+  for (const sx of [-1, 1]) {
+    const px = sx * cw;
+    limb(PA, V3(px, prof[3][1], prof[3][0]), V3(px, prof[2][1], prof[2][0]), 0.04, col);   // A pillar
+    limb(PA, V3(px, prof[0][1], prof[0][0]), V3(px, prof[1][1], prof[1][0]), 0.045, col);   // C pillar
+    limb(PA, V3(px, prof[1][1], prof[1][0]), V3(px, prof[2][1], prof[2][0]), 0.03, col);    // roof rail
+    PA.box(px, yb + 0.01, (prof[0][0] + prof[3][0]) / 2, 0.07, 0.07, prof[3][0] - prof[0][0], col); // sill
+  }
+  limb(PA, V3(-cw, prof[3][1], prof[3][0]), V3(cw, prof[3][1], prof[3][0]), 0.04, col);      // cowl
+  limb(PA, V3(-cw, prof[0][1], prof[0][0]), V3(cw, prof[0][1], prof[0][0]), 0.04, col);      // rear deck edge
+  limb(PA, V3(-cw, prof[1][1], prof[1][0]), V3(cw, prof[1][1], prof[1][0]), 0.035, col);
+  limb(PA, V3(-cw, prof[2][1], prof[2][0]), V3(cw, prof[2][1], prof[2][0]), 0.035, col);
   const cen = [(prof[0][0] + prof[1][0] + prof[2][0] + prof[3][0]) / 4, (yb + yt) / 2];
   const inset = prof.map(([pz, py]) => [cen[0] + (pz - cen[0]) * 0.86, cen[1] + (py - cen[1]) * 0.74 + 0.01]);
   GL.extrude(inset, mapX, cw, cw + 0.014, '#ffffff');
   GL.extrude(inset, mapX, -cw - 0.014, -cw, '#ffffff');
   const zMid = (inset[1][0] + inset[2][0]) / 2;
   for (const sx of [-1, 1]) PA.box(sx * (cw + 0.006), (yb + yt) / 2, zMid, 0.03, yt - yb - 0.14, 0.07, col);
+  // ---- interior: dashboard, seats, steering wheel, rear bench, mirror (and people if this car is driving)
+  {
+    const seatCols = ['#24262a', '#3a342e', '#2b3038', '#4a4338'];
+    const sc = seatCols[Math.floor(rnd() * seatCols.length)];
+    const zD = prof[2][0] - 0.3, hipY = 0.56, zW = prof[3][0];
+    G.box(0, 0.5, (prof[0][0] + prof[3][0]) / 2, 2 * cw - 0.1, 0.05, prof[3][0] - prof[0][0] - 0.2, '#25262a');                 // floor
+    G.box(0, 0.9, zW - 0.28, 2 * cw - 0.12, 0.14, 0.5, '#1d1e21');                                                          // dashboard
+    G.box(0, 0.98, zW - 0.5, 2 * cw - 0.3, 0.07, 0.3, '#17181a');                                                          // instrument hood
+    for (const sx of [-1, 1]) {
+      G.box(sx * 0.4, 0.52, zD, 0.46, 0.12, 0.5, sc);                                                                         // seat cushion
+      G.box(sx * 0.4, 0.86, zD - 0.27, 0.46, 0.56, 0.11, sc);                                                                 // backrest
+      G.box(sx * 0.4, 1.2, zD - 0.28, 0.22, 0.17, 0.08, sc);                                                                  // headrest
+    }
+    G.box(0, 0.56, zD + 0.15, 0.2, 0.22, 0.75, '#1a1b1e');                                                                    // centre console
+    const zr = zD - 0.82;
+    if (prof[2][0] - prof[1][0] > 1.5 || type >= 0.6) {
+      G.box(0, 0.52, zr, 2 * cw - 0.3, 0.12, 0.5, sc); G.box(0, 0.84, zr - 0.27, 2 * cw - 0.3, 0.52, 0.1, sc);               // rear bench
+    }
+    const wz = zD + 0.62, wy = 0.96;
+    G.geo(wheelTorus, new THREE.Matrix4().makeRotationX(-1.0).setPosition(0.4, wy, wz).multiply(new THREE.Matrix4().makeScale(0.82, 0.82, 0.82)), '#141517');
+    limb(G, V3(0.4, wy - 0.02, wz - 0.02), V3(0.4, wy - 0.18, wz + 0.2), 0.02, '#111');
+    G.box(0, prof[2][1] - 0.1, prof[2][0] + 0.12, 0.2, 0.07, 0.04, '#17181a');                                                // rear-view mirror
+    if (people) {
+      addSeated(G, 0.4, hipY, zD - 0.1, { wheel: { x: 0.4, y: wy, z: wz }, female: rnd() < 0.35 }, rnd);
+      if (rnd() < 0.5) addSeated(G, -0.4, hipY, zD - 0.1, { female: rnd() < 0.5 }, rnd);
+    }
+  }
   const win = (A, B, t0, t1) => {
     const a = [A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0], b2 = [A[0] + (B[0] - A[0]) * t1, A[1] + (B[1] - A[1]) * t1];
     let nz = -(B[1] - A[1]), ny = B[0] - A[0];

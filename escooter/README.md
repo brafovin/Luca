@@ -69,6 +69,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Autos & Menschen mit Gesichtern
+
+* Autos sind innen **hohl mit Glasscheiben**: Armaturenbrett, Sitze (Vorder-/Rückbank), Lenkrad, Mittelkonsole, Innenspiegel. Busse haben Fahrerkabine, Sitzreihen und Haltestangen.
+* **Fahrende** Autos, Busse und Polizeiwagen haben **Fahrer (und teils Beifahrer/Fahrgäste)** mit Gesicht (Augen, Brauen, Nase, Mund, Ohren, Haare, manche mit Brille/Bart), beide Hände am Lenkrad.
+  **Geparkte Autos sind leer.**
+* Fußgänger, Oma & Opa haben Gesichter (Augen, Brauen, Nase, Mund, teils Brille); wütende Senioren schauen böse mit Zähnen. Roller-Fahrer (KI) und dein Fahrer haben Augen/Nase/Mund
+  (Sturmhaube = nur Augen), Skibrille sitzt auf dem Helm.
+
 ## Fahrer & Details
 
 * Fahrer mit geformten Armen/Beinen (Muskel-Kontur), Jacke mit Reißverschluss, Brust-/Hüfttaschen, Schulterpolstern, Kapuzenrolle, Gürtelschnalle,

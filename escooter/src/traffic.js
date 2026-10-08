@@ -4,19 +4,20 @@ import { addCar } from './cars.js';
 import { P } from './world.js';
 import { mulberry32, clamp, damp } from './util.js';
 import { ik2 } from './scooter.js';
+import { addFace } from './people.js';
 
 const STOP = 11.2; // stop line distance from intersection centre
 const LANE = 1.75;
 
 function buildVehicleMeshes(M, rnd, bus) {
   const S = new BatchSet();
-  const dim = addCar(S, rnd, { type: bus ? 'bus' : undefined, lights: 'lampW' });
+  const dim = addCar(S, rnd, { type: bus ? 'bus' : undefined, lights: 'lampW', people: true });
   const g = new THREE.Group();
-  const map = { paint: 'paint', glass: 'glass', generic: 'generic', lampW: 'lampW' };
+  const map = { paint: 'paint', glass: 'glass', cglass: 'carGlass', generic: 'generic', lampW: 'lampW' };
   for (const [k, b] of Object.entries(S.b)) {
     if (b.empty) continue;
     const m = new THREE.Mesh(b.build(), M[map[k]]);
-    m.castShadow = k !== 'glass' && k !== 'lampW';
+    m.castShadow = k !== 'glass' && k !== 'cglass' && k !== 'lampW';
     m.receiveShadow = true;
     g.add(m);
   }
@@ -107,6 +108,8 @@ export function buildAiScooter(M, rnd, o = {}) {
   partAt(B, new THREE.SphereGeometry(0.1, 12, 10), 0, headY, headZ, style < 0.35 ? '#0d0d0f' : skin, 1, 1.1, 1.06);
   partAt(B, new THREE.CylinderGeometry(0.06, 0.075, 0.14, 8), 0, headY - 0.11, headZ - 0.02, style < 0.35 ? '#0d0d0f' : skin);
   if (style < 0.35) B.box(0, headY + 0.012, headZ + 0.09, 0.12, 0.035, 0.02, skin);
+  if (style < 0.35) for (const sx of [-1, 1]) { B.box(sx * 0.037, headY + 0.016, headZ + 0.1, 0.034, 0.02, 0.012, '#f4f4f2'); B.box(sx * 0.039, headY + 0.016, headZ + 0.106, 0.016, 0.016, 0.008, '#2a4a7a'); } // balaclava: just the eyes
+  else addFace(B, 0, headY + 0.012, headZ, { skin, hair: null, brow: '#2a1d14', glasses: rnd() < 0.12 }, rnd); // eyes, nose, mouth, ears
   if (style < 0.85) partAt(B, new THREE.SphereGeometry(0.125, 12, 8, 0, 6.283, 0, 1.8), 0, headY + 0.014, headZ, o.helmet || pick(['#f2f2f0', '#c42a2a', '#16171a', '#2a5fb4', '#e6a21e']), 1, 1.04, 1.1);
   else B.box(0, headY + 0.04, headZ - 0.005, 0.2, 0.09, 0.2, pick(['#2a2f3a', '#6a4a30']));
   const g = new THREE.Group();
@@ -125,7 +128,7 @@ export function buildAiScooter(M, rnd, o = {}) {
 
 function buildPoliceCar(M, rnd, glowTex) {
   const S = new BatchSet();
-  const dim = addCar(S, rnd, { type: 0.45, color: '#eceff1', lights: 'lampW' });
+  const dim = addCar(S, rnd, { type: 0.45, color: '#eceff1', lights: 'lampW', people: true });
   const { L, W, H } = dim;
   const PA = S.get('paint'), G = S.get('generic');
   const g = new THREE.Group();
@@ -149,8 +152,8 @@ function buildPoliceCar(M, rnd, glowTex) {
   }
   for (const [k, b] of Object.entries(S.b)) {
     if (b.empty) continue;
-    const m = new THREE.Mesh(b.build(), M[{ paint: 'paint', glass: 'glass', generic: 'generic', lampW: 'lampW' }[k]]);
-    m.castShadow = k !== 'glass' && k !== 'lampW'; m.receiveShadow = true; g.add(m);
+    const m = new THREE.Mesh(b.build(), M[{ paint: 'paint', glass: 'glass', cglass: 'carGlass', generic: 'generic', lampW: 'lampW' }[k]]);
+    m.castShadow = k !== 'glass' && k !== 'cglass' && k !== 'lampW'; m.receiveShadow = true; g.add(m);
   }
   g.add(lensL, lensR, ...fl);
   // "POLIZEI" lettering on both doors
