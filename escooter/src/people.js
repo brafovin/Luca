@@ -78,10 +78,12 @@ export function addSeated(B, x, hipY, z, o = {}, rnd = Math.random) {
   const shirt = o.shirt || SHIRTS[Math.floor(rnd() * SHIRTS.length)];
   const pants = o.pants || ['#2a3142', '#3b3b3f', '#5a4a3a', '#1f2430'][Math.floor(rnd() * 4)];
   const female = o.female ?? rnd() < 0.4;
-  const lean = 0.1;
+  const lean = o.lean ?? 0.1;
   // legs
   for (const sx of [-1, 1]) {
-    const hip = V(x + sx * 0.1, hipY, z), knee = V(x + sx * 0.11, hipY + 0.07, z + 0.38), foot = V(x + sx * 0.11, hipY - 0.2, z + 0.5);
+    const hip = V(x + sx * 0.1, hipY, z);
+    const knee = o.moped ? V(x + sx * 0.14, hipY - 0.03, z + 0.4) : V(x + sx * 0.11, hipY + 0.07, z + 0.38);
+    const foot = o.moped ? V(x + sx * 0.16, 0.34, z + 0.3) : V(x + sx * 0.11, hipY - 0.2, z + 0.5);
     limb(B, hip, knee, 0.075, pants); limb(B, knee, foot, 0.058, pants);
     B.box(foot.x, foot.y - 0.02, foot.z + 0.05, 0.1, 0.06, 0.24, '#222226');
   }
@@ -94,7 +96,7 @@ export function addSeated(B, x, hipY, z, o = {}, rnd = Math.random) {
   for (const sx of [-1, 1]) {
     const s = V(x + sx * 0.22, hipY + 0.46, z - lean * 0.45);
     let hand;
-    if (o.wheel) hand = V(o.wheel.x + sx * 0.1, o.wheel.y + 0.02, o.wheel.z);
+    if (o.wheel) hand = V(o.wheel.x + sx * (o.handDX ?? 0.1), o.wheel.y + 0.02, o.wheel.z);
     else hand = V(x + sx * 0.14, hipY + 0.14, z + 0.28);
     const elbow = V((s.x + hand.x) / 2 + sx * 0.04, Math.min(s.y, hand.y) - 0.04, (s.z + hand.z) / 2 - 0.05);
     limb(B, s, elbow, 0.052, shirt); limb(B, elbow, hand, 0.044, shirt);

@@ -69,6 +69,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Jugendliche 🧑‍🤝‍🧑
+
+* **In jedem Park** hängen Jugendlichen-Gruppen auf den Bänken ab. **Halbstarke** (dunkle Hoodies, Caps): rauchen (Zigarette im Mund, Rauchwolken), pöbeln dich an
+  („Was glotzt du so?!“, „Gib mal Kohle rüber!“ – Sprechblase), und wenn du ihnen länger zu nah kommst, stehen sie auf, **laufen dir hinterher und schubsen dich** (−30 €, stoppt dich).
+  Hau ab (mit Roller oder rennend) oder box sie nieder (`E`); schlägst du einen, werden alle seiner Gruppe sauer.
+* **Nette Jugendliche** (bunte Hoodies) sitzen auf der anderen Bank, quatschen, winken dir zu und rufen „Moin!“ – auf einem Moped „Geile Simme!“.
+* Im Verkehr fahren **nette Jugendliche auf Simson-Mopeds** (mit Helm und Gesicht); sie winken dir zu, wenn du vorbeifährst.
+
 ## Simson-Laden 🛵
 
 * Zweiter, begehbarer Laden **einen Block westlich vom Start** (blaue Markierung auf Minimap/Leuchtfeuer, Schild „SIMSON S51“). Drei Tische (mit `F`):

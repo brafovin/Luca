@@ -28,11 +28,12 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10) {
     this.list = [];
     this.young = count;
     this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
-    this.count = count + elders + kids + playKids + playPars;
+    this.count = count + elders + kids + playKids + playPars + teens;
+    this.nTeens = teens;
     const total = this.count;
     this.sites = [];
     this.dyn = [];
@@ -77,23 +78,28 @@ export class Pedestrians {
       hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
       cap: mk(new THREE.CylinderGeometry(0.125, 0.135, 0.05, 12)),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
+      cigT: mk(mergedGeo((B) => { B.box(0.022, -0.052, 0.14, 0.016, 0.016, 0.09, '#f2f0e8'); B.box(0.022, -0.052, 0.19, 0.0145, 0.0145, 0.012, '#ff6a1a'); B.box(0.022, -0.052, 0.098, 0.0165, 0.0165, 0.03, '#d8a860'); }), true),
       swing: mk(mergedGeo((B) => { for (const sx of [-0.14, 0.14]) B.box(sx, -0.8, 0, 0.012, 1.6, 0.012, '#8a8d92'); B.box(0, -1.6, 0, 0.4, 0.04, 0.2, '#d42020'); }), true),
     };
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (let i = 0; i < total; i++) {
       const elder = i >= count && i < count + elders;
       const nk = i - count - elders;
-      const kind = i < count ? 'young' : elder ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : 'ppar';
+      const kind = i < count ? 'young' : elder ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : 'teen';
       const pick = (a) => a[Math.floor(Math.random() * a.length)];
       const p = { active: false, kind, elder, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: '', sayT: 0, cool: 0, lane: 0, s: 0 };
       p.has = { hair: kind !== 'opa' || Math.random() < 0.3, cap: kind === 'opa' && Math.random() < 0.75, cane: kind === 'opa' || (kind === 'oma' && Math.random() < 0.3), bag: kind === 'oma', roll: kind === 'oma' && Math.random() < 0.55 };
       if (kind === 'kid' || kind === 'pkid') { p.child = true; p.protect = true; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; p.slot = kind === 'kid' ? nk : nk - kids; if (kind === 'kid') { p.parent = nk; this.list[nk].protect = true; this.list[nk].hasKid = i; } }
+      if (kind === 'teen') {
+        p.slot = nk - kids - playKids - playPars; p.rowdy = (p.slot % 5) < 3; p.has.hair = Math.random() < 0.7; p.has.cap = Math.random() < 0.55; p.has.cane = p.has.bag = p.has.roll = false;
+        p.smoker = p.rowdy ? (p.slot % 5) !== 1 : false; p.ts = 'sit'; p.aggro = 0;
+      }
       if (kind === 'ppar') { p.protect = true; p.slot = nk - kids - playKids; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; }
       if (kind === 'young') { p.has.hair = Math.random() < 0.85; p.has.cane = false; p.has.bag = Math.random() < 0.3; }
       if (p.has.roll) p.has.cane = false;
       if (p.has.cane && kind === 'oma') p.has.bag = false;
       this.list.push(p);
-      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : CLOTH[i % CLOTH.length];
+      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'teen' ? pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9']) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
@@ -102,7 +108,7 @@ export class Pedestrians {
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
-      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'glasses', 'swing']) this.parts[k].setColorAt(i, c.set('#ffffff'));
+      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'glasses', 'swing', 'cigT']) this.parts[k].setColorAt(i, c.set('#ffffff'));
       for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, zero);
     }
     for (const k of Object.values(this.parts)) if (k.instanceColor) k.instanceColor.needsUpdate = true;
@@ -149,7 +155,8 @@ export class Pedestrians {
   drawFigure(i, p, o) {
     const P_ = this.parts, m = this._m, b = this._b, tt = this._t;
     b.makeRotationY(o.yaw);
-    b.setPosition(o.x, o.y, o.z);
+    if (o.lie) { tt.makeRotationX(-Math.PI / 2 * o.lie); b.multiply(tt); }
+    b.setPosition(o.x, o.lie ? 0.32 : o.y, o.z);
     tt.makeScale(o.sc, o.sc, o.sc); b.multiply(tt);
     const hs = o.head || 1;
     const place = (mesh, rot0, ox, oy, oz, rot1 = 0, sc2 = 1, rz = 0) => {
@@ -170,13 +177,97 @@ export class Pedestrians {
     place(P_.legL, 0, 0.09, 0, 0, o.legL || 0); place(P_.legR, 0, -0.09, 0, 0, o.legR || 0);
     place(P_.armL, h, 0.24, 0.54, 0, o.aL || 0, 1, o.azL || 0); place(P_.armR, h, -0.24, 0.54, 0, o.aR || 0, 1, o.azR || 0);
     if (p.has.hair) place(P_.hair, h, 0, 0.735, 0.008, 0, hs); else P_.hair.setMatrixAt(i, this._zero);
-    for (const k of ['cap', 'cane', 'bag', 'roll']) P_[k].setMatrixAt(i, this._zero);
+    if (o.cap && p.has.cap) place(P_.cap, h, 0, 0.82, 0.03, 0, hs); else P_.cap.setMatrixAt(i, this._zero);
+    if (o.cig) place(P_.cigT, h, 0, 0.71, 0.02, 0, hs); else P_.cigT.setMatrixAt(i, this._zero);
+    for (const k of ['cane', 'bag', 'roll']) P_[k].setMatrixAt(i, this._zero);
     if (o.swing) { // swing seat + chains, hinged at the beam
       m.makeRotationY(o.swing.yaw); m.setPosition(o.swing.x, o.swing.y, o.swing.z);
       tt.makeRotationX(-o.swing.th); m.multiply(tt);
       P_.swing.setMatrixAt(i, m);
     } else P_.swing.setMatrixAt(i, this._zero);
   }
+  /** teenagers hanging out on park benches: rowdy ones smoke and provoke, nice ones chat and wave */
+  updateTeen(i, p, dt, t, player) {
+    const site = this.sites[Math.floor(p.slot / 5)];
+    if (!site) { p.active = false; this.hideFigure(i); p.ts = 'sit'; p.aggro = 0; p.px = undefined; return; }
+    const c = P / 2, local = p.slot % 5;
+    const bench = local < 3 ? { x: 36, z: c + 2.7, yaw: Math.PI } : { x: 64, z: c - 2.7, yaw: 0 };
+    const seatX = bench.x + (local === 0 ? -0.5 : local === 1 ? 0.5 : local === 2 ? 1.5 : local === 3 ? -0.45 : 0.45);
+    const homeX = site.ox + seatX, homeZ = site.oz + bench.z + (bench.yaw === Math.PI ? 0.05 : -0.05);
+    if (p.px === undefined) { p.active = true; p.px = homeX; p.pz = homeZ; p.yawT = bench.yaw; p.phase0 = Math.random() * 6; p.down = 0; p.hp = 100; p.ko = false; p.stabbed = false; p.say = ''; p.sayT = 0; p.ts = 'sit'; p.cool = 0; }
+    p.active = true;
+    const T = t + p.phase0;
+    const pl = player || { x: 1e9, z: 1e9 };
+    const dxp = pl.x - p.px, dzp = pl.z - p.pz, dp = Math.hypot(dxp, dzp);
+    if (p.sayT > 0) p.sayT -= dt;
+    if (p.flinch > 0) p.flinch -= dt;
+    if (p.cool > 0) p.cool -= dt;
+    if (p.down > 0) { // knocked out
+      p.down -= dt; if (p.stabbed) p.down = 9999;
+      if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; p.aggro = 8; p.ts = p.rowdy ? 'stress' : 'sit'; }
+      const lie = Math.min(1, (p.down > 11.7 ? 0.2 : 1));
+      this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT, sc: 0.95, lie: 1 });
+      return;
+    }
+    // ---- behaviour
+    if (p.rowdy) {
+      if (p.ts === 'sit') {
+        if (dp < 12 && p.sayT <= 0 && Math.random() < dt * 0.3) { const L = ['Was glotzt du so?!', 'Ey, Alter, verpiss dich!', 'Hast du Feuer, Opfer?', 'Fahr weiter, Kasper!', 'Gib mal Kohle rüber!', 'Cooler Roller … NICHT!']; this.say(p, L[Math.floor(Math.random() * L.length)], 3); }
+        if (dp < 6.5) p.aggro += dt * (1 + (pl.speed || 0) * 0.1); else p.aggro = Math.max(0, p.aggro - dt * 0.8);
+        if (p.aggro > 4.5) { p.ts = 'stress'; p.aggro = 10; this.say(p, 'Komm her, du Pappnase!', 3); if (this.onTeenAngry) this.onTeenAngry(p); }
+      } else if (p.ts === 'stress') {
+        if (dp > 28) { p.ts = 'back'; p.aggro = 0; }
+        else {
+          const sp = 2.1; // jog after the player
+          if (dp > 1.1) { let nx = p.px + (dxp / dp) * sp * dt, nz = p.pz + (dzp / dp) * sp * dt; if (this.colliders && Math.hypot(nx - homeX, nz - homeZ) > 1.9) { const r = pushOut(nx, nz, 0.3, this.colliders, null, p); nx = r.x; nz = r.z; } p.px = nx; p.pz = nz; p.walkPh = (p.walkPh || 0) + dt * 10; p.yawT = Math.atan2(dxp, dzp); }
+          else if (p.cool <= 0 && (this.shoveCool || 0) <= 0) { p.cool = 4; this.shoveCool = 4.5; if (this.onShove) this.onShove(p); const L = ['Zieh Leine!', 'Na, was jetzt?!', 'Lutscher!']; this.say(p, L[Math.floor(Math.random() * L.length)], 2); }
+          else p.yawT = Math.atan2(dxp, dzp);
+        }
+      } else if (p.ts === 'back') {
+        const dx = homeX - p.px, dz = homeZ - p.pz, d = Math.hypot(dx, dz);
+        if (d < 0.15) { p.ts = 'sit'; p.px = homeX; p.pz = homeZ; p.yawT = bench.yaw; }
+        else { const sp = 1.4; p.px += (dx / d) * sp * dt; p.pz += (dz / d) * sp * dt; p.walkPh = (p.walkPh || 0) + dt * 7; p.yawT = Math.atan2(dx, dz); }
+      }
+    } else { // nice teens
+      if (dp < 13 && p.sayT <= 0 && p.cool <= 0) {
+        const mop = pl.moped;
+        const L = mop ? ['Geile Simme!', 'Schwalbe/S51? Respekt!', 'Moin! Schönes Moped!'] : ['Moin!', 'Na, alles fit?', 'Schönen Tag noch!', 'Cooler Roller!'];
+        this.say(p, L[Math.floor(Math.random() * L.length)], 2.6); p.cool = 9 + Math.random() * 6; p.waveT = 2;
+      }
+      if (p.waveT > 0) p.waveT -= dt;
+    }
+    // ---- pose
+    const sitting = p.ts === 'sit' || p.ko;
+    const smoker = p.smoker && p.ts === 'sit';
+    let o;
+    if (sitting) {
+      const nod = Math.sin(T * 1.3) * 0.04, drag = smoker ? ((T % 9) < 2.2 ? 1 : 0) : 0;
+      let aR = -0.9 + Math.sin(T * 0.7) * 0.05, aL = -0.9, hunch = 0.06 + nod;
+      if (drag) aR = -2.3; else if (smoker) aR = -0.5;
+      if (!p.rowdy && p.waveT > 0) aR = -2.6 + Math.sin(T * 7) * 0.35;
+      if (!p.rowdy && p.waveT <= 0 && local === 3) { aL = -1.0 + Math.sin(T * 1.9) * 0.35; hunch = 0.1 + Math.sin(T * 1.9) * 0.05; } // talking
+      p.legSw = (p.legSw || 0) + 0;
+      o = { x: p.px, y: 0.55 - 0.84 * 0.95 + 0.12, z: p.pz, yaw: p.yawT, sc: 0.95, hunch, legL: -0.95, legR: -0.85 + Math.sin(T * 0.9) * 0.08, aL, aR, head: 1.0, cap: true, cig: smoker && !p.rowdy ? false : smoker };
+      if (p.flinch > 0) o.hunch -= 0.35;
+      // cigarette smoke
+      if (smoker && this.smoke) {
+        p.smk = (p.smk || 0) + dt * (drag ? 8 : 2.2);
+        while (p.smk >= 1) { p.smk--; const hx = p.px + Math.sin(p.yawT) * 0.12, hz = p.pz + Math.cos(p.yawT) * 0.12; this.smoke.emit(hx, 1.43, hz, Math.sin(p.yawT) * 0.25, 0.2, Math.cos(p.yawT) * 0.25, 'cig', drag ? 2 : 1); }
+      }
+      this.dyn.push({ x: p.px, z: p.pz, r: 0.36, vx: 0, vz: 0, ped: p });
+    } else {
+      const sw = Math.sin(p.walkPh || 0) * 0.8;
+      o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 0.95, hunch: 0.12, legL: sw, legR: -sw, aL: -sw, aR: p.ts === 'stress' ? -2.0 + Math.sin(T * 10) * 0.3 : sw, head: 1.0, cap: true, cig: false };
+      this.dyn.push({ x: p.px, z: p.pz, r: 0.3, vx: 0, vz: 0, ped: p });
+    }
+    p.x = p.px; p.z = p.pz;
+    { // nearest road (for the ambulance)
+      const rx = Math.round(p.px / P) * P, rz = Math.round(p.pz / P) * P;
+      if (Math.abs(p.px - rx) < Math.abs(p.pz - rz)) { p.axis = 'z'; p.lane = p.px; } else { p.axis = 'x'; p.lane = p.pz; }
+    }
+    this.drawFigure(i, p, o);
+  }
+
   hideFigure(i) { for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, this._zero); }
 
   updateSpecial(i, p, dt, t, px, pz, R) {
@@ -263,6 +354,11 @@ export class Pedestrians {
     const l = Math.hypot(dx, dz) || 1;
     // staggers back along their own walking line
     if (p.axis === 'x') p.s += (dx / l) * 0.18; else p.s += (dz / l) * 0.18;
+    if (p.kind === 'teen') {
+      p.px = p.x; p.pz = p.z;
+      if (p.rowdy) { for (const q of this.list) if (q.kind === 'teen' && q.rowdy && Math.floor(q.slot / 5) === Math.floor(p.slot / 5) && q.ts === 'sit') { q.ts = 'stress'; q.aggro = 10; } p.ts = 'stress'; this.say(p, 'Du bist tot, Alter!', 2.4); }
+      else this.say(p, 'Hey, spinnst du?!', 2);
+    }
     if (p.elder) { p.anger = Math.min(100, p.anger + 30); }
     else { const say = ['Aua!', 'Hey, spinnst du?!', 'Lass das!', 'Hilfe!']; this.say(p, say[Math.floor(Math.random() * say.length)], 1.6); }
     if (p.hp <= 0) { p.down = opts.long ? 9999 : 12; p.ko = true; p.chase = 0; p.say = ''; if (opts.long) p.stabbed = true; return 'ko'; }
@@ -273,12 +369,14 @@ export class Pedestrians {
     const px = player.x, pz = player.z, pspeed = player.speed || 0;
     const t = now * 0.001;
     this.dyn.length = 0;
+    if (this.shoveCool > 0) this.shoveCool -= dt;
     this.refreshSites(px, pz);
     const m = this._m, b = this._b, l = this._l, tt = this._t;
     const P_ = this.parts;
     for (let i = 0; i < this.count; i++) {
       const p = this.list[i];
       if (p.kind === 'kid' || p.kind === 'pkid' || p.kind === 'ppar') { this.updateSpecial(i, p, dt, t, px, pz, R); continue; }
+      if (p.kind === 'teen') { this.updateTeen(i, p, dt, t, player); continue; }
       if (!p.active) this.spawn(p, px, pz, R);
       if (!p.active) { for (const k of Object.keys(P_)) P_[k].setMatrixAt(i, this._zero); continue; }
       let x = p.x, z = p.z;
