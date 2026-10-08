@@ -46688,6 +46688,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     const win = lamps * 1.6;
     for (const k of ["plaster", "brick", "panel", "glass"]) M["f_" + k].emissiveIntensity = win;
     M.lampW.emissiveIntensity = lamps * 3.4;
+    for (const k of ["shopSign", "shopSign2", "shopSign3", "shopSign4", "shopSign5", "fuelPylon"]) M[k].emissiveIntensity = 0.12 + lamps * 0.8;
+    M.bright.emissiveIntensity = 0.3 + lamps * 0.12;
     M.shopGlow.emissiveIntensity = lamps * 0.9;
     M.pool.opacity = lamps * 0.5;
     M.glowW.opacity = lamps * 0.85;
