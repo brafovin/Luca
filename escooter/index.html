@@ -79,6 +79,21 @@
   #toast small{display:block;font-size:14px;font-weight:600;color:var(--dim);margin-top:2px}
   #crash{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(255,40,20,0) 45%,rgba(255,40,20,.55));opacity:0;transition:opacity .35s}
   #vignette{position:fixed;inset:0;pointer-events:none;z-index:6;background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 52%,rgba(8,10,16,.34) 100%)}
+  #xhair{position:fixed;left:50%;top:50%;width:0;height:0;z-index:7;pointer-events:none;--sp:8px}
+  #xhair.hidden{display:none}
+  #xhair i{position:absolute;background:#fff;box-shadow:0 0 3px rgba(0,0,0,.9);opacity:.92}
+  #xhair i:nth-child(1){left:-1px;top:calc(-1 * var(--sp) - 9px);width:2px;height:9px}
+  #xhair i:nth-child(2){left:-1px;top:var(--sp);width:2px;height:9px}
+  #xhair i:nth-child(3){top:-1px;left:calc(-1 * var(--sp) - 9px);height:2px;width:9px}
+  #xhair i:nth-child(4){top:-1px;left:var(--sp);height:2px;width:9px}
+  #xhair b{position:absolute;left:-1.5px;top:-1.5px;width:3px;height:3px;border-radius:50%;background:#ff3b3b}
+  #hitmark{position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;z-index:7;pointer-events:none;opacity:0}
+  #hitmark:before,#hitmark:after{content:'';position:absolute;left:12px;top:-2px;width:2px;height:30px;background:#fff;box-shadow:0 0 4px #000;transform:rotate(45deg)}
+  #hitmark:after{transform:rotate(-45deg)}
+  #hitmark.kill:before,#hitmark.kill:after{background:#ff3b3b}
+  #ammo{position:absolute;right:26px;bottom:170px;padding:8px 14px;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  #ammo small{font-size:13px;color:var(--dim);font-weight:600}
+  #ammo.low{color:#ff6a6a;border-color:rgba(255,80,80,.7)}
   #speedfx{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,255,255,0) 55%,rgba(210,235,255,.28) 100%);transition:opacity .25s}
   #lowbatt{position:absolute;left:50%;bottom:180px;transform:translateX(-50%);padding:8px 18px;color:var(--bad);font-weight:800;letter-spacing:.08em;animation:blink 1s infinite}
   @keyframes blink{50%{opacity:.35}}
@@ -161,6 +176,7 @@
           <span><kbd>C</kbd></span><span>Kamera: hinten / Ego-Perspektive</span>
           <span><kbd>E</kbd> <kbd>J</kbd></span><span>Zu Fuß: <b>Boxen</b> (halten = Schlagfolge) – zu viele Schläge = K.O.</span>
           <span><kbd>Z</kbd> <kbd>Y</kbd></span><span>Zigarette anzünden &amp; <b>ziehen</b> (Rauch ausatmen) · Y = ausdrücken (Kiosk im Simson-Laden)</span>
+          <span><kbd>R</kbd></span><span>Zu Fuß mit Pistole: <b>Nachladen</b> (15 Schuss) · <kbd>Leertaste</kbd> Springen</span>
           <span><kbd>Q</kbd></span><span>Zu Fuß: <b>Pistole</b> ziehen/wegstecken – <b>linke Maustaste</b> / E / J = Schuss (1 Schuss = tot, Krankenwagen kommt). Kinder &amp; Eltern sind tabu</span>
           <span><kbd>N</kbd></span><span>Zu Fuß: <b>Messer</b> ziehen/wegstecken – Schlag (E/J) = Stich · Opfer bluten, Krankenwagen holt sie ab (Kinder &amp; Eltern sind tabu)</span>
           <span><kbd>F</kbd></span><span>Absteigen / aufsteigen · zu Fuß: WASD, Shift rennen</span>
@@ -284,6 +300,9 @@
   <div id="toast" class="panel"></div>
   <div id="speedfx"></div>
   <div id="vignette"></div>
+  <div id="xhair" class="hidden"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="hitmark"></div>
+  <div id="ammo" class="panel hidden"></div>
   <div id="crash"></div>
 </div>
 <div id="touch">

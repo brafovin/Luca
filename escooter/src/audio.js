@@ -90,13 +90,35 @@ export class GameAudio {
     this.emsO.frequency.setTargetAtTime(Math.floor(t * 2.2) % 2 ? 1000 : 740, t, 0.01);
     this.emsG.gain.setTargetAtTime(Math.max(0, level) * 0.06, t, 0.1);
   }
+  _reverb() {
+    if (this._rv) return this._rv;
+    const c = this.ctx, len = Math.floor(c.sampleRate * 0.9), buf = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    const cv = c.createConvolver(); cv.buffer = buf; const g = c.createGain(); g.gain.value = 0.5; cv.connect(g); g.connect(this.master);
+    return (this._rv = cv);
+  }
+  step(run) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500 + Math.random() * 500;
+    const g = c.createGain(); g.gain.setValueAtTime(run ? 0.16 : 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t, Math.random() * 1.5); n.stop(t + 0.1);
+  }
+  click(kind = 0) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(kind === 1 ? 1400 : kind === 2 ? 2600 : 900, t); o.frequency.exponentialRampToValueAtTime(kind === 2 ? 1800 : 300, t + 0.05);
+    const g = c.createGain(); g.gain.setValueAtTime(kind === 2 ? 0.05 : 0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + (kind === 2 ? 0.06 : 0.07));
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.08);
+  }
   shot() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
     const n = c.createBufferSource(); n.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
     const g = c.createGain(); g.gain.setValueAtTime(0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + 0.32);
+    n.connect(f); f.connect(g); g.connect(this.master); g.connect(this._reverb()); n.start(t); n.stop(t + 0.32);
     const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
     const og = c.createGain(); og.gain.setValueAtTime(0.6, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
     o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.28);
