@@ -15,6 +15,7 @@ import { Traffic } from './traffic.js';
 import { TRACK, trackProject, trackAt, trackNear, trackXZ, TRACK_W } from './track.js';
 import { Pedestrians } from './peds.js';
 import { Rain } from './weather.js';
+import { Birds } from './birds.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
 
@@ -58,6 +59,7 @@ const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), g
 const peds = new Pedestrians(scene, M, 16, 6);
 traffic.peds = peds;
 const rain = new Rain(scene);
+const birds = new Birds(scene, 18);
 const dynAll = [];
 const walkDyn = [];
 const PARK = { space: true };
@@ -1128,6 +1130,7 @@ function tick(dt, now, render = true) {
   }
   // day / night
   sky.setTime(cfg.hours);
+  birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
   sky.update(dt, _focus.copy(camera.position).lerp(_focus2.set(me.x, 0, me.z), 0.5).setY(0));
   const night = sky.night, lamps = sky.lampsOn;
   const win = lamps * 1.6;
