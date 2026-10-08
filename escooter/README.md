@@ -208,6 +208,12 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Autohaus** (Block `(1,1)`, östlich-südlich vom Start): Showroom mit Podesten, Verkäufer und Hof mit vielen Autos. Am Schreibtisch oder an einem Auto <kbd>F</kbd>: **Stadtflitzer 2.500 €** (135 km/h), **Limousine 5.000 €** (190), **Geländewagen 7.500 €** (165), **Supersportwagen 12.000 €** (**250 km/h**, Heckflügel, Vierfach-Auspuff). Das gekaufte Auto steht vor dem Autohaus (<kbd>F</kbd> einsteigen, <kbd>F</kbd> aussteigen, <kbd>C</kbd> Ich-Perspektive, <kbd>X</kbd> Fahrzeug wechseln). Aus den Auspuffen **qualmt es** – stärker bei Gas.
 * **Mehr los auf den Gehwegen:** deutlich mehr Fußgänger, dazu **Halbstarken-Gangs** (3er-Gruppen), die durch die Stadt laufen, rauchen, pöbeln – und dir nachrennen, wenn du ihnen zu nahe kommst (oder du ziehst die Waffe / boxt sie).
 
+## Schönere Umgebung 🌳
+* **Fernsicht:** Hinter dem Nebel liegen jetzt Bergketten, Hügel, Baumlinie und eine dunstige Hochhaus-Skyline (nachts mit leuchtenden Fenstern) – der Horizont ist nicht mehr leer.
+* **Wind:** Baumkronen wiegen sich im Wind (stärker bei Regen).
+* **Leben in der Luft:** tagsüber fallende Blätter und Pollen, nachts Glühwürmchen.
+* **Blumenkästen** mit bunten Blumen zwischen den Straßenbäumen.
+
 ## Entwickeln
 
 ```
