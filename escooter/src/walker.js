@@ -76,6 +76,13 @@ export class WalkerModel {
         const bl = mk(new THREE.BoxGeometry(0.018, 0.26, 0.05), mat(0xdfe3e8, { metalness: 0.95, roughness: 0.15 }), kn); bl.position.y = -0.21;
         const tip = mk(new THREE.BoxGeometry(0.014, 0.05, 0.03), mat(0xdfe3e8, { metalness: 0.95, roughness: 0.15 }), kn); tip.position.set(0, -0.36, -0.01);
         this.knifeMesh = kn;
+        // pistol (barrel along the arm; the grip points to local -z so it hangs down when the arm is raised)
+        const gn = new THREE.Group(); gn.position.set(0, -0.07, 0.0); gn.visible = false; hg.add(gn);
+        mk(new THREE.BoxGeometry(0.034, 0.2, 0.05), mat(0x16171a, { metalness: 0.8, roughness: 0.3 }), gn).position.set(0, -0.1, 0.02);
+        mk(new THREE.BoxGeometry(0.03, 0.07, 0.04), mat(0x2a2b2f, { roughness: 0.6 }), gn).position.set(0, 0.0, -0.035);
+        mk(new THREE.BoxGeometry(0.02, 0.14, 0.012), mat(0x8d9096, { metalness: 0.9, roughness: 0.25 }), gn).position.set(0, -0.12, 0.048);
+        const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), new THREE.MeshBasicMaterial({ color: 0xffc040, toneMapped: false })); fl.position.set(0, -0.28, 0.02); fl.rotation.x = Math.PI; fl.visible = false; gn.add(fl);
+        this.gunMesh = gn; this.gunFlash = fl;
       }
       const palm = mk(new THREE.BoxGeometry(0.08, 0.075, 0.034), mat(0x3a2f28), hg); palm.position.y = -0.03;
       const back = mk(new THREE.BoxGeometry(0.082, 0.07, 0.016), mat(0x2b2d33), hg); back.position.set(0, -0.03, -0.022);
@@ -95,7 +102,7 @@ export class WalkerModel {
     this.phase = 0;
   }
   /** pose: phase (rad), amp 0..1, run (bool) */
-  pose(phase, amp, run, lean = 0, wave = 0, box = null) {
+  pose(phase, amp, run, lean = 0, wave = 0, box = null, gun = null) {
     const sw = Math.sin(phase) * (run ? 0.95 : 0.6) * amp;
     this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
     this.arms[0].rotation.x = -sw * (run ? 1.1 : 0.8); this.arms[1].rotation.x = sw * (run ? 1.1 : 0.8);
@@ -104,7 +111,12 @@ export class WalkerModel {
     this.torso.position.y = 0.9 + Math.abs(Math.cos(phase)) * 0.025 * amp;
     this.head.rotation.x = -0.05 - (this.dragAmt || 0) * 0.28;
     if (wave > 0) { this.arms[1].rotation.x = -2.6 + Math.sin(phase * 3) * 0.3 * wave; }
-    if (box) { // boxing stance: guard up, bobbing, twist into the punch
+    if (gun) { // pistol drawn: right arm out in front, left hand supporting
+      const kick = gun.recoil * 0.35;
+      this.arms[1].rotation.x = -1.5 + kick; this.arms[1].rotation.z = 0; this.arms[1].rotation.y = 0.05;
+      this.arms[0].rotation.x = -1.35 + kick * 0.8; this.arms[0].rotation.z = -0.28; this.arms[0].rotation.y = -0.3;
+      this.torso.rotation.x = 0.1; this.head.rotation.x = -0.1;
+    } else if (box) { // boxing stance: guard up, bobbing, twist into the punch
       const g = box.guard, bob = Math.sin(box.t * 7) * 0.025 * g;
       for (const [i, sx] of [[0, 1], [1, -1]]) {
         const p = box.side === i ? box.p : 0; // 0..1..0 extension of the punching arm
@@ -128,7 +140,7 @@ export class Walker {
     this.model.group.visible = false;
     scene.add(this.model.group);
     this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
-    this.knife = false; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
+    this.knife = false; this.gun = false; this.recoil = 0; this.flashT = 0; this.shootEvent = null; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
   }
   place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
   update(dt, inp, col, dyn) {
@@ -136,7 +148,10 @@ export class Walker {
     // ---- boxing
     this.boxT += dt;
     if (this.punchCool > 0) this.punchCool -= dt;
-    if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide = this.knife ? 1 : this.punchSide ^ 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
+    if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 6);
+    if (this.flashT > 0) this.flashT -= dt;
+    if (this.gun) { if (inp.punch && this.punchCool <= 0) { this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw }; this.recoil = 1; this.flashT = 0.07; this.punchCool = 0.42; } }
+    else if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide = this.knife ? 1 : this.punchSide ^ 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
     if (this.punchT < 1) {
       this.punchT = Math.min(1, this.punchT + dt / 0.3);
       if (!this.punched && this.punchT >= 0.4) { this.punched = true; this.punchEvent = { x: this.x, z: this.z, yaw: this.yaw, side: this.punchSide }; }
@@ -174,8 +189,10 @@ export class Walker {
     const gd = Math.min(1, this.guardT * 3);
     const ext = this.punchT < 1 ? Math.sin(Math.PI * Math.min(1, this.punchT * 1.1)) : 0;
     this.punchExt = ext; this.guardAmt = gd;
-    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null);
+    if (this.model.gunFlash) this.model.gunFlash.visible = this.flashT > 0;
+    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, !this.gun && gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null, this.gun ? { recoil: this.recoil } : null);
   }
   setVisible(v) { this.model.group.visible = v; }
+  setGun(on) { this.gun = on; if (this.model.gunMesh) this.model.gunMesh.visible = on; if (on) this.setKnife(false); }
   setKnife(on) { this.knife = on; if (this.model.knifeMesh) this.model.knifeMesh.visible = on; }
 }

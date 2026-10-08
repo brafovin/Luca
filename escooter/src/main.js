@@ -55,6 +55,7 @@ const me = {
   get v() { return st.mode === 'walk' ? walker.speed : scooter.v; },
   get speed() { return st.mode === 'walk' ? walker.speed : Math.abs(scooter.v); },
   get heading() { return st.mode === 'walk' ? walker.yaw : scooter.heading; },
+  get armed() { return st.mode === 'walk' && !!st.gun; },
   get moped() { return st.mode === 'ride' && !!scooter.model.moped; },
 };
 const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
@@ -249,6 +250,7 @@ window.addEventListener('keydown', (e) => {
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
     case 'KeyH': setWbar(!cfg.wbar); break;
     case 'KeyN': toggleKnife(); break;
+    case 'KeyQ': toggleGun(); break;
     case 'KeyZ': smokeKey(); break;
     case 'KeyY': putOut(); break;
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
@@ -534,9 +536,71 @@ function trackHud() {
 let koCount = 0;
 function toggleKnife() {
   if (st.mode !== 'walk') return;
+  if (st.gun) { st.gun = false; walker.setGun(false); }
   st.knife = !st.knife; walker.setKnife(st.knife);
   fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = st.knife));
   toast(st.knife ? '🔪 Messer gezogen' : 'Messer weggesteckt', st.knife ? 'E / J = zustechen · Kinder und Eltern sind tabu · N = wegstecken' : '', 1600);
+}
+/* ---- pistol: one shot = dead */
+const gunFP = new THREE.Group();
+const gunFlashFP = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 8), new THREE.MeshBasicMaterial({ color: 0xffc040, toneMapped: false, fog: false }));
+{
+  const dark = new THREE.MeshStandardMaterial({ color: 0x16171a, metalness: 0.8, roughness: 0.3 }), grip = new THREE.MeshStandardMaterial({ color: 0x2a2b2f, roughness: 0.6 });
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.05, 0.28), dark); slide.position.set(0, 0, -0.1);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.06, 8), dark); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, -0.004, -0.27);
+  const gr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), grip); gr.position.set(0, -0.085, 0.01); gr.rotation.x = 0.2;
+  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.012, 0.012), new THREE.MeshBasicMaterial({ color: 0xffffff })); sight.position.set(0, 0.03, -0.2);
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.11), new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.7 })); hand.position.set(0.0, -0.1, 0.03);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.8 })); arm.position.set(0.03, -0.12, 0.3);
+  gunFlashFP.rotation.x = -Math.PI / 2; gunFlashFP.position.set(0, 0, -0.42); gunFlashFP.visible = false;
+  gunFP.add(slide, barrel, gr, sight, hand, arm, gunFlashFP);
+  gunFP.visible = false; camera.add(gunFP);
+}
+const tracers = [];
+function addTracer(x0, y0, z0, x1, y1, z1) {
+  const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 1;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, len), new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false }));
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); m.lookAt(x1, y1, z1); scene.add(m);
+  tracers.push({ m, t: 0.09 });
+}
+function toggleGun() {
+  if (st.mode !== 'walk') { toast('Pistole nur zu Fuß', 'erst absteigen (F)', 1400); return; }
+  st.gun = !st.gun;
+  if (st.gun) { st.knife = false; walker.setKnife(false); fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = false)); }
+  walker.setGun(st.gun);
+  toast(st.gun ? '🔫 Pistole gezogen' : 'Pistole weggesteckt', st.gun ? 'E / J = schießen (1 Schuss = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
+}
+function resolveShot(ev) {
+  audio.shot();
+  const eyeY = 1.36, fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
+  const ox = ev.x + fx * 0.55, oz = ev.z + fz * 0.55;
+  // how far does the bullet fly before it hits a wall
+  let range = 60;
+  const wallAt = (x, z) => { let hit = false; world.colliders.near(x, z, 1, (c) => { if (hit || c.t !== 0) return; if (x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1 && Math.max(c.x1 - c.x0, c.z1 - c.z0) > 3) hit = true; }); return hit; };
+  for (let d = 0.8; d < 60; d += 0.5) { if (wallAt(ox + fx * d, oz + fz * d)) { range = d; break; } }
+  let best = null, bt = 1e9;
+  for (const p of peds.list) {
+    if (!p.active || p.down > 0 || p.protect) continue;
+    const dx = p.x - ox, dz = p.z - oz, t = dx * fx + dz * fz;
+    if (t < 0.3 || t > range) continue;
+    const lat = Math.abs(dx * fz - dz * fx);
+    if (lat < 0.38 + t * 0.015 && t < bt) { bt = t; best = p; }
+  }
+  const hitD = best ? bt : range;
+  addTracer(ox, eyeY - 0.1, oz, ox + fx * hitD, eyeY - 0.1 - (best ? 0.0 : 0), oz + fz * hitD);
+  smoke.emit(ox + fx * 0.3, eyeY - 0.1, oz + fz * 0.3, fx * 0.3, 0.1, fz * 0.3, 'cig');
+  st.crashT = 0.08; $('crash').style.opacity = 0.12;
+  if (!best) return;
+  const dx = best.x - ox, dz = best.z - oz, l = Math.hypot(dx, dz) || 1;
+  const wasTeen = best.kind === 'teen';
+  peds.hit(best, dx, dz, 300, { long: true, gun: true });
+  blood.splash(best.x - dx / l * 0.1, 1.15, best.z - dz / l * 0.1, dx / l, dz / l, 24);
+  best.bloodPool = blood.pool(best.x, best.z, 1.1);
+  st.score = Math.max(0, st.score - 300);
+  ems.call(best);
+  audio.thud(7);
+  toast(wasTeen ? 'Getroffen – tot' : 'Niedergeschossen', wasTeen ? 'die anderen rennen um ihr Leben · Krankenwagen unterwegs · −300 Punkte' : 'Krankenwagen unterwegs · −300 Punkte', 3200);
+  if (wasTeen) peds.scareTeens(best);
 }
 function resolvePunch(ev) {
   const fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
@@ -635,7 +699,7 @@ function dismount() {
 function mount() {
   const d = Math.hypot(scooter.x - walker.x, scooter.z - walker.z);
   if (d > 3.4) { toast('Zu weit weg', 'geh näher an deinen Roller (F)', 1500); return; }
-  st.mode = 'ride'; if (st.knife) { st.knife = false; walker.setKnife(false); }
+  st.mode = 'ride'; if (st.knife) { st.knife = false; walker.setKnife(false); } if (st.gun) { st.gun = false; walker.setGun(false); }
   scooter.parked = false; scooter.rider.visible = true; scooter.v = 0;
   walker.setVisible(false);
   camYaw = scooter.heading;
@@ -968,6 +1032,15 @@ const fists = new THREE.Group();
   fists.visible = false; scene.add(camera); camera.add(fists);
 }
 function updateFists() {
+  for (let i = tracers.length - 1; i >= 0; i--) { const tr = tracers[i]; tr.t -= 0.016; tr.m.material.opacity = Math.max(0, tr.t / 0.09); if (tr.t <= 0) { scene.remove(tr.m); tr.m.geometry.dispose(); tr.m.material.dispose(); tracers.splice(i, 1); } }
+  const showGun = st.mode === 'walk' && st.fp && st.gun && !st.dbgCam;
+  gunFP.visible = showGun;
+  if (showGun) {
+    const r = walker.recoil || 0;
+    gunFP.position.set(0.1, -0.15 + r * 0.02, -0.34 + r * 0.1);
+    gunFP.rotation.set(0.04 + r * 0.32, 0.03, 0);
+    gunFlashFP.visible = walker.flashT > 0;
+  }
   const on = st.mode === 'walk' && st.fp && walker.guardAmt > 0.02 && !st.dbgCam;
   fists.visible = on;
   if (!on) return;
@@ -1393,6 +1466,7 @@ function tick(dt, now, render = true) {
       for (const c of parkDyn) walkDyn.push(c);
       walker.update(dt2, inp, world.colliders, walkDyn);
       if (walker.punchEvent) { const ev = walker.punchEvent; walker.punchEvent = null; resolvePunch(ev); }
+      if (walker.shootEvent) { const ev = walker.shootEvent; walker.shootEvent = null; resolveShot(ev); }
     }
     if (scooter.fellEvent) { scooter.fellEvent = false; st.score = Math.max(0, st.score - 150); toast('Sturz!', '−150 Punkte – zu schnell gegen ein Hindernis', 2200); audio.thud(14); st.crashT = 1; $('crash').style.opacity = 0.9; }
     if (scooter.wheelieEvent) {
@@ -1564,4 +1638,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { toggleGun, resolveShot, tracers, blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

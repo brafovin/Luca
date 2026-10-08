@@ -69,6 +69,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Pistole 🔫
+
+* Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Pistole weg**, `E`/`J` schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.
+  **Kinder und ihre Eltern sind tabu** (nicht treffbar). Auf dem Roller kannst du nicht schießen.
+* Die **Halbstarken** halten deine Waffe zunächst für **Fake** („Haha, die Waffe ist doch fake!“) und lassen sich dadurch noch schneller provozieren.
+  **Knallst du einen von ihnen ab, rennen alle anderen (auch die netten) panisch weg** („Scheiße, die ist echt!“) und kommen erst nach einer Weile zur Bank zurück.
+* Die Halbstarken sehen jetzt **gefährlich** aus: Kapuze, finsterer Blick mit schräg gezogenen Brauen, Augenringen, Bartschatten und Narbe, Arme verschränkt.
+
 ## Jugendliche 🧑‍🤝‍🧑
 
 * **In jedem Park** hängen Jugendlichen-Gruppen auf den Bänken ab. **Halbstarke** (dunkle Hoodies, Caps): rauchen (Zigarette im Mund, Rauchwolken), pöbeln dich an

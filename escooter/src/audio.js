@@ -90,6 +90,17 @@ export class GameAudio {
     this.emsO.frequency.setTargetAtTime(Math.floor(t * 2.2) % 2 ? 1000 : 740, t, 0.01);
     this.emsG.gain.setTargetAtTime(Math.max(0, level) * 0.06, t, 0.1);
   }
+  shot() {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
+    const g = c.createGain(); g.gain.setValueAtTime(0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + 0.32);
+    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+    const og = c.createGain(); og.gain.setValueAtTime(0.6, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.28);
+  }
   whoosh() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
