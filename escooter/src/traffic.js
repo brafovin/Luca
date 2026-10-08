@@ -223,6 +223,9 @@ function buildPoliceCar(M, rnd, glowTex) {
 export class Traffic {
   constructor(scene, M, count = 12, riders = 8, opts = {}) {
     this.onGreet = null;
+    this.hlMat = new THREE.SpriteMaterial({ map: opts.glow, color: 0xfff0c8, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0, fog: false });
+    this.tlMat = new THREE.SpriteMaterial({ map: opts.glow, color: 0xff2a1a, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0, fog: false });
+    this.poolMat = new THREE.MeshBasicMaterial({ map: opts.pool, color: 0xffeebb, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
     this.scene = scene;
     this.M = M;
     this.rnd = mulberry32(99);
@@ -239,6 +242,13 @@ export class Traffic {
       const moped = isRider && i >= count + riders - (opts.mopeds ?? 3);
       const c = moped ? buildAiMoped(M, this.rnd) : isRider ? buildAiScooter(M, this.rnd) : buildVehicleMeshes(M, this.rnd, bus);
       c.group.visible = false;
+      if (!isRider && opts.glow) { // night: head/tail light glow + light pool on the road
+        for (const sx of [-1, 1]) {
+          const h = new THREE.Sprite(this.hlMat); h.scale.set(1.5, 1.5, 1); h.position.set(sx * c.W * 0.32, 0.72, c.L / 2 + 0.25); c.group.add(h);
+          const t = new THREE.Sprite(this.tlMat); t.scale.set(0.9, 0.9, 1); t.position.set(sx * c.W * 0.32, 0.8, -c.L / 2 - 0.15); c.group.add(t);
+        }
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(c.W * 1.7, 9), this.poolMat); pl.rotation.x = -Math.PI / 2; pl.position.set(0, 0.07, c.L / 2 + 4.6); pl.renderOrder = 2; c.group.add(pl);
+      }
       scene.add(c.group);
       this.cars.push({ ...c, active: false, bus, kind: isRider ? 'scooter' : 'car', laneOff: isRider ? 3.1 : LANE, s: 0, v: 0, axis: 'x', dir: 1, lane: 0, cruise: 10, wait: 0, down: 0, phase: Math.random() * 6, fall: 0, turn: null, plan: 0, planKey: '' });
     }
@@ -249,6 +259,7 @@ export class Traffic {
     }
   }
 
+  setNight(n) { this.hlMat.opacity = Math.min(0.85, n * 1.2); this.tlMat.opacity = Math.min(0.7, n * 1.0); this.poolMat.opacity = Math.min(0.5, n * 0.7); }
   spawn(c, px, pz, R) {
     const rnd = Math.random;
     for (let tries = 0; tries < 12; tries++) {
@@ -272,7 +283,8 @@ export class Traffic {
       const wx = axis === 'x' ? s : lane, wz = axis === 'x' ? lane : s;
       if (Math.hypot(wx - px, wz - pz) < 50) ok = false;
       if (!ok) continue;
-      Object.assign(c, { active: true, axis, dir, lane, s, v: 0, cruise: c.moped ? 10 + rnd() * 4 : c.kind === 'scooter' ? 4.5 + rnd() * 7 : c.kind === 'police' ? c.patrolCruise : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
+      if (c.fx && this.onRecycle) this.onRecycle(c);
+      Object.assign(c, { dead: false, hp: 100, active: true, axis, dir, lane, s, v: 0, cruise: c.moped ? 10 + rnd() * 4 : c.kind === 'scooter' ? 4.5 + rnd() * 7 : c.kind === 'police' ? c.patrolCruise : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
       c.v = c.cruise * 0.8;
       c.group.visible = true;
       return true;
@@ -290,6 +302,14 @@ export class Traffic {
       let wx = c.axis === 'x' ? c.s : c.lane, wz = c.axis === 'x' ? c.lane : c.s;
       if (c.turn) { wx = c.turn.x; wz = c.turn.z; }
       if (Math.hypot(wx - px, wz - pz) > R * (c.chase ? 2.4 : 1.5)) { c.active = false; c.group.visible = false; c.turn = null; continue; }
+      if (c.dead) { // wrecked: stays where it is (burning)
+        c.v = 0;
+        const wx2 = c.axis === 'x' ? c.s : c.lane, wz2 = c.axis === 'x' ? c.lane : c.s;
+        if (!c.turn) c.group.position.x = wx2, c.group.position.z = wz2;
+        const fx2 = Math.sin(c.group.rotation.y), fz2 = Math.cos(c.group.rotation.y);
+        for (const o of [-1.4, 0, 1.4]) this.dyn.push({ x: c.group.position.x + fx2 * o, z: c.group.position.z + fz2 * o, r: c.W / 2 + 0.05, vx: 0, vz: 0 });
+        continue;
+      }
       if (c.kind === 'police') {
         const pu = this.pursuit;
         const chase = !!(pu.active && Math.hypot(wx - pu.x, wz - pu.z) < 340);

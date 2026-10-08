@@ -69,6 +69,15 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Autos kaputt machen 🚗💥 & Obdachlose 🍺
+
+* **Autos haben Lebenspunkte.** Treffer mit **Pistole** (3 Schuss), **Faust/Messer** (Boxen zu Fuß, ca. 10 Schläge) oder **Rammen mit dem Roller** (je schneller, desto mehr Schaden) lassen die Scheiben splittern,
+  machen Dellen, verrußen das Auto, es qualmt – bei 0 Lebenspunkten **brennt** es (Feuer, schwarzer Rauch) und bleibt als Wrack stehen (blockiert die Straße, wird nach einer Weile abgeschleppt). −200 Punkte.
+  Das gilt für fahrende **und geparkte** Autos (ein geparktes Auto wird beim ersten Treffer aus dem Block herausgeschnitten; das kann einen kurzen Ruckler geben).
+* **Grafik:** glänzender Klarlack auf allen Autos, dezente Vignette, nachts **Scheinwerfer-/Rücklicht-Glühen und Lichtkegel** der fahrenden Autos auf der Straße.
+* **Obdachlose** (3 in der Stadt): zerlumpte Kleidung, Mütze, grauer Bart, rote Nase, **trinken Bier** (Flasche in der Hand, setzen sie an, Prost!), torkeln über die Gehwege, pöbeln und schnorren („Haste mal ’nen Euro?“).
+  Kommst du ihnen nah, werden sie **sehr schnell sauer**, rennen dir hinterher und hauen dir die Flasche über (−25 €). Man kann sie boxen/erschießen wie andere Passanten.
+
 ## Pistole 🔫
 
 * Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Pistole weg**, **linke Maustaste** (oder `E`/`J`) schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.

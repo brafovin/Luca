@@ -76,7 +76,7 @@ export function addCar(S, rnd, opts = {}) {
       S.get(lightB).box(sx * (hw - 0.25), 0.75, L / 2 + 0.01, 0.4, 0.2, 0.04, '#f6f4ea');
       PA.box(sx * (hw - 0.25), 0.9, -L / 2 - 0.01, 0.4, 0.22, 0.04, '#a31616');
     }
-    return { L, W, H };
+    return { L, W, H, type: 'bus', col };
   }
 
   let L, W, H;
@@ -201,5 +201,5 @@ export function addCar(S, rnd, opts = {}) {
   }
   if (type < 0.35 && rnd() < 0.5) G.box(0, yt - 0.02, prof[1][0] - 0.05, W * 0.8, 0.04, 0.2, '#16171a'); // spoiler
   if (rnd() < 0.5) G.cyl(0.0, yt + 0.02, prof[1][0] + 0.2, 0.008, 0.28, '#111', 4, false); // antenna
-  return { L, W, H };
+  return { L, W, H, type, col, cab: { prof, yb, yt, cw, cen } };
 }
