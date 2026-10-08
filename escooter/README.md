@@ -25,7 +25,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `A` `D` / `←` `→` | Lenken |
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
-| `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). |
+| `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen Geld – **je länger, desto mehr** (≈ 40 €/s, wächst mit der Dauer; Einhand ≈ 100 €/s) (nur ab ~7 km/h; Bremsen bricht ab). |
 | `V` | **Rennstrecke** ↔ Stadt (auch Menü-Button „🏁 Zur Rennstrecke teleportieren“ bzw. HUD-Button unter der Minimap) |
 | `K` | **Polizei** an/aus (auch per Button unter der Minimap oder im Menü) |
 | `X` | Roller wechseln (auch im Pausenmenü → „Roller“) |
@@ -33,7 +33,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | Maus | Ins Spiel klicken → Maus links/rechts lenkt, linke Taste Gas, rechte Bremse, Mausrad zoomt (Esc beendet) |
 | `Leertaste` | Stark bremsen |
 | `C` | Kamera wechseln (hinter dem Roller / Ego-Cockpit mit Display) |
-| `R` | **Eine Hand** vom Lenker nehmen (Einhand-Wheelie = **250 €** statt 100 €) – nochmal `R` = wieder beide Hände |
+| `R` | **Eine Hand** vom Lenker nehmen (Einhand-Wheelie zahlt mehr als das Doppelte) – nochmal `R` = wieder beide Hände |
 | `Backspace` | Reset – setzt dich auf die nächste Straße / Strecke |
 | `H` | **Wheelie-Bar** an/aus (begrenzt den Wheelie auf ca. 32°, sicherer; im Menü ebenfalls) |
 | `L` / `B` | Licht an/aus · Klingel |
@@ -199,6 +199,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   chatten mit dir.
 * **Grafik**: Wetter (klar/bewölkt/Regen mit Streifen-Regen und nasser Straße), Fassaden mit Bump-Relief,
   eingebackene Bodenabschattung, SSAO + Bloom auf „Hoch“.
+
+## Läden, Tankstellen, Autohaus & echte Fenster 🏪⛽🚗
+* **Fenster mit Innenleben:** Alle Fassaden-Fenster zeigen echte Räume (Interior Mapping – Boden, Decke, Wände, Möbel, bei Nacht warmes Licht in manchen Zimmern). Geschäfte, Supermarkt, Tankstelle und Autohaus haben komplett verglaste Fronten, durch die man hineinsieht.
+* **Supermärkte** (Block südlich vom Start `(0,1)` + zufällig in der Stadt): **elektrische Glas-Schiebetüren** (öffnen automatisch, wenn jemand kommt), Regale mit Getränken, Snacks, Nudeln, Brot …, Kühlregale, drei Kassen mit Kassierern, Einkaufswagen-Stellplatz und **Kunden mit Einkaufswagen**, die durch die Gänge gehen, Waren aus den Regalen nehmen, bezahlen und wieder gehen.
+* **Produkte holen:** zu Fuß auf ein Produkt zielen (Fadenkreuz-Mitte, < 3 m) → <kbd>F</kbd> = in den Korb. An der Kasse <kbd>F</kbd> = bezahlen (Energy Drink = 90 s schneller laufen, Rest gibt Punkte), <kbd>I</kbd> leert den Korb. Ohne Bezahlen aus dem Laden gehen = **Ladendiebstahl** (Ware weg + Strafe). Entnommene Produkte füllen sich nach einiger Zeit wieder auf.
+* **Tankstellen** (Block `(-1,1)` + zufällig): Dach mit Zapfsäulen, Preismast, Tankstellen-Shop mit Verkäufer, Regalen und Kühlern.
+* **Autohaus** (Block `(1,1)`, östlich-südlich vom Start): Showroom mit Podesten, Verkäufer und Hof mit vielen Autos. Am Schreibtisch oder an einem Auto <kbd>F</kbd>: **Stadtflitzer 2.500 €** (135 km/h), **Limousine 5.000 €** (190), **Geländewagen 7.500 €** (165), **Supersportwagen 12.000 €** (**250 km/h**, Heckflügel, Vierfach-Auspuff). Das gekaufte Auto steht vor dem Autohaus (<kbd>F</kbd> einsteigen, <kbd>F</kbd> aussteigen, <kbd>C</kbd> Ich-Perspektive, <kbd>X</kbd> Fahrzeug wechseln). Aus den Auspuffen **qualmt es** – stärker bei Gas.
+* **Mehr los auf den Gehwegen:** deutlich mehr Fußgänger, dazu **Halbstarken-Gangs** (3er-Gruppen), die durch die Stadt laufen, rauchen, pöbeln – und dir nachrennen, wenn du ihnen zu nahe kommst (oder du ziehst die Waffe / boxt sie).
 
 ## Entwickeln
 
