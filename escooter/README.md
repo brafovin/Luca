@@ -69,6 +69,13 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Simson-Laden 🛵
+
+* Zweiter, begehbarer Laden **einen Block westlich vom Start** (blaue Markierung auf Minimap/Leuchtfeuer, Schild „SIMSON S51“). Drei Tische (mit `F`):
+  **Simson-Händler** – **Simson S51** für **800 €**: 50-cm³-Zweitakter, **60 km/h**, sitzender Fahrer, Zweitakt-Sound, **Auspuff qualmt** (mehr bei Gas). **Kein VESC** (Moped!).
+  **Tuning** – **MTX10-Motor** (600 €): großer Zylinder, roter Resonanzauspuff, **85 km/h**, mehr Beschleunigung & Qualm; **PZ-Tuning-Lenker** (250 €): breiter Rennlenker mit Querstrebe, mehr Kurvengrip.
+  **Kiosk** – **Zigaretten** (20 Stück, 8 €): `Z` zündet eine an (Glut, Rauchwölkchen, ~45 s), nochmal `Z` drückt sie aus. Die Simson lässt sich auch beim VESC-Shop lackieren.
+
 ## Kinder, Spielplätze, Messer & Krankenwagen
 
 * **Kinder** laufen mit Mama/Papa an der Hand über die Gehwege. In jedem **Park** gibt es einen **Spielplatz** (Gummiboden, Zaun, Schaukeln, Rutsche, Sandkasten, Wippe, Bänke):

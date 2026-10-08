@@ -364,6 +364,23 @@ function shopSignTex() {
   return c;
 }
 
+function shopSign2Tex() {
+  const c = cv(1024, 256), x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#12202e'); g.addColorStop(1, '#0a121a');
+  x.fillStyle = g; x.fillRect(0, 0, 1024, 256);
+  x.strokeStyle = '#2a8ad8'; x.lineWidth = 10; x.strokeRect(12, 12, 1000, 232);
+  x.font = '900 118px Arial Black, Arial, sans-serif'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#ffffff'; x.fillText('SIMSON', 60, 140);
+  x.fillStyle = '#e8c020'; x.fillText('S51', 590, 140);
+  x.font = '600 40px Arial, sans-serif'; x.fillStyle = '#9fd4ff';
+  x.fillText('Moped-Werkstatt · MTX10 · PZ-Tuning · Kiosk', 66, 214);
+  // little moped silhouette
+  x.fillStyle = '#e8c020'; x.beginPath(); x.arc(800, 205, 22, 0, 6.3); x.arc(930, 205, 22, 0, 6.3); x.fill();
+  x.fillRect(805, 160, 120, 10); x.fillRect(850, 140, 40, 20);
+  return c;
+}
+
 export function makeTextures(renderer) {
   const rnd = mulberry32(1337);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -381,6 +398,7 @@ export function makeTextures(renderer) {
   T.beam = mk(beam(), { repeat: false });
   T.beam.wrapT = THREE.ClampToEdgeWrapping;
   T.shopSign = mk(shopSignTex(), { aniso, repeat: false });
+  T.shopSign2 = mk(shopSign2Tex(), { aniso, repeat: false });
   T.signs = mk(signAtlas(), { aniso, repeat: false });
   T.poster = mk(posterAtlas(rnd), { aniso });
   T.facade = {};

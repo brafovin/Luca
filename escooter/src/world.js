@@ -23,6 +23,15 @@ PLAY.slide = { x: PLAY.cx - 6, z: PLAY.cz - 5, top: 1.9 };
 PLAY.sand = { x: PLAY.cx - 5, z: PLAY.cz + 5.5, w: 4.4, d: 3.4 };
 PLAY.parents = [[PLAY.cx - 2, PLAY.cz + 7.9], [PLAY.cx + 3, PLAY.cz + 7.9]];
 PLAY.run = { x0: PLAY.cx - 3, x1: PLAY.cx + 2, z0: PLAY.cz - 1, z1: PLAY.cz + 3.2 };
+// second shop: Simson / moped workshop one block west of the start
+export const SHOP2 = { x: -P + LOT0 + 24, z: 7.5 };
+export const SHOP2_IN = { x0: -P + LOT0 + 10.5, x1: -P + LOT0 + 37.5, z0: LOT0 + 1.5, z1: LOT0 + 16.5 };
+export const SHOP2_TABLES = [
+  { id: 'moped', shop: 2, name: 'Simson-Händler', x: SHOP2.x - 8, z: LOT0 + 8.6 },
+  { id: 'tuning', shop: 2, name: 'Tuning (MTX10 & PZ)', x: SHOP2.x, z: LOT0 + 8.6 },
+  { id: 'kiosk', shop: 2, name: 'Kiosk', x: SHOP2.x + 8, z: LOT0 + 8.6 },
+];
+export const inShop2 = (x, z) => x > SHOP2_IN.x0 && x < SHOP2_IN.x1 && z > SHOP2_IN.z0 && z < SHOP2_IN.z1;
 export const SHOP_TABLES = [
   { id: 'parts', name: 'VESC & Umbauten', x: SHOP_CX - 8, z: LOT0 + 8.6 },
   { id: 'scooters', name: 'Roller', x: SHOP_CX, z: LOT0 + 8.6 },
@@ -61,6 +70,7 @@ export function blockType(i, j) {
   if (i === 0 && j === 0) return 'perimeter';
   if (i === 0 && j === -1) return 'houses';
   if (i === 1 && j === 0) return 'vescshop';
+  if (i === -1 && j === 0) return 'mopedshop';
   const h = hash2(i, j, 7);
   if (h < 0.44) return 'perimeter';
   if (h < 0.64) return 'houses';
@@ -1069,19 +1079,20 @@ class ChunkBuilder {
   }
 
   /** walk-in interior of the VESC shop: floor, shelves, three counters with products */
-  shopInterior(x0, x1, z0, z1, cx, H, DW) {
+  shopInterior(x0, x1, z0, z1, cx, H, DW, cfg = {}) {
+    const A = cfg.accent || '#ff7a1a';
     const G = this.b('generic'), PL = this.b('plain'), L = this.b('lampW'), SG = this.b('shopGlow'), MK = this.b('mark'), pav = this.b('paver2');
     const fy = CURB + 0.04;
     pav.plane(x0 + 0.5, z0 + 0.5, x1 - 0.5, z1 - 0.5, fy, '#8f8b84', 1.5);
-    MK.plane(cx - 0.9, z0 - 0.2, cx + 0.9, z0 + 11, fy + 0.006, '#ff7a1a');                 // orange guide carpet from the door to the counters
+    MK.plane(cx - 0.9, z0 - 0.2, cx + 0.9, z0 + 11, fy + 0.006, A);                 // orange guide carpet from the door to the counters
     MK.plane(cx - 0.9, z0 + 9.7, cx + 0.9, z0 + 11, fy + 0.007, '#17181b');
     // inner wall liner (light panels) and orange slat wall
     PL.box(x0 + 0.54, CURB + H / 2, (z0 + z1) / 2, 0.06, H - 0.3, z1 - z0 - 1, '#d9d6cf');
     PL.box(x1 - 0.54, CURB + H / 2, (z0 + z1) / 2, 0.06, H - 0.3, z1 - z0 - 1, '#d9d6cf');
     PL.box(cx, CURB + H / 2, z0 + 0.54, x1 - x0 - 1, H - 0.3, 0.06, '#d9d6cf');
     PL.box(cx, CURB + H / 2 - 0.1, z1 - 0.54, x1 - x0 - 1, H - 0.5, 0.06, '#2b2e34');
-    for (let i = 0; i < 22; i++) G.box(x0 + 1.4 + i * 1.18, CURB + 2.4, z1 - 0.58, 0.05, 3.6, 0.04, '#ff7a1a'); // slats
-    G.box(cx, CURB + 4.45, z1 - 0.6, x1 - x0 - 1.4, 0.5, 0.06, '#ff7a1a'); // header band
+    for (let i = 0; i < 22; i++) G.box(x0 + 1.4 + i * 1.18, CURB + 2.4, z1 - 0.58, 0.05, 3.6, 0.04, A); // slats
+    G.box(cx, CURB + 4.45, z1 - 0.6, x1 - x0 - 1.4, 0.5, 0.06, A); // header band
     G.box(x0 + 0.58, CURB + 0.12, (z0 + z1) / 2, 0.08, 0.24, z1 - z0 - 1, '#17181b'); G.box(x1 - 0.58, CURB + 0.12, (z0 + z1) / 2, 0.08, 0.24, z1 - z0 - 1, '#17181b');
     // ceiling light strips
     for (const lx of [cx - 10, cx - 5, cx, cx + 5, cx + 10]) for (const lz of [z0 + 4, z0 + 9, z0 + 14]) { L.box(lx, CURB + H - 0.34, lz, 0.5, 0.05, 3.2, '#ffffff'); G.box(lx, CURB + H - 0.31, lz, 0.7, 0.04, 3.4, '#17181b'); }
@@ -1122,6 +1133,23 @@ class ChunkBuilder {
       this.box2(tx - 1.75, tz - 0.68, tx + 1.75, tz + 0.68);
       return CURB + 1.0;
     };
+    if (cfg.moped) {
+      // 1 – a real Simson on a display stand, helmets
+      let ty = table(cx - 8, '#2a62c4');
+      this.miniMoped(cx - 8, tz, Math.PI / 2, '#2a62c4', ty + 0.04, false, 1.05);
+      for (const [dx, c] of [[-1.3, '#f2f2f0'], [1.3, '#d42020']]) { G.cyl(cx - 8 + dx, ty, tz - 0.1, 0.17, 0.2, c, 12, true, 0.14); G.box(cx - 8 + dx, ty + 0.08, tz - 0.24, 0.2, 0.06, 0.02, '#111'); }
+      // 2 – tuning parts: MTX10 engine block (red/black), PZ bars, expansion chambers
+      ty = table(cx, '#d42020');
+      G.box(cx - 1.0, ty + 0.14, tz - 0.05, 0.34, 0.28, 0.36, '#9da1a6'); G.cyl(cx - 1.0, ty + 0.28, tz - 0.05, 0.1, 0.22, '#c42020', 12); for (let k = 0; k < 6; k++) G.cyl(cx - 1.0, ty + 0.34 + k * 0.02, tz - 0.05, 0.13, 0.008, '#5a2a12', 12);
+      G.cyl(cx + 0.2, ty, tz + 0.05, 0.06, 0.5, "#d42020", 10, true, 0.06);
+      G.box(cx + 0.9, ty + 0.12, tz - 0.3, 1.0, 0.04, 0.04, '#17181b'); G.box(cx + 0.9, ty + 0.2, tz - 0.3, 0.9, 0.04, 0.04, '#d8a820'); G.box(cx + 0.9, ty + 0.16, tz - 0.3, 0.04, 0.12, 0.04, '#d8a820');
+      G.box(cx + 0.1, ty + 0.1, tz + 0.2, 0.7, 0.16, 0.2, '#c42020'); G.cyl(cx + 0.5, ty + 0.1, tz + 0.2, 0.09, 0.4, '#c9ccd1', 10);
+      // 3 – kiosk: cigarettes, lighters, drinks
+      ty = table(cx + 8, '#e8c020');
+      for (let k = 0; k < 8; k++) G.box(cx + 8 - 1.2 + k * 0.17, ty + 0.045, tz - 0.2, 0.09, 0.09, 0.03, k % 2 ? '#d42020' : '#f2f2f0');
+      for (let k = 0; k < 6; k++) { G.cyl(cx + 8 - 0.4 + k * 0.18, ty, tz + 0.2, 0.05, 0.28, ['#1f9aff', '#30b050', '#f0c820'][k % 3], 8); }
+      G.box(cx + 8 + 1.0, ty + 0.2, tz + 0.1, 0.4, 0.4, 0.3, '#2b2e34'); G.box(cx + 8 + 1.0, ty + 0.3, tz - 0.06, 0.3, 0.12, 0.01, '#35e6ff');
+    } else {
     // 1 – parts: VESC controllers, cables, batteries
     let ty = table(cx - 8, '#1668ff');
     for (let i = 0; i < 3; i++) { G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.1, tz - 0.1, 0.42, 0.18, 0.62, '#1668ff'); G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.205, tz - 0.1, 0.34, 0.02, 0.5, '#35e6ff'); G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.1, tz - 0.42, 0.3, 0.1, 0.02, '#e9faff'); }
@@ -1135,15 +1163,34 @@ class ChunkBuilder {
     const paints = ['#111114', '#f2f2f0', '#d42020', '#ff7a1a', '#f0c820', '#30b050', '#1f7aff', '#ff4fa3', '#9a4dff', '#c9ccd1'];
     paints.forEach((c, i) => { const px = cx + 8 - 1.5 + i * 0.33; G.cyl(px, ty, tz - 0.15, 0.12, 0.2, c, 12); G.cyl(px, ty + 0.2, tz - 0.15, 0.125, 0.025, '#c9ccd1', 12); G.cyl(px, ty + 0.17, tz + 0.2, 0.12, 0.2, c, 12); });
     paints.forEach((c, i) => G.box(cx + 8 - 1.55 + i * 0.345, ty + 0.55, tz + 0.55, 0.3, 0.9, 0.03, c)); // swatch board
+    }
     // waiting area: sofa + plant
     G.box(x1 - 3.6, CURB + 0.3, z0 + 2.4, 2.4, 0.5, 0.9, '#2b2e34'); G.box(x1 - 3.6, CURB + 0.75, z0 + 2.75, 2.4, 0.5, 0.2, '#2b2e34');
     G.cyl(x0 + 2.6, CURB, z0 + 2.4, 0.3, 0.5, '#7a5a3a', 10); G.cyl(x0 + 2.6, CURB + 0.5, z0 + 2.4, 0.4, 0.9, '#2f7a3a', 8, true, 0.05);
     this.box2(x1 - 4.9, z0 + 1.9, x1 - 2.3, z0 + 3.2); this.circ(x0 + 2.6, z0 + 2.4, 0.4);
   }
 
-  vescShop() {
+  miniMoped(x, z, ry, col, y = CURB + 0.0, collide = true, sc = 1) {
+    const S = this.S;
+    const m = new THREE.Matrix4().makeRotationY(ry); m.setPosition(x, y, z); m.multiply(new THREE.Matrix4().makeScale(sc, sc, sc));
+    S.setTransform(m);
+    const G = this.b('generic');
+    for (const wz of [-0.6, 0.6]) { const g = new THREE.TorusGeometry(0.25, 0.045, 6, 18); g.rotateY(Math.PI / 2); G.geo(g, new THREE.Matrix4().makeTranslation(0, 0.29, wz), '#0d0d0f'); G.box(0, 0.29, wz, 0.1, 0.1, 0.1, '#8c9096'); }
+    G.box(0, 0.35, 0, 0.3, 0.3, 0.34, '#9da1a6');
+    G.box(0, 0.68, 0.13, 0.24, 0.18, 0.5, col);
+    G.box(0, 0.78, -0.33, 0.26, 0.09, 0.78, '#141416');
+    limbW(G, 0, 0.3, 0.6, 0, 0.95, 0.46, 0.022, '#17181b');
+    G.box(0, 0.95, 0.46, 0.7, 0.025, 0.025, '#c9ccd1');
+    G.cyl(0, 0.82, 0.54, 0.09, 0.1, '#c9ccd1', 10);
+    G.box(0.2, 0.27, -0.42, 0.1, 0.1, 0.62, '#c9ccd1');
+    S.setTransform(null);
+    if (collide) this.circ(x, z, 0.55);
+  }
+
+  vescShop(cfg = {}) {
     const { rnd } = this;
-    const G = this.b('generic'), PL = this.b('plain'), SG = this.b('shopGlow'), L = this.b('lampW'), SS = this.b('shopsign'), pav = this.b('paver2');
+    const A = cfg.accent || '#ff7a1a', SGN = cfg.sign || 'shopsign';
+    const G = this.b('generic'), PL = this.b('plain'), SG = this.b('shopGlow'), L = this.b('lampW'), SS = this.b(SGN), pav = this.b('paver2');
     pav.plane(LOT0 + 0.3, LOT0 + 0.3, LOT1 - 0.3, LOT1 - 0.3, CURB + 0.01, '#b9b5ac', 2);
     const x0 = LOT0 + 10, w = 28, z0 = LOT0 + 1, d = 16, H = 5.4, x1 = x0 + w, z1 = z0 + d, cx = x0 + w / 2;
     // walls with an open doorway (walk-in shop)
@@ -1155,9 +1202,9 @@ class ChunkBuilder {
     PL.box(x1 - T / 2, CURB + H / 2, z0 + d / 2, T, H, d, '#2b2e34');
     PL.box(cx, CURB + H / 2, z1 - T / 2, w, H, T, '#2b2e34');
     PL.box(cx, CURB + H - 0.15, z0 + d / 2, w, 0.3, d, '#e4e1da', { bottom: true });
-    this.shopInterior(x0, x1, z0, z1, cx, H, DW);
+    this.shopInterior(x0, x1, z0, z1, cx, H, DW, cfg);
     G.box(cx, CURB + H + 0.2, z0 + d / 2, w + 0.5, 0.4, d + 0.5, '#17181b');
-    G.box(cx, CURB + 4.0, z0 - 0.06, w + 0.1, 0.45, 0.14, '#ff7a1a');
+    G.box(cx, CURB + 4.0, z0 - 0.06, w + 0.1, 0.45, 0.14, A);
     for (const sd of [-1, 1]) G.box((sd < 0 ? x0 + cx - DW : x1 + cx + DW) / 2 + (sd < 0 ? 0 : 0), CURB + 0.2, z0 - 0.06, sd < 0 ? cx - DW - x0 + 0.1 : x1 - cx - DW + 0.1, 0.4, 0.14, '#17181b');
     // lit shop window front + mullions
     for (const sd of [-1, 1]) { // window glass left / right of the doorway
@@ -1168,7 +1215,7 @@ class ChunkBuilder {
     for (let i = 0; i <= 8; i++) { const mx = x0 + 1.5 + ((w - 3) * i) / 8; if (Math.abs(mx - cx) > DW + 0.1) G.box(mx, CURB + 1.9, z0 - 0.08, 0.1, 3.1, 0.1, '#17181b'); }
     for (const sd of [-1, 1]) G.box(cx + sd * (DW + 0.05), CURB + DH / 2, z0 - 0.1, 0.12, DH, 0.2, '#17181b'); // door frame
     G.box(cx, CURB + DH + 0.05, z0 - 0.1, DW * 2 + 0.2, 0.12, 0.2, '#17181b');
-    G.box(cx, CURB + 2.55, z0 - 1.0, 4.4, 0.14, 2.0, '#ff7a1a'); // canopy
+    G.box(cx, CURB + 2.55, z0 - 1.0, 4.4, 0.14, 2.0, A); // canopy
     for (const sx of [-1, 1]) G.box(cx + sx * 2.1, CURB + 1.3, z0 - 1.9, 0.08, 2.6, 0.08, '#17181b');
     // big sign above the entrance
     const sw = 14, sh = 3.5, sy = CURB + H + 2.1;
@@ -1179,16 +1226,21 @@ class ChunkBuilder {
     // collision: walls only, the doorway stays open
     for (const c of [[x0, cx - DW, z0, z0 + T], [cx + DW, x1, z0, z0 + T], [x0, x0 + T, z0, z1], [x1 - T, x1, z0, z1], [x0, x1, z1 - T, z1]]) this.colliders.push({ t: 0, x0: c[0], x1: c[1], z0: c[2], z1: c[3] });
     // display scooters + pedestals on the plaza
-    const cols = ['#ff7a1a', '#1fd0ff', '#ffffff', '#9dff1a'];
-    for (let i = 0; i < 4; i++) { // the doorway in the middle stays free
-      const px = cx + [-8.5, -5, 5, 8.5][i], pz = z0 - 3.6;
-      G.cyl(px, CURB, pz, 1.1, 0.3, '#3a3d44', 16);
-      this.miniScooter(px, pz, Math.PI / 2 + (i - 1.5) * 0.5, cols[i]);
+    if (cfg.moped) {
+      const mc = ['#2a62c4', '#2f7a3a', '#e8c020', '#c42a2a'];
+      for (let i = 0; i < 4; i++) this.miniMoped(cx + [-8.5, -5, 5, 8.5][i], z0 - 3.6, Math.PI / 2 + (i - 1.5) * 0.45, mc[i]);
+    } else {
+      const cols = ['#ff7a1a', '#1fd0ff', '#ffffff', '#9dff1a'];
+      for (let i = 0; i < 4; i++) { // the doorway in the middle stays free
+        const px = cx + [-8.5, -5, 5, 8.5][i], pz = z0 - 3.6;
+        G.cyl(px, CURB, pz, 1.1, 0.3, '#3a3d44', 16);
+        this.miniScooter(px, pz, Math.PI / 2 + (i - 1.5) * 0.5, cols[i]);
+      }
     }
     // flags
     for (const fx of [x0 - 1.5, x1 + 1.5]) {
       G.cyl(fx, CURB, z0 - 2.5, 0.07, 8, '#cfd2d6', 6);
-      G.box(fx + 0.8, CURB + 7.2, z0 - 2.5, 1.5, 1.0, 0.03, '#ff7a1a');
+      G.box(fx + 0.8, CURB + 7.2, z0 - 2.5, 1.5, 1.0, 0.03, A);
       this.circ(fx, z0 - 2.5, 0.12);
     }
     // lamps, benches, trees
@@ -1265,6 +1317,7 @@ class ChunkBuilder {
     else if (t === 'park') this.park();
     else if (t === 'modern') this.modern();
     else if (t === 'vescshop') this.vescShop();
+    else if (t === 'mopedshop') this.vescShop({ moped: true, accent: '#2a8ad8', sign: 'shopsign2' });
     else this.shop();
     return this;
   }
@@ -1276,7 +1329,7 @@ const MESHDEF = {
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
   glass: ['glass', 0, 1], cglass: ['carGlass', 0, 0], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
-  tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
+  shopsign2: ['shopSign2', 0, 0], tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
   trackAsphalt: ['asphalt', 0, 1], trackGround: ['runoff', 0, 1], grassT: ['grassT', 0, 1],
 };
 

@@ -37,6 +37,7 @@ export function createMaterials(T) {
   M.sign = std({ map: T.signs, transparent: false, alphaTest: 0.5, roughness: 0.45, metalness: 0.2, side: THREE.DoubleSide, vertexColors: true });
   M.poster = std({ map: T.poster, roughness: 0.6, vertexColors: true });
   M.shopSign = std({ map: T.shopSign, emissiveMap: T.shopSign, emissive: 0xffffff, emissiveIntensity: 0.1, roughness: 0.5 });
+  M.shopSign2 = std({ map: T.shopSign2, emissiveMap: T.shopSign2, emissive: 0xffffff, emissiveIntensity: 0.1, roughness: 0.5 });
   M.lampG = std({ color: 0xffffff, vertexColors: true, emissive: 0x3dff9a, emissiveIntensity: 0.4, roughness: 0.4 });
   M.pool = new THREE.MeshBasicMaterial({ map: T.pool, color: 0xffb35c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
   M.glowW = new THREE.PointsMaterial({ map: T.glow, color: 0xffc67a, size: 3.2, sizeAttenuation: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });

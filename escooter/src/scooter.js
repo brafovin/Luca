@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
-import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, decorate, paintModel } from './models.js';
+import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, buildSimson, decorate, paintModel } from './models.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
@@ -73,10 +73,10 @@ export class Scooter {
     this.dispTex = new THREE.CanvasTexture(dcv);
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
     const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
-    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx) };
+    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx), simson: buildSimson(ctx) };
     this.wbar = true; this.oneHand = false; this.handMix = 0; this.wheelieOne = false;
     for (const m of Object.values(this.models)) {
-      decorate(m);
+      if (!m.noDecor) decorate(m);
       this.tilt.add(m.group);
       this.root.add(m.glow);
       m.glow.visible = false;
@@ -99,12 +99,24 @@ export class Scooter {
     this.steer = m.steer; this.frontWheel = m.frontWheel; this.rearWheel = m.rearWheel;
     this.foot = m.foot; this.spec = m.spec; this.wb = m.wheelbase; this.half = m.half;
     this.vescGlow = m.glow;
+    this.rider.position.y = m.riderDY || 0;
     this.spot.position.set(...m.spotPos);
     this.setVesc(this.vesc);
   }
 
   setPaint(id, body, accent) { const m = this.models[id]; if (m) paintModel(m, body, accent); }
-  setWbar(on) { this.wbar = on; for (const m of Object.values(this.models)) m.wheelieBar.visible = on; }
+  setWbar(on) { this.wbar = on; for (const m of Object.values(this.models)) m.wheelieBar.visible = on && !m.noDecor; }
+  /** Simson upgrades: MTX10 engine + PZ-Tuning handlebars */
+  setSimsonUpgrades(mtx, pz) {
+    const m = this.models.simson;
+    if (!m.spec0) m.spec0 = { ...m.spec };
+    this.simsonUp = { mtx, pz };
+    m.mtx.visible = mtx; m.exStock.visible = !mtx;
+    m.barPZ.visible = pz; m.barStock.visible = !pz;
+    m.spec = { ...(mtx ? m.specMtx : m.spec0), aLat: pz ? 10.8 : m.spec0.aLat };
+    m.gripLocalNow = pz ? m.gripLocalPZ : m.gripLocal;
+    if (this.modelId === 'simson') this.spec = m.spec;
+  }
   get hyperOn() { return !!this.hyper && this.modelId === 'sonic'; }
   get topKmh() { if (this.hyperOn) return HYPER_V * 3.6; const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
   get vTurbo() { const S = this.spec; return this.vesc ? S.vVT : S.vT; }
@@ -181,6 +193,14 @@ export class Scooter {
     const nose = mk(new THREE.SphereGeometry(0.02, 8, 6), mBal); nose.userData.pos = [0, -0.012, 0.1]; nose.scale.set(0.8, 1.1, 1); head.push(nose);
     const chinPad = mk(new THREE.BoxGeometry(0.07, 0.012, 0.02), mJacketDark); chinPad.userData.pos = [0, -0.08, 0.08]; head.push(chinPad);
     const headG = new THREE.Group(); rider.add(headG); this.headG = headG;
+    { // cigarette (shown while smoking)
+      const cg = new THREE.Group(); cg.position.set(0.028, -0.047, 0.108); cg.visible = false; headG.add(cg);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.075), std({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = 0.04; cg.add(body);
+      const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0125, 0.0125, 0.024), std({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0; cg.add(filt);
+      const ember = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.011, 0.008), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false })); ember.position.z = 0.081; cg.add(ember);
+      const tip = new THREE.Object3D(); tip.position.z = 0.085; cg.add(tip);
+      this.cig = cg; this.cigTip = tip;
+    }
     for (const m of head) headG.add(m);
     headG.scale.setScalar(K);
     this.rParts.head = head;
@@ -375,9 +395,10 @@ export class Scooter {
     for (let i = 0; i < 2; i++) this.shoulder[i].copy(this.shoulder0[i]).sub(this.pivotP).applyMatrix4(this.torsoG.matrix);
     this.pelvis.position.set(0, this.hip[0].y - 0.02, this.hip[0].z);
     for (let i = 0; i < 2; i++) {
-      const g = T.g.copy(this.model.gripLocal[i]);
+      const g = T.g.copy((this.model.gripLocalNow || this.model.gripLocal)[i]);
       steer.localToWorld(g);
       tilt.worldToLocal(g);
+      g.y -= this.model.riderDY || 0;
       const lift = i === 0 ? hm : 0; // the left hand comes off the bar, the right one stays on the throttle
       const hand = this.arms[i].hand;
       if (lift > 0.001) {
@@ -395,12 +416,12 @@ export class Scooter {
       setSegment(this.arms[i].lo, this._v[0], g);
       this.arms[i].elbow.position.copy(this._v[0]);
       const ft = this.foot[i];
-      T.ankle.set(ft.x, ft.y + 0.05, ft.z - 0.04);
+      T.ankle.set(ft.x, ft.y + 0.05 - (this.model.riderDY || 0), ft.z - 0.04);
       ik2(this.hip[i], T.ankle, 0.5, 0.5, T.legPole[i], this._v[1]);
       setSegment(this.legs[i].up, this.hip[i], this._v[1]);
       setSegment(this.legs[i].lo, this._v[1], T.ankle);
       this.legs[i].knee.position.copy(this._v[1]);
-      this.legs[i].foot.position.set(ft.x, ft.y, ft.z + 0.06);
+      this.legs[i].foot.position.set(ft.x, ft.y - (this.model.riderDY || 0), ft.z + 0.06);
       const kp = this.kneePads[i];
       kp.position.copy(this._v[1]).add(T.pad.set(0, 0, 0.055 * K)); kp.quaternion.copy(this.legs[i].lo.quaternion);
       const tp = this.thighPockets[i];
@@ -408,6 +429,7 @@ export class Scooter {
     }
   }
 
+  setSmoking(on) { this.smoking = on; this.cig.visible = on && !this.firstPerson; }
   setVesc(on) {
     this.vesc = on;
     for (const [k, m] of Object.entries(this.models)) {
@@ -419,7 +441,7 @@ export class Scooter {
   }
 
   setView(first) {
-    this.firstPerson = first;
+    this.firstPerson = first; if (this.cig) this.cig.visible = !!this.smoking && !first;
     const show = !first;
     this.rParts.torso.visible = show; this.rParts.stripe.visible = show;
     this.rParts.head.forEach((p) => (p.visible = show));
