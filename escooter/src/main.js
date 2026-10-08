@@ -63,7 +63,7 @@ const me = {
 const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
 const parkDyn = [];
 const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), glow: tex.glow, pool: tex.pool });
-const peds = new Pedestrians(scene, M, 16, 6);
+const peds = new Pedestrians(scene, M, 30, 10, 6);
 traffic.peds = peds;
 const rain = new Rain(scene);
 const birds = new Birds(scene, 18);
@@ -757,6 +757,8 @@ function updatePolice(dt) {
   const ch = pu.active ? traffic.nearestChaser(me.x, me.z) : null;
   audio.siren(ch ? clamp(1 - ch.d / 260, 0, 1) : 0);
 }
+// wheelie payout grows with time on the rear wheel (and a bit faster the longer you hold it)
+function wheelieEur(dur, one) { return Math.round(dur * (one ? 100 : 40) * (1 + Math.min(dur, 30) / 15)); }
 function earn(eur, why) {
   st.money = Math.max(0, st.money + eur);
   store.set('money', Math.floor(st.money));
@@ -1326,7 +1328,7 @@ function updateHUD(dt) {
   $('speedfx').style.opacity = clamp((kmh - 40) / 50, 0, 1).toFixed(2);
   setText('moneyVal', Math.floor(st.money).toLocaleString('de-DE') + ' €');
   const wEl = $('wheelie');
-  if (scooter.wheelie > 0.3 && st.mode === 'ride') { wEl.classList.remove('hidden'); const ok = scooter.wheelieT >= 1.5; wEl.innerHTML = `WHEELIE <b>${scooter.wheelieT.toFixed(1)} s</b> ${ok ? '· <span style="color:#8dffb0">+100 € beim Absetzen</span>' : '· halte durch (1,5 s)'}`; }
+  if (scooter.wheelie > 0.3 && st.mode === 'ride') { wEl.classList.remove('hidden'); const ok = scooter.wheelieT >= 1.5; wEl.innerHTML = `WHEELIE <b>${scooter.wheelieT.toFixed(1)} s</b> ${ok ? `· <span style="color:#8dffb0">+${wheelieEur(scooter.wheelieT, scooter.wheelieOne)} € beim Absetzen</span>` : '· halte durch (1,5 s)'}`; }
   else wEl.classList.add('hidden');
   const wd = $('wanted');
   if (st.wanted > 0) {
@@ -1566,10 +1568,10 @@ function tick(dt, now, render = true) {
     if (scooter.wheelieEvent) {
       const ev = scooter.wheelieEvent; scooter.wheelieEvent = null;
       st.wheelies = (st.wheelies || 0) + 1;
-      const eur = ev.one ? 250 : 100;
+      const eur = wheelieEur(ev.dur, ev.one);
       earn(eur); st.score += (ev.one ? 400 : 150) + ev.dur * 40;
       audio.chime([660, 880, 1100, 1480]);
-      toast(ev.one ? '🖐️ EINHAND-WHEELIE! +250 €' : 'WHEELIE! +100 €', `${ev.dur.toFixed(1)} s auf dem Hinterrad · ${st.wheelies}. Wheelie`, 2200);
+      toast(ev.one ? `🖐️ EINHAND-WHEELIE! +${eur} €` : `WHEELIE! +${eur} €`, `${ev.dur.toFixed(1)} s auf dem Hinterrad · ${st.wheelies}. Wheelie`, 2200);
     }
     updatePolice(dt2);
     if (st.track) trackUpdate(dt2);
