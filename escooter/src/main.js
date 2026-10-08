@@ -1,5 +1,7 @@
 import { CARS, CAR_IDS } from './pcar.js';
 import { Shops } from './shops.js';
+import { Horizon } from './horizon.js';
+import { Ambient } from './ambient.js';
 import { LAYOUT } from './stores.js';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -48,6 +50,8 @@ const tex = makeTextures(renderer);
 const M = createMaterials(tex);
 const sky = new Sky(scene, renderer, camera);
 const world = new World(scene, M);
+const horizon = new Horizon(scene);
+const ambient = new Ambient(scene);
 const scooter = new Scooter(tex, M);
 scene.add(scooter.root);
 const audio = new GameAudio();
@@ -1747,6 +1751,9 @@ function tick(dt, now, render = true) {
   const win = lamps * 1.6;
   for (const k of ['plaster', 'brick', 'panel', 'glass']) M['f_' + k].emissiveIntensity = win;
   M.lampW.emissiveIntensity = lamps * 3.4;
+  M.foliage.userData.wind.value = performance.now() * 0.001 * (1 + (cfg.weather === 'rain' ? 1.2 : 0));
+  horizon.update(camera, sky.fog.color, sky.night, sky.sunDir, sky.uniforms.sunCol.value);
+  if (!st.paused) ambient.update(Math.min(dt, 0.05), camera.position, sky.night, 0.5 + (cfg.weather === 'rain' ? 1 : 0), cfg.weather === 'rain');
   for (const k of ['shopSign', 'shopSign2', 'shopSign3', 'shopSign4', 'shopSign5', 'fuelPylon']) M[k].emissiveIntensity = 0.12 + lamps * 0.8;
   M.bright.emissiveIntensity = 0.3 + lamps * 0.12;
   M.shopGlow.emissiveIntensity = lamps * 0.9;

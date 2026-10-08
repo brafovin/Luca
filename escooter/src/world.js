@@ -324,6 +324,17 @@ class ChunkBuilder {
         const [px, pz] = [s + (rnd() - 0.5) * 3, side * 7.4];
         this.tree(px, pz, CURB, { pit: true });
       }
+      // flower planters between the trees
+      for (const side of [1, -1]) for (const s of [50, 12, 88]) {
+        if (rnd() < (s === 50 ? 0.25 : 0.5)) continue;
+        if (hash2(this.ci, this.cj, 31 + rot) < 0.3 && side === 1 && s > 45 && s < 65) continue; // bus stop
+        const pz = side * 7.9, Fo = this.b('foliage');
+        G.box(s, CURB + 0.28, pz, 1.7, 0.56, 0.7, '#6b4a34');
+        Fo.box(s, CURB + 0.6, pz, 1.56, 0.12, 0.56, '#3f8a3a');
+        const fc = [['#e8485a', '#f5d90a', '#ffffff'], ['#c44a9a', '#ffd23a', '#ffffff'], ['#f08a30', '#e8485a', '#f5d90a']][Math.floor(rnd() * 3)];
+        for (let k = 0; k < 9; k++) { const fx = s - 0.7 + (k % 5) * 0.35 + (rnd() - 0.5) * 0.1, fz = pz + (k < 5 ? -0.14 : 0.14); Fo.box(fx, CURB + 0.74 + rnd() * 0.08, fz, 0.13, 0.13, 0.13, fc[k % 3]); }
+        this.box2(s - 0.85, pz - 0.35, s + 0.85, pz + 0.35);
+      }
       // bus stop
       if (hash2(this.ci, this.cj, 31 + rot) < 0.3) this.busStop(rot);
       // parked cars

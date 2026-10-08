@@ -78,6 +78,18 @@ export function createMaterials(T) {
   M.plain = std({ vertexColors: true, roughness: 0.92, metalness: 0 });
   M.roof = std({ map: T.roof, vertexColors: true, roughness: 0.82, metalness: 0.02 });
   M.foliage = std({ map: T.leaf, vertexColors: true, roughness: 0.92, metalness: 0 });
+  { // trees sway in the wind (vertex shader), strongest in the canopy
+    const wind = { value: 0 };
+    M.foliage.userData.wind = wind;
+    M.foliage.onBeforeCompile = (sh) => {
+      sh.uniforms.uWind = wind;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWind;').replace('#include <begin_vertex>', `#include <begin_vertex>
+        { vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz; float f = smoothstep(1.6, 6.5, transformed.y);
+          transformed.x += (sin(uWind * 1.6 + wp.x * 0.31 + wp.z * 0.17) * 0.07 + sin(uWind * 3.3 + wp.z * 0.9 + wp.y) * 0.025) * f;
+          transformed.z += (cos(uWind * 1.3 + wp.z * 0.27 + wp.x * 0.11) * 0.06 + sin(uWind * 2.9 + wp.x * 0.8) * 0.02) * f; }`);
+    };
+    M.foliage.customProgramCacheKey = () => 'foliageWind';
+  }
   M.paint = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.5, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.07 }); // glossy clear-coated car paint
   M.carGlass = std({ color: 0x9db8cc, roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.28, depthWrite: false, envMapIntensity: 1.6 });
   M.glass = std({ color: 0x6f869a, roughness: 0.07, metalness: 0.9, envMapIntensity: 1.25 });
