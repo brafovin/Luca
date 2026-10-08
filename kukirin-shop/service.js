@@ -46,10 +46,10 @@ const KB = [
     action: { label: "Nachricht an das Team", run: () => svcShowForm({ topic: "Defekt / Reklamation" }) },
   },
   {
-    id: "ersatzteile", faq: true, chip: "Ersatzteile & Zubehör",
-    q: "Gibt es Ersatzteile und Zubehör?",
-    kw: ["ersatzteil", "zubehoer", "reifen", "ladegeraet", "helm", "schloss", "bremsbelag", "schlauch"],
-    a: () => `Zubehör führen wir derzeit nicht im Shop. <strong>Ersatzteile besorgen wir auf Anfrage</strong> – schreib uns einfach das Modell und das gewünschte Teil.`,
+    id: "ersatzteile", faq: true, chip: "Taschen, Merch & Ersatzteile",
+    q: "Gibt es Taschen, Merch, Zubehör und Ersatzteile?",
+    kw: ["ersatzteil", "zubehoer", "reifen", "ladegeraet", "helm", "schloss", "bremsbelag", "schlauch", "tasche", "rucksack", "merch", "shirt", "hoodie", "pullover", "cap", "kappe", "sticker", "flasche", "groesse"],
+    a: () => `Ja! Im Shop findest du <button class="inline-link" data-cat="tasche">Scooter-Taschen</button> (Lenker-, Transport-, Kabeltasche, Rucksack) und <button class="inline-link" data-cat="merch">Merch</button> (T-Shirt, Hoodie, Cap, Sticker, Trinkflasche). Weiteres Zubehör und <strong>Ersatzteile besorgen wir auf Anfrage</strong>.`,
     action: { label: "Teil anfragen", run: () => svcShowForm({ topic: "Ersatzteile / Zubehör" }) },
   },
   {

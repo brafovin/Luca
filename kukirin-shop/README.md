@@ -5,7 +5,8 @@ Statischer Online-Shop (HTML/CSS/JS, kein Build nötig) für Kukirin E-Scooter.
 **Starten:** `index.html` im Browser öffnen oder `python3 -m http.server` im Ordner ausführen.
 
 ## Enthalten
-- 9 Modelle mit Herstellerfotos (`img/`) und Herstellerdaten (`products.js`)
+- 9 Scooter-Modelle mit Herstellerfotos (`img/*.jpg`) und Herstellerdaten (`products.js`)
+- **4 Scooter-Taschen und 5 Merch-Artikel** (Lenkertasche, Transporttasche, Kabeltasche, Rucksack, T-Shirt, Hoodie, Cap, Sticker-Set, Trinkflasche) mit Kategorie-Tabs, Größen- und Farbauswahl (Warenkorb führt Varianten getrennt)
 - Filter (ABE / Sitz / Power / Budget), Suche, Sortierung, Hover-Bildwechsel
 - Produktdialog mit Bildgalerie, Highlights und Datenblatt
 - Scooter-Berater, Vergleichstabelle, Info zur Straßenzulassung (eKFV/ABE), FAQ
@@ -15,6 +16,7 @@ Statischer Online-Shop (HTML/CSS/JS, kein Build nötig) für Kukirin E-Scooter.
 - Mobil optimiert
 
 ## Vor dem Livegang
+00. **Taschen & Merch sind Beispiel-Artikel:** Der Hersteller führt beides nicht. Preise, Maße, Materialien und die gezeichneten Produktgrafiken (`img/tasche-*.svg`, `img/merch-*.svg`) sind Platzhalter. Ersetze sie durch die Daten und Fotos deines Lieferanten (`EXTRA` in `products.js`). Den Namen/das Logo „Kukirin“ nur mit Erlaubnis des Markeninhabers auf Merch drucken; sonst eigene Marke verwenden.
 0. **Service konfigurieren:** In `service.js` oben `SERVICE` ausfüllen (E-Mail, Telefon, Zeiten, Antwortzeit). Ohne E-Mail läuft das Kontaktformular im Demo-Modus (nur lokal gespeichert, mit sichtbarem Hinweis). Mit E-Mail öffnet es das Mailprogramm; für echten Versand ein Backend/Formular-Dienst anbinden.
 1. **Bildrechte klären:** Die Fotos stammen von der Herstellerseite kukirin.it.com. Nutzung nur mit Erlaubnis des Rechteinhabers (Händlervertrag / schriftliche Freigabe) oder durch eigene Fotos ersetzen.
 2. **Preise & Daten prüfen:** In `products.js` stehen die aktuellen Preise der Herstellerseite (EU-Shop) und Herstellerangaben. Eigene Einkaufs-/Verkaufspreise eintragen; Zulassungsstatus (ABE) pro Modell beim Lieferanten bestätigen lassen.
