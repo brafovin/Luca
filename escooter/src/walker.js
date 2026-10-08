@@ -14,7 +14,7 @@ function mat(color, o = {}) {
 /** Articulated pedestrian figure (balaclava + goggles + helmet + courier backpack). */
 export class WalkerModel {
   constructor(o = {}) {
-    const jacket = o.jacket || 0x56606b, pants = o.pants || 0x191b21, helmetCol = o.helmet || 0xf2f2f0, pack = o.pack ?? 0xff7a1a;
+    const jacket = o.jacket || 0x56606b, pants = o.pants || 0x191b21, helmetCol = o.helmet || 0xf2f2f0, pack = o.pack === undefined ? null : o.pack;
     this.group = new THREE.Group();
     const g = this.group;
     g.scale.setScalar(1.15); // a bit bigger than before

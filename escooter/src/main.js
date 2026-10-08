@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { makeTextures } from './textures.js';
 import { createMaterials } from './materials.js';
 import { Sky } from './sky.js';
-import { World, P, blockType, groundHeight, hasStation, SHOP } from './world.js';
+import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop } from './world.js';
 import { Walker } from './walker.js';
 import { Net } from './net.js';
 import { Scooter } from './scooter.js';
@@ -199,7 +199,7 @@ function readInput() {
     if (mouse.lock && mouse.rmb) o.back = true;
     return o;
   }
-  o.wheelie = (keys.has('KeyE') || mouse.mmb) && !(!st.vesc && Math.hypot(scooter.x - SHOP.x, scooter.z - SHOP.z) < 9);
+  o.wheelie = keys.has('KeyE') || mouse.mmb;
   if (mouse.lock) {
     if (!o.left && !o.right) o.steer = mouse.steer;
     if (mouse.lmb) o.fwd = true;
@@ -225,6 +225,7 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) { keys.add(e.code); return; }
   keys.add(e.code);
   if (!st.running) return;
+  if (st.shopOpen) { if (e.code === 'Escape' || e.code === 'KeyF') { closeShop(); e.preventDefault(); } return; }
   if (st.paused && !['KeyP', 'Escape', 'Enter', 'KeyM'].includes(e.code)) return;
   switch (e.code) {
     case 'KeyC': toggleCam(); break;
@@ -235,15 +236,10 @@ window.addEventListener('keydown', (e) => {
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
     case 'KeyB': audio.bell(); peds.bell(me.x, me.z); break;
-    case 'KeyE': if (Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9 && !st.vesc) interact(); break;
-    case 'KeyQ': if (atShop()) buyModel('dt3'); break;
-    case 'KeyU': if (atShop()) buyModel('sonic'); break;
-    case 'KeyO': if (atShop()) buyModel('g2'); break;
-    case 'KeyI': if (atShop()) buyModel('zt3'); break;
     case 'KeyX': switchModel(); break;
     case 'KeyK': setPolice(!cfg.police); break;
     case 'KeyV': toggleTrack(); break;
-    case 'KeyF': toggleMount(); break;
+    case 'KeyF': { const tb = nearestTable(); if (tb) openShop(tb); else toggleMount(); break; }
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
     case 'KeyG': st.showFps = !st.showFps; $('fps').classList.toggle('hidden', !st.showFps); break;
@@ -303,7 +299,7 @@ function toast(text, sub = '', ms = 1800) {
 }
 function setPaused(p) {
   st.paused = p;
-  $('menu').classList.toggle('hidden', !p);
+  $('menu').classList.toggle('hidden', !p || !!st.shopOpen);
   $('btnStart').textContent = st.started ? 'Weiter fahren' : 'Fahrt starten';
   $('menusub').textContent = st.started ? 'Pausiert – passe Einstellungen an oder fahre weiter.' : 'Fahre mit dem E-Scooter frei durch eine endlose deutsche Stadt – oder sammle Checkpoints.';
   $('best').textContent = st.best ? `Bestwert: ${Math.round(st.best).toLocaleString('de-DE')} Punkte` : '';
@@ -592,7 +588,7 @@ function setVesc(on) {
 }
 const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3 };
 const MODEL_ORDER = ['g4', 'g2', 'zt3', 'dt3', 'sonic'];
-const allOwned = () => st.vesc && st.dt3 && st.sonic && st.g2 && st.zt3;
+const allOwned = () => false; // paint jobs are always for sale, so the shop never runs out
 const atShop = () => Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9;
 function syncModelSelect() {
   const sel = $('optModel');
@@ -646,21 +642,114 @@ function setWbar(on) {
   if (st.running) toast(cfg.wbar ? 'Wheelie-Bar an' : 'Wheelie-Bar ab', cfg.wbar ? 'begrenzt den Wheelie auf ~32° – sicherer' : 'Wheelie bis fast zum Überschlag', 1700);
 }
 $('optWbar').onchange = (e) => setWbar(e.target.checked);
-function interact() {
-  const d = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
-  if (d < 9) {
-    if (st.vesc) { toast('VESC ist schon verbaut', 'viel Spaß!', 1800); return; }
-    if (st.money < VESC_PRICE) { toast('Zu wenig Geld', `Du hast ${Math.floor(st.money)} € – der VESC kostet ${VESC_PRICE} €. Fahre Checkpoints!`, 3000); audio.beep(); return; }
-    earn(-VESC_PRICE);
-    store.set('vesc', true);
-    setVesc(true);
-    audio.chime([523, 659, 784, 1046, 1318]);
-    toast('VESC eingebaut!', `Turbo bis ${Math.round(scooter.topKmh)} km/h`, 4200);
-    net.sendEvent && net.sendEvent('vesc');
-    return;
-  }
-  const stn = world.nearestStation(me.x, me.z);
+function buyVesc() {
+  if (st.vesc) { toast('VESC ist schon verbaut', 'viel Spaß!', 1800); return; }
+  if (st.money < VESC_PRICE) { toast('Zu wenig Geld', `Du hast ${Math.floor(st.money)} € – der VESC kostet ${VESC_PRICE} €. Fahre Checkpoints!`, 3000); audio.beep(); return; }
+  earn(-VESC_PRICE);
+  store.set('vesc', true);
+  setVesc(true);
+  audio.chime([523, 659, 784, 1046, 1318]);
+  toast('VESC eingebaut!', `Turbo bis ${Math.round(scooter.topKmh)} km/h`, 4200);
+  net.sendEvent && net.sendEvent('vesc');
 }
+const interact = buyVesc; // (debug hook name)
+
+/* ------------------------------------------------------------------ walk-in shop: counters, buying, paint */
+const PAINTS = [
+  { id: 'orig', name: 'Original', hex: null },
+  { id: 'black', name: 'Schwarz', hex: '#14151a' }, { id: 'white', name: 'Weiß', hex: '#f2f2f0' }, { id: 'silver', name: 'Silber', hex: '#c9ccd1' },
+  { id: 'red', name: 'Rot', hex: '#d42020' }, { id: 'orange', name: 'Orange', hex: '#ff7a1a' }, { id: 'yellow', name: 'Gelb', hex: '#f0c820' },
+  { id: 'lime', name: 'Lime', hex: '#9dff1a' }, { id: 'green', name: 'Grün', hex: '#1fa04a' }, { id: 'cyan', name: 'Cyan', hex: '#17d6ff' },
+  { id: 'blue', name: 'Blau', hex: '#1f5cff' }, { id: 'purple', name: 'Violett', hex: '#9a4dff' }, { id: 'pink', name: 'Pink', hex: '#ff4fa3' },
+];
+const PAINT_PRICE = 100;
+st.paint = store.get('paint', {});
+st.paintSel = 'g4';
+function applyPaint(id) {
+  const p = st.paint[id] || {};
+  const hx = (v) => { const c = PAINTS.find((q) => q.id === v); return c && c.hex ? parseInt(c.hex.slice(1), 16) : null; };
+  scooter.setPaint(id, hx(p.body), hx(p.accent));
+}
+function buyPaint(id, part, colorId) {
+  if (!OWNED[id] || !OWNED[id]()) return;
+  const cur = (st.paint[id] || {})[part] || 'orig';
+  if (cur === colorId) { toast('Schon lackiert', '', 900); return; }
+  const price = colorId === 'orig' ? 0 : PAINT_PRICE;
+  if (st.money < price) { toast('Zu wenig Geld', `Lackierung kostet ${PAINT_PRICE} €`, 1800); audio.beep(); return; }
+  if (price) earn(-price);
+  st.paint[id] = { ...(st.paint[id] || {}), [part]: colorId };
+  store.set('paint', st.paint);
+  applyPaint(id);
+  audio.chime([660, 880]);
+  toast(`🎨 ${PAINTS.find((q) => q.id === colorId).name}`, price ? `−${price} €` : 'Werkslackierung', 1200);
+  renderShop();
+}
+function nearestTable() {
+  if (st.track || st.shopOpen) return null;
+  for (const t of SHOP_TABLES) {
+    const dx = Math.max(Math.abs(me.x - t.x) - 1.75, 0), dz = Math.max(Math.abs(me.z - t.z) - 0.68, 0);
+    if (Math.hypot(dx, dz) < 1.6) return t;
+  }
+  return null;
+}
+function openShop(t) {
+  st.shopOpen = true; st.shopTab = t.id; st.paintSel = st.model;
+  renderShop();
+  $('shop').classList.remove('hidden');
+  setPaused(true);
+}
+function closeShop() {
+  st.shopOpen = false;
+  $('shop').classList.add('hidden');
+  setPaused(false);
+  lockMouse();
+}
+function renderShop() {
+  const t = SHOP_TABLES.find((q) => q.id === st.shopTab) || SHOP_TABLES[0];
+  const el = $('shopBody');
+  const money = Math.floor(st.money).toLocaleString('de-DE');
+  let h = `<div class="shead"><h2>🛒 ${t.name}</h2><div class="smoney">${money} €</div><button id="shopClose" class="ghost">Schließen (Esc)</button></div>`;
+  const tabs = SHOP_TABLES.map((q) => `<button class="stab ${q.id === t.id ? 'on' : ''}" data-tab="${q.id}">${q.name}</button>`).join('');
+  h += `<div class="stabs">${tabs}</div>`;
+  if (t.id === 'parts') {
+    h += `<div class="srow"><div class="sinfo"><b>VESC-Controller Umbau</b><small>Turbo schneller: G4 150 km/h · Dualtron 235 km/h · Sonic 500 km/h · ZT3 Pro & G2 70 km/h. Gilt für alle Roller.</small></div>`
+      + (st.vesc ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="vesc" ${st.money < VESC_PRICE ? 'disabled' : ''}>Kaufen · ${VESC_PRICE} €</button>`) + `</div>`;
+    h += `<div class="srow"><div class="sinfo"><b>Wheelie-Bar</b><small>Stützrad hinten (an/aus mit H) – gratis dabei.</small></div><span class="sown">✓ dabei</span></div>`;
+  } else if (t.id === 'scooters') {
+    const rows = [['g4', 'KuKirin G4', 0, 'Starter · 65 km/h (Turbo 100) · VESC 150'], ['zt3', 'ZT3 Pro', SHOP_MODELS.zt3.price, '40 km/h · VESC 70'], ['g2', 'Kukirin G2', SHOP_MODELS.g2.price, '55 km/h · VESC 70'], ['dt3', 'Dualtron Thunder 3', SHOP_MODELS.dt3.price, '110 km/h (Turbo 170) · VESC 235'], ['sonic', 'Weped Sonic', SHOP_MODELS.sonic.price, '200 km/h (Turbo 300) · VESC 500 · Rennstrecke: bis 5000 km/h']];
+    for (const [id, name, price, info] of rows) {
+      const own = OWNED[id]();
+      const btn = st.model === id ? `<span class="sown">● aktiv</span>` : own ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'disabled' : ''}>Kaufen · ${price} €</button>`;
+      h += `<div class="srow"><div class="sinfo"><b>${name}</b><small>${info}</small></div>${btn}</div>`;
+    }
+  } else {
+    const own = MODEL_ORDER.filter((k) => OWNED[k]());
+    if (!own.includes(st.paintSel)) st.paintSel = st.model;
+    h += `<div class="srow"><div class="sinfo"><b>Roller wählen</b><small>Farbe ändern kostet ${PAINT_PRICE} € pro Teil (Werkslackierung gratis).</small></div><select id="paintSel">${own.map((k) => `<option value="${k}" ${k === st.paintSel ? 'selected' : ''}>${SHOP_MODELS[k] ? SHOP_MODELS[k].name : 'KuKirin G4'}</option>`).join('')}</select></div>`;
+    const cur = st.paint[st.paintSel] || {};
+    for (const [part, label] of [['body', 'Rahmen & Karosserie'], ['accent', 'Akzente (Federn, Zierteile)']]) {
+      h += `<div class="sinfo" style="margin:10px 4px 4px"><b>${label}</b></div><div class="swatches">`;
+      for (const c of PAINTS) h += `<button class="sw ${(cur[part] || 'orig') === c.id ? 'on' : ''}" data-act="paint" data-part="${part}" data-color="${c.id}" title="${c.name}${c.hex ? ' · ' + PAINT_PRICE + ' €' : ''}" style="background:${c.hex || 'conic-gradient(#14151a,#ff7a1a,#f2f2f0,#14151a)'}"></button>`;
+      h += `</div>`;
+    }
+  }
+  el.innerHTML = h;
+  el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { st.shopTab = b.dataset.tab; renderShop(); }));
+  el.querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => {
+    const a = b.dataset.act;
+    if (a === 'vesc') { buyVesc(); renderShop(); }
+    else if (a === 'buy') { buyModelUI(b.dataset.id); }
+    else if (a === 'use') { setModel(b.dataset.id); renderShop(); }
+    else if (a === 'paint') buyPaint(st.paintSel, b.dataset.part, b.dataset.color);
+  }));
+  const sel = $('paintSel'); if (sel) sel.onchange = () => { st.paintSel = sel.value; renderShop(); };
+  $('shopClose').onclick = closeShop;
+}
+function buyModelUI(id) { const v = scooter.v; scooter.v = 0; buyModel(id); scooter.v = v; renderShop(); }
+// interior light so the shop is not dark in daylight
+const shopLight = new THREE.PointLight(0xfff1d8, 0, 34, 1.6);
+shopLight.position.set((SHOP_IN.x0 + SHOP_IN.x1) / 2, 4.0, (SHOP_IN.z0 + SHOP_IN.z1) / 2);
+scene.add(shopLight);
 
 /* ------------------------------------------------------------------ camera */
 let camYaw = 0, camDist = 3.2, shakeT = 0;
@@ -668,6 +757,7 @@ const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 const fpAnchor = new THREE.Object3D();
 scooter.root.add(fpAnchor);
 fpAnchor.position.set(0, 1.55, -0.12);
+const FP_DEF = { y: 1.55, pitch: 0.36 };
 const fpLook = new THREE.Object3D();
 fpLook.rotation.y = Math.PI; // camera looks down -z, scooter forward is +z
 fpAnchor.add(fpLook);
@@ -729,7 +819,9 @@ function updateCamera(dt, first) {
   const baseFov = 62 + (s.kmh / s.topKmh) * 26 + (s.boosting ? 4 : 0);
   if (st.fp) {
     mouse.lookY = damp(mouse.lookY, 0, 1.5, dt);
-    fpAnchor.rotation.set(s.pitch * 0.4 + 0.36 + mouse.lookY - s.wheelie * 0.3, 0, -s.lean * 0.5, 'YXZ');
+    const fpp = s.model.fp || FP_DEF;
+    fpAnchor.position.y = fpp.y;
+    fpAnchor.rotation.set(s.pitch * 0.4 + fpp.pitch + mouse.lookY - s.wheelie * 0.3, 0, -s.lean * 0.5, 'YXZ');
     scooter.root.updateMatrixWorld(true);
     fpLook.getWorldPosition(camera.position);
     fpLook.getWorldQuaternion(camera.quaternion);
@@ -864,12 +956,9 @@ function updateHUD(dt) {
   // shop / interaction prompt
   const ds = Math.hypot(me.x - SHOP.x, me.z - SHOP.z);
   let prompt = '';
-  if (ds < 9 && !allOwned()) {
-    const l = [];
-    if (!st.vesc) l.push(st.money >= VESC_PRICE ? `<kbd>E</kbd> VESC-Umbau – ${VESC_PRICE} €` : `VESC ${VESC_PRICE} € (dir fehlen ${Math.ceil(VESC_PRICE - st.money)} €)`);
-    for (const [id, sm] of Object.entries(SHOP_MODELS)) if (!st[id]) l.push(st.money >= sm.price ? `<kbd>${sm.key}</kbd> ${sm.name} – ${sm.price} €` : `${sm.name} ${sm.price} € (dir fehlen ${Math.ceil(sm.price - st.money)} €)`);
-    prompt = '🛒 ' + l.join('  ·  ');
-  }
+  const tbl = nearestTable();
+  if (tbl) prompt = `<kbd>F</kbd> ${tbl.name} – ansehen & kaufen`;
+  else if (ds < 16 && !inShop(me.x, me.z)) prompt = '🛒 Geh in den Laden – an den Tischen kaufst du VESC, Roller & Farben';
   else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < 3.4) prompt = '<kbd>F</kbd> Aufsteigen';
   if (cache.prompt !== prompt) { cache.prompt = prompt; $('prompt').innerHTML = prompt; $('prompt').classList.toggle('hidden', !prompt); }
   const shopLine = (st.track || allOwned()) ? '' : `<br>🛒 VESC-Shop: ${ds >= 1000 ? (ds / 1000).toFixed(1) + ' km' : Math.round(ds) + ' m'}`;
@@ -1158,6 +1247,7 @@ function tick(dt, now, render = true) {
     }
   }
   for (const L of lampLights) L.intensity = lamps * 260;
+  { const dS = Math.hypot(me.x - (SHOP_IN.x0 + SHOP_IN.x1) / 2, me.z - (SHOP_IN.z0 + SHOP_IN.z1) / 2); shopLight.intensity = dS < 40 ? 330 * (1 - Math.max(0, dS - 22) / 18) : 0; }
   const head = st.userHead ?? lamps > 0.4;
   scooter.updateLights(night, head, dt, sky.hours);
   scooter.updateRider(dt, Math.abs(scooter.v));
@@ -1198,6 +1288,7 @@ async function boot() {
   setModel(OWNED[st.model] && OWNED[st.model]() ? st.model : 'g4', true);
   setPolice(cfg.police);
   setWbar(cfg.wbar);
+  for (const id of Object.keys(st.paint)) applyPaint(id);
   shopBeacon.position.set(SHOP.x, groundHeight(SHOP.x, SHOP.z), SHOP.z);
   sky.setTime(cfg.hours);
   sky.update(0.01, new THREE.Vector3(30, 0, 0), true);
@@ -1226,4 +1317,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
-import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, decorate } from './models.js';
+import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, decorate, paintModel } from './models.js';
 
 const WHEELBASE = 1.16;
 const G = 9.81;
@@ -103,6 +103,7 @@ export class Scooter {
     this.setVesc(this.vesc);
   }
 
+  setPaint(id, body, accent) { const m = this.models[id]; if (m) paintModel(m, body, accent); }
   setWbar(on) { this.wbar = on; for (const m of Object.values(this.models)) m.wheelieBar.visible = on; }
   get hyperOn() { return !!this.hyper && this.modelId === 'sonic'; }
   get topKmh() { if (this.hyperOn) return HYPER_V * 3.6; const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }
@@ -144,20 +145,10 @@ export class Scooter {
     const pocket = mk(new THREE.BoxGeometry(0.07, 0.07, 0.015), mJacketDark); pocket.position.set(0.07, 0.02, 0.098); torsoExtra.push(pocket);
     this.torsoExtra = torsoExtra;
     for (const m of torsoExtra) { m.position.multiplyScalar(K); m.scale.multiplyScalar(K); }
-    const stripe = mk(new THREE.BoxGeometry(0.34, 0.44, 0.2), std({ color: 0xff7a1a, roughness: 0.6 })); // courier backpack
+    const stripe = new THREE.Group(); // (no backpack any more – kept as an empty anchor)
+    rider.add(stripe);
     this.rParts.stripe = stripe;
-    const bpLogo = mk(new THREE.BoxGeometry(0.2, 0.05, 0.012), std({ color: 0xffffff, roughness: 0.5 }), stripe);
-    bpLogo.position.set(0, 0.08, -0.106);
-    const bpRefl = mk(new THREE.BoxGeometry(0.3, 0.025, 0.012), mReflect, stripe);
-    bpRefl.position.set(0, -0.12, -0.106);
-    const bpFlap = mk(new THREE.BoxGeometry(0.34, 0.1, 0.215), std({ color: 0xd9600f, roughness: 0.65 }), stripe);
-    bpFlap.position.set(0, 0.17, 0);
     this.rParts.straps = [];
-    for (const sx of [-1, 1]) {
-      const strap = mk(new THREE.BoxGeometry(0.035, 0.3 * K, 0.012), mJacketDark);
-      this.rParts.straps.push(strap);
-      strap.userData.sx = sx;
-    }
 
     // ---- head: balaclava (Sturmhaube) + ski goggles + helmet
     const head = [];
