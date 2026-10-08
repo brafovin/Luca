@@ -13,6 +13,15 @@ export const FLOOR = 3.2;
 /** VESC shop: interaction point on the pavement in front of the door (world coords) */
 import { isTrackChunk, buildTrackChunk, inTrackZone } from './track.js';
 export const SHOP = { x: P + LOT0 + 24, z: 7.5 };
+// walk-in VESC shop: interior rectangle (world coords) and the three counters you can buy at
+export const SHOP_IN = { x0: P + LOT0 + 10 + 0.5, x1: P + LOT0 + 38 - 0.5, z0: LOT0 + 1 + 0.5, z1: LOT0 + 17 - 0.5 };
+const SHOP_CX = P + LOT0 + 24;
+export const SHOP_TABLES = [
+  { id: 'parts', name: 'VESC & Umbauten', x: SHOP_CX - 8, z: LOT0 + 8.6 },
+  { id: 'scooters', name: 'Roller', x: SHOP_CX, z: LOT0 + 8.6 },
+  { id: 'paint', name: 'Lackierung', x: SHOP_CX + 8, z: LOT0 + 8.6 },
+];
+export const inShop = (x, z) => x > SHOP_IN.x0 && x < SHOP_IN.x1 && z > SHOP_IN.z0 && z < SHOP_IN.z1;
 
 /* ------------------------------------------------------------------ terrain */
 function sdRounded(lx, lz) {
@@ -975,9 +984,9 @@ class ChunkBuilder {
     }
   }
 
-  miniScooter(x, z, ry, col) {
+  miniScooter(x, z, ry, col, y = CURB + 0.5, collide = true) {
     const S = this.S;
-    const m = new THREE.Matrix4().makeRotationY(ry); m.setPosition(x, CURB + 0.5, z);
+    const m = new THREE.Matrix4().makeRotationY(ry); m.setPosition(x, y, z);
     S.setTransform(m);
     const G = this.b('generic');
     G.box(0, 0.18, 0, 0.2, 0.07, 0.72, '#16171a');
@@ -990,7 +999,80 @@ class ChunkBuilder {
       G.box(0, 0.138, wz, 0.07, 0.12, 0.12, '#8c9096');
     }
     S.setTransform(null);
-    this.circ(x, z, 0.5);
+    if (collide) this.circ(x, z, 0.5);
+  }
+
+  /** walk-in interior of the VESC shop: floor, shelves, three counters with products */
+  shopInterior(x0, x1, z0, z1, cx, H, DW) {
+    const G = this.b('generic'), PL = this.b('plain'), L = this.b('lampW'), SG = this.b('shopGlow'), MK = this.b('mark'), pav = this.b('paver2');
+    const fy = CURB + 0.04;
+    pav.plane(x0 + 0.5, z0 + 0.5, x1 - 0.5, z1 - 0.5, fy, '#8f8b84', 1.5);
+    MK.plane(cx - 0.9, z0 - 0.2, cx + 0.9, z0 + 11, fy + 0.006, '#ff7a1a');                 // orange guide carpet from the door to the counters
+    MK.plane(cx - 0.9, z0 + 9.7, cx + 0.9, z0 + 11, fy + 0.007, '#17181b');
+    // inner wall liner (light panels) and orange slat wall
+    PL.box(x0 + 0.54, CURB + H / 2, (z0 + z1) / 2, 0.06, H - 0.3, z1 - z0 - 1, '#d9d6cf');
+    PL.box(x1 - 0.54, CURB + H / 2, (z0 + z1) / 2, 0.06, H - 0.3, z1 - z0 - 1, '#d9d6cf');
+    PL.box(cx, CURB + H / 2, z0 + 0.54, x1 - x0 - 1, H - 0.3, 0.06, '#d9d6cf');
+    PL.box(cx, CURB + H / 2 - 0.1, z1 - 0.54, x1 - x0 - 1, H - 0.5, 0.06, '#2b2e34');
+    for (let i = 0; i < 22; i++) G.box(x0 + 1.4 + i * 1.18, CURB + 2.4, z1 - 0.58, 0.05, 3.6, 0.04, '#ff7a1a'); // slats
+    G.box(cx, CURB + 4.45, z1 - 0.6, x1 - x0 - 1.4, 0.5, 0.06, '#ff7a1a'); // header band
+    G.box(x0 + 0.58, CURB + 0.12, (z0 + z1) / 2, 0.08, 0.24, z1 - z0 - 1, '#17181b'); G.box(x1 - 0.58, CURB + 0.12, (z0 + z1) / 2, 0.08, 0.24, z1 - z0 - 1, '#17181b');
+    // ceiling light strips
+    for (const lx of [cx - 10, cx - 5, cx, cx + 5, cx + 10]) for (const lz of [z0 + 4, z0 + 9, z0 + 14]) { L.box(lx, CURB + H - 0.34, lz, 0.5, 0.05, 3.2, '#ffffff'); G.box(lx, CURB + H - 0.31, lz, 0.7, 0.04, 3.4, '#17181b'); }
+    this.glowPts.push(cx, CURB + H - 0.5, z0 + 8);
+    // shelving along the back wall and side walls with products
+    const cols = ['#1a1a1d', '#c42a2a', '#2f6aa6', '#e2c13a', '#e9e9e6', '#ff7a1a'];
+    const shelf = (sx, sz, w, depth, along) => { // along: 'x' or 'z'
+      const wx = along === 'x' ? w : depth, wz = along === 'x' ? depth : w;
+      G.box(sx, CURB + 1.2, sz, wx, 2.4, wz, '#23262b');
+      for (let lvl = 0; lvl < 4; lvl++) {
+        const y = CURB + 0.25 + lvl * 0.62;
+        G.box(sx, y, sz, wx + 0.02, 0.05, wz + 0.02, '#c9ccd0');
+        const n = Math.floor(w / 0.55);
+        for (let k = 0; k < n; k++) {
+          const off = -w / 2 + 0.3 + k * ((w - 0.5) / Math.max(1, n - 1));
+          const px = along === 'x' ? sx + off : sx, pz = along === 'x' ? sz : sz + off;
+          const c = cols[Math.floor(this.rnd() * cols.length)];
+          const kind = this.rnd();
+          if (kind < 0.4) G.box(px, y + 0.22, pz, 0.38, 0.38, 0.34, c);                         // box
+          else if (kind < 0.7) { G.cyl(px, y + 0.03, pz, 0.2, 0.08, '#111', 14); G.cyl(px, y + 0.03, pz, 0.12, 0.09, '#555', 10); G.cyl(px, y + 0.11, pz, 0.2, 0.08, '#111', 14); } // tyres
+          else { G.cyl(px, y + 0.03, pz, 0.14, 0.2, c, 10, true, 0.12); G.box(px, y + 0.16, pz + (along === 'x' ? 0.1 : 0), 0.14, 0.04, 0.04, '#111'); } // helmet / bottle
+        }
+      }
+      this.box2(sx - wx / 2, sz - wz / 2, sx + wx / 2, sz + wz / 2);
+    };
+    for (let i = 0; i < 4; i++) shelf(x0 + 4.5 + i * 6.3, z1 - 1.3, 5.6, 0.7, 'x');
+    for (let i = 0; i < 2; i++) { shelf(x0 + 1.1, z0 + 4.2 + i * 5.6, 4.6, 0.7, 'z'); shelf(x1 - 1.1, z0 + 4.2 + i * 5.6, 4.6, 0.7, 'z'); }
+    // the three counters
+    const tz = z0 + 8.6;
+    const table = (tx, accent, label) => {
+      G.box(tx, CURB + 0.46, tz, 3.2, 0.9, 1.1, '#2b2e34');
+      G.box(tx, CURB + 0.95, tz, 3.5, 0.09, 1.35, '#9a7550');
+      G.box(tx, CURB + 0.3, tz - 0.56, 3.0, 0.1, 0.03, accent);   // accent strip on the front
+      G.box(tx, CURB + 0.96, tz - 0.64, 3.5, 0.03, 0.04, accent);
+      G.box(tx, CURB + 3.2, tz + 0.5, 0.1, 1.8, 0.1, '#17181b');    // sign pole behind the counter
+      G.box(tx, CURB + 3.9, tz + 0.5, 3.2, 0.7, 0.08, accent);      // sign plate
+      L.box(tx, CURB + 3.9, tz + 0.44, 3.0, 0.5, 0.03, '#ffffff');
+      this.box2(tx - 1.75, tz - 0.68, tx + 1.75, tz + 0.68);
+      return CURB + 1.0;
+    };
+    // 1 – parts: VESC controllers, cables, batteries
+    let ty = table(cx - 8, '#1668ff');
+    for (let i = 0; i < 3; i++) { G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.1, tz - 0.1, 0.42, 0.18, 0.62, '#1668ff'); G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.205, tz - 0.1, 0.34, 0.02, 0.5, '#35e6ff'); G.box(cx - 8 - 1.0 + i * 0.95, ty + 0.1, tz - 0.42, 0.3, 0.1, 0.02, '#e9faff'); }
+    G.cyl(cx - 8 + 1.1, ty, tz + 0.1, 0.22, 0.18, '#17181b', 16); G.cyl(cx - 8 + 1.1, ty, tz + 0.1, 0.1, 0.19, '#d98a2a', 12);
+    G.box(cx - 8 + 0.35, ty + 0.12, tz + 0.25, 0.6, 0.22, 0.28, '#2b2e34');
+    // 2 – scooters on the counter
+    ty = table(cx, '#ff7a1a');
+    [['#e9e9e6', -1.3], ['#ff7a1a', -0.45], ['#c42a2a', 0.45], ['#9dff1a', 1.3]].forEach(([c, dx]) => this.miniScooter(cx + dx, tz, 0, c, ty + 0.0, false));
+    // 3 – paint
+    ty = table(cx + 8, '#b24dff');
+    const paints = ['#111114', '#f2f2f0', '#d42020', '#ff7a1a', '#f0c820', '#30b050', '#1f7aff', '#ff4fa3', '#9a4dff', '#c9ccd1'];
+    paints.forEach((c, i) => { const px = cx + 8 - 1.5 + i * 0.33; G.cyl(px, ty, tz - 0.15, 0.12, 0.2, c, 12); G.cyl(px, ty + 0.2, tz - 0.15, 0.125, 0.025, '#c9ccd1', 12); G.cyl(px, ty + 0.17, tz + 0.2, 0.12, 0.2, c, 12); });
+    paints.forEach((c, i) => G.box(cx + 8 - 1.55 + i * 0.345, ty + 0.55, tz + 0.55, 0.3, 0.9, 0.03, c)); // swatch board
+    // waiting area: sofa + plant
+    G.box(x1 - 3.6, CURB + 0.3, z0 + 2.4, 2.4, 0.5, 0.9, '#2b2e34'); G.box(x1 - 3.6, CURB + 0.75, z0 + 2.75, 2.4, 0.5, 0.2, '#2b2e34');
+    G.cyl(x0 + 2.6, CURB, z0 + 2.4, 0.3, 0.5, '#7a5a3a', 10); G.cyl(x0 + 2.6, CURB + 0.5, z0 + 2.4, 0.4, 0.9, '#2f7a3a', 8, true, 0.05);
+    this.box2(x1 - 4.9, z0 + 1.9, x1 - 2.3, z0 + 3.2); this.circ(x0 + 2.6, z0 + 2.4, 0.4);
   }
 
   vescShop() {
@@ -998,17 +1080,28 @@ class ChunkBuilder {
     const G = this.b('generic'), PL = this.b('plain'), SG = this.b('shopGlow'), L = this.b('lampW'), SS = this.b('shopsign'), pav = this.b('paver2');
     pav.plane(LOT0 + 0.3, LOT0 + 0.3, LOT1 - 0.3, LOT1 - 0.3, CURB + 0.01, '#b9b5ac', 2);
     const x0 = LOT0 + 10, w = 28, z0 = LOT0 + 1, d = 16, H = 5.4, x1 = x0 + w, z1 = z0 + d, cx = x0 + w / 2;
-    PL.box(cx, CURB + H / 2, z0 + d / 2, w, H, d, '#2b2e34');
+    // walls with an open doorway (walk-in shop)
+    const DW = 1.7, DH = 2.9, T = 0.5;
+    PL.box((x0 + cx - DW) / 2, CURB + H / 2, z0 + T / 2, cx - DW - x0, H, T, '#2b2e34');
+    PL.box((x1 + cx + DW) / 2, CURB + H / 2, z0 + T / 2, x1 - cx - DW, H, T, '#2b2e34');
+    PL.box(cx, CURB + (DH + H) / 2, z0 + T / 2, DW * 2, H - DH, T, '#2b2e34', { bottom: true });
+    PL.box(x0 + T / 2, CURB + H / 2, z0 + d / 2, T, H, d, '#2b2e34');
+    PL.box(x1 - T / 2, CURB + H / 2, z0 + d / 2, T, H, d, '#2b2e34');
+    PL.box(cx, CURB + H / 2, z1 - T / 2, w, H, T, '#2b2e34');
+    PL.box(cx, CURB + H - 0.15, z0 + d / 2, w, 0.3, d, '#e4e1da', { bottom: true });
+    this.shopInterior(x0, x1, z0, z1, cx, H, DW);
     G.box(cx, CURB + H + 0.2, z0 + d / 2, w + 0.5, 0.4, d + 0.5, '#17181b');
     G.box(cx, CURB + 4.0, z0 - 0.06, w + 0.1, 0.45, 0.14, '#ff7a1a');
-    G.box(cx, CURB + 0.2, z0 - 0.06, w + 0.1, 0.4, 0.14, '#17181b');
+    for (const sd of [-1, 1]) G.box((sd < 0 ? x0 + cx - DW : x1 + cx + DW) / 2 + (sd < 0 ? 0 : 0), CURB + 0.2, z0 - 0.06, sd < 0 ? cx - DW - x0 + 0.1 : x1 - cx - DW + 0.1, 0.4, 0.14, '#17181b');
     // lit shop window front + mullions
-    SG.box(cx, CURB + 1.9, z0 - 0.04, w - 3, 3.0, 0.06, '#ffe2b0');
-    for (let i = 0; i <= 8; i++) G.box(x0 + 1.5 + ((w - 3) * i) / 8, CURB + 1.9, z0 - 0.08, 0.1, 3.1, 0.1, '#17181b');
-    G.box(cx, CURB + 3.45, z0 - 0.08, w - 3, 0.1, 0.1, '#17181b'); G.box(cx, CURB + 0.38, z0 - 0.08, w - 3, 0.1, 0.1, '#17181b');
-    // double door
-    G.box(cx, CURB + 1.15, z0 - 0.1, 2.6, 2.3, 0.1, '#0f1013'); G.box(cx - 0.05, CURB + 1.1, z0 - 0.17, 0.06, 1.0, 0.04, '#cfd2d6'); G.box(cx + 0.05, CURB + 1.1, z0 - 0.17, 0.06, 1.0, 0.04, '#cfd2d6');
-    SG.box(cx, CURB + 1.2, z0 - 0.15, 2.3, 2.0, 0.02, '#ffd9a0');
+    for (const sd of [-1, 1]) { // window glass left / right of the doorway
+      const xa = sd < 0 ? x0 + 1.5 : cx + DW + 0.2, xb = sd < 0 ? cx - DW - 0.2 : x1 - 1.5;
+      SG.box((xa + xb) / 2, CURB + 1.9, z0 - 0.04, xb - xa, 3.0, 0.06, '#ffe2b0');
+      G.box((xa + xb) / 2, CURB + 3.45, z0 - 0.08, xb - xa, 0.1, 0.1, '#17181b'); G.box((xa + xb) / 2, CURB + 0.38, z0 - 0.08, xb - xa, 0.1, 0.1, '#17181b');
+    }
+    for (let i = 0; i <= 8; i++) { const mx = x0 + 1.5 + ((w - 3) * i) / 8; if (Math.abs(mx - cx) > DW + 0.1) G.box(mx, CURB + 1.9, z0 - 0.08, 0.1, 3.1, 0.1, '#17181b'); }
+    for (const sd of [-1, 1]) G.box(cx + sd * (DW + 0.05), CURB + DH / 2, z0 - 0.1, 0.12, DH, 0.2, '#17181b'); // door frame
+    G.box(cx, CURB + DH + 0.05, z0 - 0.1, DW * 2 + 0.2, 0.12, 0.2, '#17181b');
     G.box(cx, CURB + 2.55, z0 - 1.0, 4.4, 0.14, 2.0, '#ff7a1a'); // canopy
     for (const sx of [-1, 1]) G.box(cx + sx * 2.1, CURB + 1.3, z0 - 1.9, 0.08, 2.6, 0.08, '#17181b');
     // big sign above the entrance
@@ -1017,13 +1110,14 @@ class ChunkBuilder {
     SS.quad([cx - sw / 2, sy - sh / 2, z0 - 0.58], [cx + sw / 2, sy - sh / 2, z0 - 0.58], [cx + sw / 2, sy + sh / 2, z0 - 0.58], [cx - sw / 2, sy + sh / 2, z0 - 0.58], '#ffffff', [1, 0, 0, 0, 0, 1, 1, 1], [cx, sy, z0 + 3]);
     for (const sx of [-1, 1]) G.box(cx + sx * 5.5, CURB + H + 0.7, z0 - 0.2, 0.3, 1.4, 0.3, '#101114');
     L.box(cx, sy - sh / 2 - 0.25, z0 - 0.58, sw, 0.1, 0.1, '#ffffff'); // neon under sign
-    this.colliders.push({ t: 0, x0, x1, z0, z1 });
+    // collision: walls only, the doorway stays open
+    for (const c of [[x0, cx - DW, z0, z0 + T], [cx + DW, x1, z0, z0 + T], [x0, x0 + T, z0, z1], [x1 - T, x1, z0, z1], [x0, x1, z1 - T, z1]]) this.colliders.push({ t: 0, x0: c[0], x1: c[1], z0: c[2], z1: c[3] });
     // display scooters + pedestals on the plaza
-    const cols = ['#ff7a1a', '#1fd0ff', '#ffffff'];
-    for (let i = 0; i < 3; i++) {
-      const px = cx - 7 + i * 7, pz = z0 - 3.6;
+    const cols = ['#ff7a1a', '#1fd0ff', '#ffffff', '#9dff1a'];
+    for (let i = 0; i < 4; i++) { // the doorway in the middle stays free
+      const px = cx + [-8.5, -5, 5, 8.5][i], pz = z0 - 3.6;
       G.cyl(px, CURB, pz, 1.1, 0.3, '#3a3d44', 16);
-      this.miniScooter(px, pz, Math.PI / 2 + (i - 1) * 0.5, cols[i]);
+      this.miniScooter(px, pz, Math.PI / 2 + (i - 1.5) * 0.5, cols[i]);
     }
     // flags
     for (const fx of [x0 - 1.5, x1 + 1.5]) {

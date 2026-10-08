@@ -253,6 +253,7 @@ export function buildG4(ctx, o = {}) {
 
   return {
     id: o.id || 'g4', name: o.name || 'KuKirin G4', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.62, 1.7],
+    paint: { body: [mGloss], accent: [mTrim, mSpring] },
     gripLocal: [new THREE.Vector3(0.265, 1.06, -0.02), new THREE.Vector3(-0.265, 1.06, -0.02)],
     foot: [new THREE.Vector3(0.05, 0.265, 0.06), new THREE.Vector3(-0.05, 0.265, -0.28)],
     half: HALF, wheelbase: 1.16, wheelR: R, spotPos: [0, 0.78, 0.46], dispMode: o.disp || 'D3', stemDecal: 'G4',
@@ -471,6 +472,7 @@ export function buildDT3(ctx) {
 
   return {
     id: 'dt3', name: 'Dualtron Thunder 3', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.85, 2.1],
+    paint: { body: [mGloss], accent: [mRed, mSpring] }, fp: { y: 1.6, pitch: 0.3 },
     gripLocal: [new THREE.Vector3(0.34, BY, -0.02), new THREE.Vector3(-0.34, BY, -0.02)],
     foot: [new THREE.Vector3(0.085, 0.285, 0.12), new THREE.Vector3(-0.085, 0.285, -0.34)],
     half: HALF, wheelbase: 1.32, wheelR: R, spotPos: [0, 0.85, 0.62], dispMode: 'DUAL', stemDecal: 'DT3',
@@ -647,6 +649,7 @@ export function buildSonic(ctx) {
 
   return {
     id: 'sonic', name: 'Weped Sonic', group, steer, frontWheel, rearWheel, vescParts, glow, glowSize: [0.95, 2.4],
+    paint: { body: [mGloss], accent: [mLime, mSpring, mLimeLed] }, fp: { y: 1.74, pitch: 0.1 }, // camera sits above the tall display
     gripLocal: [new THREE.Vector3(0.37, BY, -0.02), new THREE.Vector3(-0.37, BY, -0.02)],
     foot: [new THREE.Vector3(0.09, 0.32, 0.14), new THREE.Vector3(-0.09, 0.32, -0.36)],
     half: HALF, wheelbase: 1.44, wheelR: R, spotPos: [0, 0.9, 0.68], dispMode: 'DUAL', stemDecal: 'SONIC',
@@ -699,4 +702,43 @@ export function decorate(m) {
     const mr = add(m.steer, new THREE.BoxGeometry(0.06, 0.04, 0.008), dark, x + sx * 0.012, y + 0.12, -0.03); mr.rotation.set(-0.25, sx * 0.3, 0);
     const gl = add(m.steer, new THREE.BoxGeometry(0.05, 0.03, 0.002), mirror, x + sx * 0.012, y + 0.12, -0.037); gl.rotation.set(-0.25, sx * 0.3 + Math.PI, 0); gl.castShadow = false;
   }
+  // bell on the left of the bar, phone holder with a glowing navigation screen on the right
+  const brass = std({ color: 0xd8d9dc, roughness: 0.2, metalness: 1, envMapIntensity: 1.6 });
+  add(m.steer, new THREE.CylinderGeometry(0.012, 0.012, 0.03, 8), dark, gx * 0.55, gy + 0.018, -0.02);
+  const bell = add(m.steer, new THREE.SphereGeometry(0.03, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), brass, gx * 0.55, gy + 0.034, -0.02);
+  add(m.steer, new THREE.BoxGeometry(0.03, 0.006, 0.012), dark, gx * 0.55 + 0.015, gy + 0.037, 0.03).rotation.z = 0.2;
+  const navTex = textCanvas(64, 112, (x, w, h) => {
+    x.fillStyle = '#0d1b2a'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#2d5a8a'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, 80); x.lineTo(30, 56); x.lineTo(40, 20); x.lineTo(64, 0); x.stroke();
+    x.strokeStyle = '#22405f'; x.lineWidth = 2; x.beginPath(); x.moveTo(10, 112); x.lineTo(34, 70); x.lineTo(64, 60); x.stroke();
+    x.strokeStyle = '#35e6ff'; x.lineWidth = 4; x.beginPath(); x.moveTo(14, 112); x.lineTo(32, 66); x.lineTo(42, 24); x.stroke();
+    x.fillStyle = '#ff7a1a'; x.beginPath(); x.arc(32, 66, 5, 0, 6.3); x.fill();
+  });
+  const ph = new THREE.Group(); ph.position.set(-gx * 0.5, gy + 0.045, -0.02); ph.rotation.x = 0.55; m.steer.add(ph);
+  add(ph, new THREE.BoxGeometry(0.075, 0.14, 0.012), dark, 0, 0.05, 0);
+  const scr = add(ph, new THREE.PlaneGeometry(0.064, 0.122), new THREE.MeshBasicMaterial({ map: navTex, toneMapped: false }), 0, 0.05, -0.0065); scr.rotation.y = Math.PI; scr.castShadow = false;
+  for (const dy of [-0.012, 0.112]) add(ph, new THREE.BoxGeometry(0.082, 0.012, 0.022), dark, 0, dy, 0);
+  add(m.steer, new THREE.CylinderGeometry(0.008, 0.008, 0.04, 6), dark, -gx * 0.5, gy + 0.015, -0.02);
+  // mud flap with reflector at the rear, orange spoke reflectors on both wheels
+  const flap = add(m.group, new THREE.BoxGeometry(0.1, 0.1, 0.006), rubber, 0, m.wheelR + 0.01, -m.half - m.wheelR - 0.015); flap.rotation.x = -0.12;
+  add(m.group, new THREE.BoxGeometry(0.05, 0.03, 0.004), std({ color: 0xff2a1a, emissive: 0x801000, emissiveIntensity: 0.6, roughness: 0.3 }), 0, m.wheelR + 0.015, -m.half - m.wheelR - 0.02);
+  const refl = std({ color: 0xff9a1a, emissive: 0x7a3800, emissiveIntensity: 0.5, roughness: 0.3 });
+  for (const w of [m.rearWheel, m.frontWheel]) for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4, rr = m.wheelR * 0.5;
+    const r = add(w, new THREE.BoxGeometry(0.004, 0.026, 0.012), refl, 0.02, Math.cos(a) * rr, Math.sin(a) * rr); r.rotation.x = a; r.castShadow = false;
+  }
+}
+
+/** Repaint a model: hex strings, or null to restore the factory colour. */
+export function paintModel(m, body, accent) {
+  const apply = (mats, hex) => {
+    for (const mt of mats) {
+      if (mt.userData.orig === undefined) mt.userData.orig = mt.color.getHex();
+      mt.color.setHex(hex === null || hex === undefined ? mt.userData.orig : hex);
+      if (mt.emissive && mt.userData.origEm === undefined) mt.userData.origEm = mt.emissive.getHex();
+      if (mt.emissive) mt.emissive.setHex(hex === null || hex === undefined ? mt.userData.origEm : (hex & 0xfefefe) >> 2);
+    }
+  };
+  apply(m.paint.body, body);
+  apply(m.paint.accent, accent);
 }

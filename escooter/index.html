@@ -88,6 +88,19 @@
   #players{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:#cfe0ea;line-height:1.5}
   #vescBadge{position:absolute;left:0;right:0;top:-4px;text-align:center;font-size:11px;font-weight:900;letter-spacing:.25em;color:#35e6ff;text-shadow:0 0 12px #35e6ff}
   #wheelie{position:absolute;left:50%;bottom:238px;transform:translateX(-50%);padding:8px 18px;font-size:16px;font-weight:800;letter-spacing:.04em;white-space:nowrap;border-color:rgba(53,230,255,.6)}
+  #shop{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(4,7,11,.62);backdrop-filter:blur(5px)}
+  #shop.hidden{display:none}
+  #shopBody{width:min(760px,94vw);max-height:88vh;overflow:auto;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:20px 24px;box-shadow:0 30px 80px rgba(0,0,0,.55);user-select:none}
+  .shead{display:flex;align-items:center;gap:14px}.shead h2{margin:0;flex:1;font-size:24px}.smoney{font-size:22px;font-weight:800;color:#8dffb0}
+  .stabs{display:flex;gap:8px;margin:14px 0}.stab{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:#fff;font-weight:700;cursor:pointer}
+  .stab.on{background:linear-gradient(135deg,#ff7a1a,#ffb23d);color:#1a0d00;border-color:transparent}
+  .srow{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:rgba(255,255,255,.04)}
+  .sinfo{flex:1}.sinfo b{display:block;font-size:17px}.sinfo small{color:var(--dim);font-size:13px}
+  .buy{padding:9px 16px;border-radius:10px;border:0;background:linear-gradient(135deg,#ff7a1a,#ffb23d);color:#1a0d00;font-weight:800;cursor:pointer;white-space:nowrap}
+  .buy:disabled{opacity:.4;cursor:not-allowed}.sown{color:#8dffb0;font-weight:800;white-space:nowrap}
+  .swatches{display:flex;flex-wrap:wrap;gap:8px;margin:4px 4px 8px}.sw{width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer}
+  .sw.on{outline:3px solid #fff;outline-offset:2px}.sw:hover{transform:scale(1.1)}
+  #paintSel{padding:8px 10px;border-radius:8px;background:#10151c;color:#fff;border:1px solid var(--line);font-size:15px}
   #wanted{position:absolute;left:50%;top:84px;transform:translateX(-50%);padding:8px 18px;font-size:17px;font-weight:900;letter-spacing:.08em;white-space:nowrap;border-color:rgba(255,70,70,.8);color:#ff8a8a;animation:wantedBlink .5s steps(2) infinite}
   @keyframes wantedBlink{50%{border-color:rgba(70,110,255,.9);color:#9db4ff}}
   #trackBtn{margin-top:6px;display:inline-block;padding:5px 12px;font:700 12px/1.2 inherit;color:#fff;cursor:pointer;letter-spacing:.04em}
@@ -145,8 +158,8 @@
           <span><kbd>Leertaste</kbd></span><span>Stark bremsen</span>
           <span><kbd>C</kbd></span><span>Kamera: hinten / Ego-Perspektive</span>
           <span><kbd>F</kbd></span><span>Absteigen / aufsteigen · zu Fuß: WASD, Shift rennen</span>
-          <span><kbd>E</kbd></span><span>Wheelie (gedrückt halten, ab 1,5 s = +100 €) · beim VESC-Shop 🛒: VESC kaufen</span>
-          <span><kbd>I</kbd> <kbd>O</kbd> <kbd>Q</kbd> <kbd>U</kbd> <kbd>X</kbd></span><span>Im Shop: ZT3 Pro (I) · Kukirin G2 (O) · Dualtron (Q) · Weped Sonic (U) kaufen · X: Roller wechseln</span>
+          <span><kbd>E</kbd></span><span>Wheelie (gedrückt halten, ab 1,5 s = +100 €)</span>
+          <span><kbd>F</kbd> <kbd>X</kbd></span><span>Im VESC-Shop an einem Tisch: F = kaufen (VESC, Roller, Farben) · X: Roller wechseln</span>
           <span><kbd>V</kbd></span><span>Rennstrecke (29 km, frei von Verkehr, Rundenzeit) ↔ Stadt</span>
           <span><kbd>K</kbd></span><span>Polizei an/aus – sie jagt dich nur nach einem Wheelie (max. 100 km/h)</span>
           <span><kbd>Enter</kbd></span><span>Chat (Multiplayer)</span>
@@ -257,6 +270,7 @@
   <div id="prompt" class="panel hidden"></div>
   <div id="wheelie" class="panel hidden"></div>
   <div id="wanted" class="panel hidden"></div>
+  <div id="shop" class="hidden"><div id="shopBody"></div></div>
   <div id="bubbles"></div>
   <div id="chat" class="hidden"><div id="chatlog"></div><input id="chatin" class="hidden" maxlength="140" placeholder="Nachricht … (Enter senden, Esc abbrechen)" autocomplete="off"/></div>
   <div id="toast" class="panel"></div>

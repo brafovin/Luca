@@ -25,7 +25,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `A` `D` / `←` `→` | Lenken |
 | `Shift` | Turbo: **bis 100 km/h** (normal 65 km/h, höherer Akkuverbrauch) – mit VESC bis 150 km/h |
 | `F` | Vom Roller **absteigen** / wieder aufsteigen (zu Fuß: `WASD`, Shift rennen, Maus dreht) |
-| `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). In der Nähe des VESC-Shops 🛒 kauft `E` den Umbau (500 €) |
+| `E` (halten) | **Wheelie**: ab 1,5 s auf dem Hinterrad gibt es beim Absetzen **100 €** (nur ab ~7 km/h; Bremsen bricht ab). |
 | `V` | **Rennstrecke** ↔ Stadt (auch Menü-Button „🏁 Zur Rennstrecke teleportieren“ bzw. HUD-Button unter der Minimap) |
 | `K` | **Polizei** an/aus (auch per Button unter der Minimap oder im Menü) |
 | `X` | Roller wechseln (auch im Pausenmenü → „Roller“) |
@@ -80,18 +80,18 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 
 ## Fünf Roller
 
-* **ZT3 Pro** (Shop, **150 €**, Taste `I`): 40 km/h, mit VESC 70 km/h. · **Kukirin G2** (Shop, **300 €**, Taste `O`): 55 km/h, mit VESC 70 km/h.
+* **ZT3 Pro** (Shop, **150 €**): 40 km/h, mit VESC 70 km/h. · **Kukirin G2** (Shop, **300 €**): 55 km/h, mit VESC 70 km/h.
 * Alle Roller haben jetzt **Wheelie-Bar** (Stützrad hinten, `H`) und **Lenkerend-Spiegel**. Der Fahrer ist ~17 % größer, mit neuen Handschuhen
   (einzelne Finger, Daumen, Knöchel-Polster, Manschette); bei „Eine Hand“ winkt die linke Hand offen in die Luft.
 
 
 * **KuKirin G4** – komplett schwarz, mit sichtbaren Federn (Gabel + Heck-Coil-Over), Faltgelenk mit Verriegelung, Bremsleitungen,
   geschlitzten Scheiben, Reifenprofil, Batterie-Seitenverkleidung, Deck-LED, Kennzeichen. Normal 65 km/h, Turbo 100 km/h.
-* **Dualtron Thunder 3** (im VESC-Shop für **1000 €**, Taste `Q`): breites Deck, Doppel-Hydraulikgabel mit roten Federn,
+* **Dualtron Thunder 3** (im VESC-Shop für **1000 €**): breites Deck, Doppel-Hydraulikgabel mit roten Federn,
   zwei Heck-Federbeine, Dual-Motor-Naben mit Kühlrippen, Vierkolben-Bremsen, Doppel-Scheinwerfer, großes Display.
   LED-Leiste am Rohr, Blinker, Gabelbrücke, Ausgleichsbehälter, Lüftungsschlitze, Rücklicht mit Reflektoren u. v. m.
   Normal 110 km/h, Turbo **170 km/h**. Mit dem VESC (500 €, gilt für beide Roller): G4 150 km/h, Dualtron **235 km/h**.
-* **Weped Sonic** (im VESC-Shop für **1500 €**, Taste `U`): Hyper-Scooter in Mattschwarz mit Lime-Akzenten, 11-Zoll-Rädern, langen
+* **Weped Sonic** (im VESC-Shop für **1500 €**): Hyper-Scooter in Mattschwarz mit Lime-Akzenten, 11-Zoll-Rädern, langen
   Lime-Federbeinen, Akku-Pods, Heckflügel und Turbinen-Düse. Normal 200 km/h, Turbo 300 km/h. **Mit VESC 350 km/h normal und 500 km/h Turbo.**
   (Bei dem Tempo lädt die Stadt weiter voraus; Hindernisse bei 500 km/h = Sturz.)
 * `X` oder das Menü (Pause → „Roller“) wechselt zwischen den gekauften Rollern.
@@ -113,6 +113,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * Während der Verfolgung fahren sie **maximal 100 km/h** (Streife ca. 40–50 km/h). Hänge sie ab (+300 Punkte) – oder bleib stehen und
   bekomm eine Strafe von 250 € (danach 25 s Ruhe).
 * Mit `K`, dem Button unter der Minimap oder im Menü lässt sich die Polizei komplett **deaktivieren** (wird gespeichert).
+
+## VESC-Shop zum Reinlaufen 🛒
+
+* Der Laden hat einen offenen Eingang – du kannst **zu Fuß oder mit dem Roller hinein**. Drinnen: Regale, Orange-Teppich zu den Tischen, Sofa, Pflanze.
+* **Drei Tische** (mit `F` öffnest du das Kauf-Fenster, wenn du davor stehst): **VESC & Umbauten** (VESC 500 €), **Roller** (ZT3 Pro, G2, Dualtron, Sonic kaufen/fahren),
+  **Lackierung** (Rahmen und Akzente je 100 € in 12 Farben; pro Roller gespeichert). Nur noch dort wird gekauft – die alten Tasten Q/U/O/I/E im Shop gibt es nicht mehr.
+* **Ego-Perspektive:** Beim Weped Sonic (und Dualtron) sitzt die Kamera höher, damit du **über das Display** schauen kannst.
+* Der Fahrer trägt keinen Rucksack mehr.
 
 ## Neu: Shop, zu Fuß, Oma & Opa, Multiplayer
 

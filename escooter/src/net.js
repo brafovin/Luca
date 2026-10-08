@@ -30,8 +30,8 @@ class Remote {
     this.id = info.id; this.name = info.name || 'Spieler'; this.look = LOOKS[info.look] || LOOKS.orange; this.vesc = !!info.vesc;
     this.snaps = [];
     const M = net.M, rnd = mulberry32(this.id * 7919 + 13);
-    this.scooter = buildAiScooter(M, rnd, { body: this.look.body, jacket: this.look.jacket, helmet: this.look.helmet, style: 0.1, pack: '#ff7a1a', pants: '#191b21' });
-    this.walker = new WalkerModel({ jacket: new THREE.Color(this.look.jacket).getHex(), helmet: new THREE.Color(this.look.helmet).getHex(), pack: 0xff7a1a });
+    this.scooter = buildAiScooter(M, rnd, { body: this.look.body, jacket: this.look.jacket, helmet: this.look.helmet, style: 0.1, pack: null, pants: '#191b21' });
+    this.walker = new WalkerModel({ jacket: new THREE.Color(this.look.jacket).getHex(), helmet: new THREE.Color(this.look.helmet).getHex(), pack: null });
     net.scene.add(this.scooter.group, this.walker.group);
     this.tagMat = new THREE.SpriteMaterial({ map: nameTexture(this.name, this.vesc), depthTest: true, transparent: true });
     this.tag = new THREE.Sprite(this.tagMat);
