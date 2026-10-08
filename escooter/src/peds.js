@@ -119,7 +119,7 @@ export class Pedestrians {
       const x = axis === 'x' ? p.s : p.lane, z = axis === 'x' ? p.lane : p.s;
       if (Math.hypot(x - px, z - pz) < 25) continue;
       p.active = true; p.speed = p.elder ? 0.65 + Math.random() * 0.35 : 1.1 + Math.random() * 0.6; p.wait = 0; p.down = 0;
-      p.anger = 0; p.mood = 0; p.chase = 0; p.cool = 0; p.say = ''; p.sayT = 0; p.x = x; p.z = z;
+      p.anger = 0; p.mood = 0; p.chase = 0; p.cool = 0; p.say = ''; p.sayT = 0; p.x = x; p.z = z; p.hp = 100; p.ko = false; p.flinch = 0; p.hitStreak = 0; p.hitT = 0;
       return;
     }
   }
@@ -130,6 +130,20 @@ export class Pedestrians {
   }
 
   say(p, text, t = 3) { p.say = text; p.sayT = t; }
+
+  /** Player punches ped p (from direction dx,dz). Returns 'hit' | 'ko' | null */
+  hit(p, dx, dz, dmg = 14) {
+    if (!p.active || p.down > 0) return null;
+    p.hp = (p.hp ?? 100) - dmg; p.flinch = 0.3; p.hitT = 6;
+    p.hitStreak = (p.hitStreak || 0) + 1;
+    const l = Math.hypot(dx, dz) || 1;
+    // staggers back along their own walking line
+    if (p.axis === 'x') p.s += (dx / l) * 0.18; else p.s += (dz / l) * 0.18;
+    if (p.elder) { p.anger = Math.min(100, p.anger + 30); }
+    else { const say = ['Aua!', 'Hey, spinnst du?!', 'Lass das!', 'Hilfe!']; this.say(p, say[Math.floor(Math.random() * say.length)], 1.6); }
+    if (p.hp <= 0) { p.down = 12; p.ko = true; p.chase = 0; p.say = ''; return 'ko'; }
+    return 'hit';
+  }
 
   update(dt, player, sig, now, R = 160) {
     const px = player.x, pz = player.z, pspeed = player.speed || 0;
@@ -168,7 +182,9 @@ export class Pedestrians {
         }
         if (p.sayT > 0) p.sayT -= dt;
       }
-      if (p.down > 0) { p.down -= dt; moving = false; }
+      if (p.down > 0) { p.down -= dt; moving = false; if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 55; p.anger = p.elder ? 70 : p.anger; p.cool = 4; } }
+      if (p.flinch > 0) p.flinch -= dt;
+      if (p.hitT > 0) { p.hitT -= dt; if (p.hitT <= 0) p.hitStreak = 0; }
       if (running && moving) {
         // 10 km/h sprint straight at the player
         const dx = px - x, dz = pz - z, d = Math.hypot(dx, dz) || 1;
@@ -214,7 +230,7 @@ export class Pedestrians {
       // ---- pose
       const sc = p.elder ? 0.93 : 1;
       const sw = (moving || running) ? Math.sin(p.phase) * (running ? 0.95 : p.elder ? 0.32 : 0.55) : 0;
-      const hunch = p.elder ? (running ? 0.18 : 0.3) : 0;
+      const hunch = (p.elder ? (running ? 0.18 : 0.3) : 0) - (p.flinch > 0 ? 0.5 * Math.sin(Math.min(1, p.flinch / 0.3) * Math.PI) : 0);
       const lie = p.down > 0 ? Math.min(1, p.down * 3) : 0;
       b.makeRotationY(yaw);
       if (lie > 0) { tt.makeRotationX(-Math.PI / 2 * lie); b.multiply(tt); }

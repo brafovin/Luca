@@ -194,6 +194,7 @@ function readInput() {
     o.strafeL = keys.has('KeyA'); o.strafeR = keys.has('KeyD');
     o.turnL = keys.has('ArrowLeft'); o.turnR = keys.has('ArrowRight');
     o.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    o.punch = keys.has('KeyE') || keys.has('KeyJ') || (navigator.getGamepads && [...navigator.getGamepads()].some((g) => g && g.buttons[2]?.pressed));
     o.yawDelta = mouse.yawAcc; mouse.yawAcc = 0;
     if (mouse.lock && mouse.lmb) o.fwd = true;
     if (mouse.lock && mouse.rmb) o.back = true;
@@ -510,6 +511,28 @@ function trackHud() {
 }
 
 /* ------------------------------------------------------------------ on foot, shop, money */
+/* ------------------------------------------------------------------ boxing */
+let koCount = 0;
+function resolvePunch(ev) {
+  const fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
+  let best = null, bd = 1e9;
+  for (const p of peds.list) {
+    if (!p.active || p.down > 0) continue;
+    const dx = p.x - ev.x, dz = p.z - ev.z, d = Math.hypot(dx, dz);
+    if (d > 1.45 || d < 0.05) continue;
+    if ((dx * fx + dz * fz) / d < 0.5) continue; // roughly in front
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (!best) { audio.whoosh && audio.whoosh(); return; }
+  const r = peds.hit(best, best.x - ev.x, best.z - ev.z, 12 + Math.random() * 6);
+  audio.thud(r === 'ko' ? 9 : 4);
+  st.crashT = 0.12; $('crash').style.opacity = 0.25;
+  if (r === 'ko') {
+    koCount++;
+    st.score = Math.max(0, st.score - 120);
+    toast(best.elder ? (best.kind === 'oma' ? 'Oma K.O.!' : 'Opa K.O.!') : 'K.O.! 🥊', 'liegt am Boden – nicht schön … −120 Punkte', 2600);
+  }
+}
 function setPolice(on) {
   cfg.police = !!on; store.set('police', cfg.police);
   traffic.policeOn = cfg.police;
@@ -758,6 +781,31 @@ const fpAnchor = new THREE.Object3D();
 scooter.root.add(fpAnchor);
 fpAnchor.position.set(0, 1.55, -0.12);
 const FP_DEF = { y: 1.55, pitch: 0.36 };
+// first-person fists (only while on foot)
+const fists = new THREE.Group();
+{
+  const gl = new THREE.MeshStandardMaterial({ color: 0xcc1c1c, roughness: 0.5 }), cf = new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.8 });
+  for (const sx of [-1, 1]) {
+    const f = new THREE.Group();
+    const fist = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.17), gl); fist.position.z = 0.0;
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.1), gl); thumb.position.set(-sx * 0.05, 0.06, -0.02);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.6), cf); arm.position.z = 0.37;
+    f.add(fist, thumb, arm); f.userData.sx = sx; fists.add(f);
+  }
+  fists.visible = false; scene.add(camera); camera.add(fists);
+}
+function updateFists() {
+  const on = st.mode === 'walk' && st.fp && walker.guardAmt > 0.02 && !st.dbgCam;
+  fists.visible = on;
+  if (!on) return;
+  fists.children.forEach((f, i) => {
+    const sx = f.userData.sx, side = sx > 0 ? 0 : 1; // arm index
+    const e = walker.punchSide === i ? walker.punchExt : 0;
+    const g = walker.guardAmt;
+    f.position.set(sx * (0.2 - 0.12 * e), -0.2 + 0.05 * e + (1 - g) * -0.3, -(0.45 + 0.55 * e));
+    f.rotation.set(0.25 * (1 - e), sx * -0.35 * (1 - e), 0);
+  });
+}
 const fpLook = new THREE.Object3D();
 fpLook.rotation.y = Math.PI; // camera looks down -z, scooter forward is +z
 fpAnchor.add(fpLook);
@@ -773,6 +821,7 @@ function insideCollider(x, z, pad) {
 }
 function updateCamera(dt, first) {
   const s = scooter;
+  updateFists();
   if (!st.started && !st.dbgCam) {
     const a = performance.now() * 0.00012 + 0.6;
     const dist = 5.2;
@@ -1150,6 +1199,7 @@ function tick(dt, now, render = true) {
       for (const c of dynAll) walkDyn.push(c);
       for (const c of parkDyn) walkDyn.push(c);
       walker.update(dt2, inp, world.colliders, walkDyn);
+      if (walker.punchEvent) { const ev = walker.punchEvent; walker.punchEvent = null; resolvePunch(ev); }
     }
     if (scooter.fellEvent) { scooter.fellEvent = false; st.score = Math.max(0, st.score - 150); toast('Sturz!', '−150 Punkte – zu schnell gegen ein Hindernis', 2200); audio.thud(14); st.crashT = 1; $('crash').style.opacity = 0.9; }
     if (scooter.wheelieEvent) {
