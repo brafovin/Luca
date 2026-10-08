@@ -55,6 +55,7 @@ const me = {
   get v() { return st.mode === 'walk' ? walker.speed : scooter.v; },
   get speed() { return st.mode === 'walk' ? walker.speed : Math.abs(scooter.v); },
   get heading() { return st.mode === 'walk' ? walker.yaw : scooter.heading; },
+  get moped() { return st.mode === 'ride' && !!scooter.model.moped; },
 };
 const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
 const parkDyn = [];
@@ -1279,23 +1280,34 @@ const bubbleEls = [];
 for (let i = 0; i < 4; i++) { const el = document.createElement('div'); el.className = 'bubble hidden'; $('bubbles').appendChild(el); bubbleEls.push(el); }
 const _bv = new THREE.Vector3();
 function updateBubbles() {
-  const list = peds.elders.filter((p) => p.anger > 14 || p.sayT > 0).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
+  const list = peds.list.filter((p) => p.active && ((p.elder && (p.anger > 14 || p.sayT > 0)) || (p.kind === 'teen' && p.sayT > 0))).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
   const W = window.innerWidth, H = window.innerHeight;
   for (let i = 0; i < 4; i++) {
     const el = bubbleEls[i], it = list[i];
     if (!it || it.d > 45) { el.classList.add('hidden'); continue; }
     const p = it.p;
-    _bv.set(p.x, (p.down > 0 ? 0.6 : 2.15), p.z).project(camera);
+    _bv.set(p.x, (p.down > 0 ? 0.6 : p.kind === 'teen' ? (p.ts === 'sit' ? 1.85 : 2.0) : 2.15), p.z).project(camera);
     if (_bv.z > 1 || _bv.z < -1 || Math.abs(_bv.x) > 1.2) { el.classList.add('hidden'); continue; }
     el.classList.remove('hidden');
     el.style.transform = `translate(${((_bv.x * 0.5 + 0.5) * W).toFixed(0)}px, ${((-_bv.y * 0.5 + 0.5) * H).toFixed(0)}px) translate(-50%,-100%)`;
-    const face = p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : '🙂';
-    const who = p.kind === 'oma' ? 'Oma' : 'Opa';
-    const html = `<b>${face} ${who}</b>${p.sayT > 0 ? '<span>' + p.say + '</span>' : ''}<i><u style="width:${p.anger.toFixed(0)}%;background:${p.anger > 80 ? '#ff3b3b' : p.anger > 50 ? '#ff9a2a' : '#ffd23a'}"></u></i>`;
+    const teen = p.kind === 'teen';
+    const face = teen ? (p.rowdy ? '😈' : '😎') : p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : '🙂';
+    const who = teen ? (p.rowdy ? 'Halbstarker' : 'Netter Typ') : p.kind === 'oma' ? 'Oma' : 'Opa';
+    const html = `<b>${face} ${who}</b>${p.sayT > 0 ? '<span>' + p.say + '</span>' : ''}${teen ? '' : `<i><u style="width:${p.anger.toFixed(0)}%;background:${p.anger > 80 ? '#ff3b3b' : p.anger > 50 ? '#ff9a2a' : '#ffd23a'}"></u></i>`}`;
     if (el._h !== html) { el._h = html; el.innerHTML = html; }
   }
 }
 peds.colliders = world.colliders;
+peds.smoke = smoke;
+peds.onShove = (p) => {
+  earn(-30);
+  toast('Jugendlicher schubst dich!', 'Rempler & Taschengeld weg · −30 € – hau ab oder schlag zurück (E)', 2600);
+  audio.thud(5);
+  st.crashT = 0.4; $('crash').style.opacity = 0.6;
+  if (st.mode === 'walk') walker.stun = 0.9; else scooter.v *= 0.3;
+};
+peds.onTeenAngry = () => { if (!st.warnedTeen) { st.warnedTeen = true; toast('Halbstarke sind sauer', 'Sie kommen dir nach – fahr weg (sie sind nur zu Fuß unterwegs) oder box sie nieder', 3200); } };
+traffic.onGreet = () => { if (!st.warnedGreet || performance.now() - st.warnedGreet > 25000) { st.warnedGreet = performance.now(); toast('👋 Jugendlicher auf Simson winkt dir zu', '', 1600); } };
 peds.onSmack = (p) => {
   const who = p.kind === 'oma' ? 'Oma' : 'Opa';
   const how = p.kind === 'oma' ? 'mit der Handtasche' : 'mit dem Gehstock';

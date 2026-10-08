@@ -4,7 +4,7 @@ import { addCar } from './cars.js';
 import { P } from './world.js';
 import { mulberry32, clamp, damp } from './util.js';
 import { ik2 } from './scooter.js';
-import { addFace } from './people.js';
+import { addFace, addSeated, limb as pLimb, ball as pBall } from './people.js';
 
 const STOP = 11.2; // stop line distance from intersection centre
 const LANE = 1.75;
@@ -126,6 +126,56 @@ export function buildAiScooter(M, rnd, o = {}) {
   return { group: g, tilt, wf, wr, L: 1.7, W: 0.6 };
 }
 
+/** friendly teenager on a Simson (AI rider) */
+export function buildAiMoped(M, rnd) {
+  const set = new BatchSet(); const B = set.get('body'); const LT = set.get('light');
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const col = pick(['#2a62c4', '#2f8a56', '#e8c020', '#c42a2a', '#e8541a']);
+  const dark = '#17181b', chrome = '#cfd2d6';
+  B.box(0, 0.35, 0.0, 0.3, 0.3, 0.34, '#9da1a6');                    // engine
+  B.box(0, 0.5, -0.45, 0.2, 0.06, 0.6, dark);                         // frame
+  B.box(0, 0.7, 0.13, 0.24, 0.17, 0.5, col);                          // tank
+  B.box(0, 0.78, -0.33, 0.26, 0.09, 0.78, '#141416');                 // seat
+  B.box(0.2, 0.27, -0.4, 0.1, 0.1, 0.66, chrome);                     // exhaust
+  B.box(0.2, 0.27, -0.74, 0.07, 0.07, 0.1, dark);
+  pLimb(B, new THREE.Vector3(0, 0.3, 0.6), new THREE.Vector3(0, 0.95, 0.5), 0.022, dark);
+  B.box(0, 0.97, 0.5, 0.76, 0.025, 0.025, chrome);
+  pBall(B, 0, 0.9, 0.58, 0.09, 0.09, 0.06, chrome);
+  LT.box(0, 0.9, 0.64, 0.1, 0.07, 0.02, '#ffffff');
+  B.box(0, 0.62, -0.84, 0.1, 0.05, 0.03, '#c01818');
+  B.box(0.12, 0.28, 0.02, 0.2, 0.02, 0.06, dark); B.box(-0.12, 0.28, 0.02, 0.2, 0.02, 0.06, dark); // footrests
+  // seated rider: friendly face, hoodie, helmet pushed back, one arm on the bars (the other one waves)
+  const shirt = pick(['#2f4a7a', '#8a2f2f', '#2f6a4a', '#d6b24a', '#6a3f7a', '#e07a2e']);
+  const hip = new THREE.Vector3(0, 0.84, -0.3);
+  addSeated(B, hip.x, hip.y, hip.z, { moped: true, lean: -0.16, handDX: 0.0, wheel: { x: 0.0, y: 0.97, z: 0.5 }, shirt, female: rnd() < 0.3, hair: undefined }, rnd);
+  // helmet resting on the head (open-face)
+  const hy = hip.y + 0.69 + 0.012, hz = hip.z + 0.16 * 0.2 + 0.02 + 0.02;
+  const helm = new THREE.SphereGeometry(0.125, 12, 8, 0, 6.283, 0, 1.45);
+  const hm = new THREE.Matrix4().compose(new THREE.Vector3(0, hy + 0.012, hz - 0.01), new THREE.Quaternion(), new THREE.Vector3(1, 1.02, 1.12));
+  B.geo(helm, hm, pick(['#f2f2f0', '#c42a2a', '#16171a', '#2a5fb4', '#e6a21e']));
+  B.box(0, hy - 0.01, hz - 0.17, 0.2, 0.05, 0.02, '#16171a');
+  const g = new THREE.Group(), tilt = new THREE.Group();
+  g.add(tilt);
+  const bm = new THREE.Mesh(B.build(), M.generic); bm.castShadow = true; bm.receiveShadow = true; tilt.add(bm);
+  tilt.add(new THREE.Mesh(LT.build(), M.lampW));
+  // waving arm (separate): shown when the player is close
+  const skinArm = new THREE.Group();
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.62, 8), new THREE.MeshStandardMaterial({ color: shirt, roughness: 0.8 }));
+  arm.position.y = 0.31; skinArm.add(arm);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), new THREE.MeshStandardMaterial({ color: '#e8bd9a', roughness: 0.8 })); hand.position.y = 0.66; skinArm.add(hand);
+  skinArm.position.set(-0.24, 1.3, -0.3); skinArm.rotation.set(0.2, 0, 0.55); skinArm.visible = false;
+  tilt.add(skinArm);
+  // wheels
+  const tg = new THREE.TorusGeometry(0.25, 0.045, 8, 22); tg.rotateY(Math.PI / 2);
+  const wmat = new THREE.MeshStandardMaterial({ color: 0x0d0d0f, roughness: 0.9 });
+  const hubG = new THREE.CylinderGeometry(0.19, 0.19, 0.06, 14); hubG.rotateZ(Math.PI / 2);
+  const mk = () => { const w = new THREE.Group(); const t = new THREE.Mesh(tg, wmat); t.castShadow = true; const h = new THREE.Mesh(hubG, new THREE.MeshStandardMaterial({ color: 0xaeb2b8, metalness: 0.8, roughness: 0.4 })); const sp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.4, 0.02), new THREE.MeshStandardMaterial({ color: 0x777b80 })); w.add(t, h, sp); return w; };
+  const wf = mk(), wr = mk();
+  wf.position.set(0, 0.29, 0.6); wr.position.set(0, 0.29, -0.6);
+  tilt.add(wf, wr);
+  return { group: g, tilt, wf, wr, L: 2.0, W: 0.7, moped: true, wheelR: 0.29, waveArm: skinArm };
+}
+
 function buildPoliceCar(M, rnd, glowTex) {
   const S = new BatchSet();
   const dim = addCar(S, rnd, { type: 0.45, color: '#eceff1', lights: 'lampW', people: true });
@@ -172,6 +222,7 @@ function buildPoliceCar(M, rnd, glowTex) {
 
 export class Traffic {
   constructor(scene, M, count = 12, riders = 8, opts = {}) {
+    this.onGreet = null;
     this.scene = scene;
     this.M = M;
     this.rnd = mulberry32(99);
@@ -185,7 +236,8 @@ export class Traffic {
     for (let i = 0; i < count + riders; i++) {
       const isRider = i >= count;
       const bus = !isRider && i % 6 === 5;
-      const c = isRider ? buildAiScooter(M, this.rnd) : buildVehicleMeshes(M, this.rnd, bus);
+      const moped = isRider && i >= count + riders - (opts.mopeds ?? 3);
+      const c = moped ? buildAiMoped(M, this.rnd) : isRider ? buildAiScooter(M, this.rnd) : buildVehicleMeshes(M, this.rnd, bus);
       c.group.visible = false;
       scene.add(c.group);
       this.cars.push({ ...c, active: false, bus, kind: isRider ? 'scooter' : 'car', laneOff: isRider ? 3.1 : LANE, s: 0, v: 0, axis: 'x', dir: 1, lane: 0, cruise: 10, wait: 0, down: 0, phase: Math.random() * 6, fall: 0, turn: null, plan: 0, planKey: '' });
@@ -220,7 +272,7 @@ export class Traffic {
       const wx = axis === 'x' ? s : lane, wz = axis === 'x' ? lane : s;
       if (Math.hypot(wx - px, wz - pz) < 50) ok = false;
       if (!ok) continue;
-      Object.assign(c, { active: true, axis, dir, lane, s, v: 0, cruise: c.kind === 'scooter' ? 4.5 + rnd() * 7 : c.kind === 'police' ? c.patrolCruise : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
+      Object.assign(c, { active: true, axis, dir, lane, s, v: 0, cruise: c.moped ? 10 + rnd() * 4 : c.kind === 'scooter' ? 4.5 + rnd() * 7 : c.kind === 'police' ? c.patrolCruise : 8.5 + rnd() * 3.5, wait: 0, down: 0, fall: 0, turn: null, plan: 0, planKey: '', chase: false });
       c.v = c.cruise * 0.8;
       c.group.visible = true;
       return true;
@@ -310,7 +362,13 @@ export class Traffic {
         c.fall = damp(c.fall, c.down > 0 ? 1 : 0, 6, dt);
         c.tilt.rotation.z = Math.sin(c.phase * 1.3) * 0.03 * Math.min(1, c.v / 4) + c.fall * 1.45;
         c.tilt.position.y = c.fall * 0.2;
-        const ang = (c.v * dt) / 0.138;
+        const ang = (c.v * dt) / (c.wheelR || 0.138);
+        if (c.moped) {
+          const dpl = Math.hypot(x - px, z - pz);
+          const wave = dpl < 14 && c.v > 1 && c.down <= 0;
+          if (c.waveArm) { c.waveArm.visible = wave; if (wave) c.waveArm.rotation.z = 0.55 + Math.sin(this.time * 9 + c.phase) * 0.28; }
+          if (wave && !c.greeted) { c.greeted = true; if (this.onGreet) this.onGreet(c); } else if (dpl > 40) c.greeted = false;
+        }
         c.wf.rotation.x += ang; c.wr.rotation.x += ang;
       }
       // collision circles
