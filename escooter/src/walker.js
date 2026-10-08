@@ -47,8 +47,15 @@ export class WalkerModel {
     const neck = mk(new THREE.CylinderGeometry(0.05, 0.068, 0.13, 10), bal, this.head); neck.position.y = 0.04;
     const cheeks = mk(new THREE.SphereGeometry(0.09, 10, 8), bal, this.head); cheeks.position.set(0, 0.12, 0.005); cheeks.scale.set(1, 0.8, 0.95);
     const slit = mk(new THREE.BoxGeometry(0.118, 0.034, 0.03), mat(0xc89878), this.head); slit.position.set(0, 0.185, 0.085);
-    const lens = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 0xff8a2a, { roughness: 0.06, metalness: 0.95 }), this.head); lens.position.set(0, 0.185, 0.098);
-    const frame = mk(new THREE.BoxGeometry(0.172, 0.07, 0.036), mat(0x2c3138), this.head); frame.position.set(0, 0.185, 0.09);
+    const lens = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 0xff8a2a, { roughness: 0.06, metalness: 0.95 }), this.head); lens.position.set(0, 0.275, 0.112); lens.rotation.x = -0.75;
+    const frame = mk(new THREE.BoxGeometry(0.172, 0.07, 0.036), mat(0x2c3138), this.head); frame.position.set(0, 0.273, 0.104); frame.rotation.x = -0.75;
+    for (const sx of [-1, 1]) { // eyes + brows + nose
+      mk(new THREE.BoxGeometry(0.036, 0.022, 0.01), mat(0xf4f4f2), this.head).position.set(sx * 0.037, 0.19, 0.1015);
+      mk(new THREE.BoxGeometry(0.017, 0.018, 0.008), mat(0x3a6a8a), this.head).position.set(sx * 0.039, 0.19, 0.1065);
+      mk(new THREE.BoxGeometry(0.008, 0.01, 0.004), mat(0x050505), this.head).position.set(sx * 0.039, 0.19, 0.1108);
+      const br = mk(new THREE.BoxGeometry(0.05, 0.009, 0.012), mat(0x2a1d14), this.head); br.position.set(sx * 0.038, 0.215, 0.1); br.rotation.z = sx * -0.12;
+    }
+    mk(new THREE.SphereGeometry(0.02, 8, 6), bal, this.head).position.set(0, 0.16, 0.1);
     const helmet = mk(new THREE.SphereGeometry(0.128, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.43), mat(helmetCol, { roughness: 0.22, metalness: 0.25 }), this.head); helmet.position.set(0, 0.19, -0.01); helmet.scale.set(1, 1.04, 1.12);
     const peak = mk(new THREE.BoxGeometry(0.16, 0.012, 0.07), mat(helmetCol, { roughness: 0.22 }), this.head); peak.position.set(0, 0.255, 0.125); peak.rotation.x = -0.18;
     // arms (pivot at shoulder)

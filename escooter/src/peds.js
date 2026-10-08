@@ -53,12 +53,26 @@ export class Pedestrians {
     });
     const caneGeo = mergedGeo((B) => { B.box(0, 0.42, 0, 0.03, 0.84, 0.03, '#6a4a2c'); B.box(0, 0.86, 0.035, 0.03, 0.03, 0.09, '#6a4a2c'); B.box(0, 0.02, 0, 0.045, 0.04, 0.045, '#222'); });
     const bagGeo = mergedGeo((B) => { B.box(0, 0, 0, 0.28, 0.2, 0.1, '#6a3a2a'); B.box(0, 0.14, 0, 0.14, 0.02, 0.02, '#3a2a1a'); });
+    const faceGeo = (angry) => mergedGeo((B) => {
+      for (const sx of [-1, 1]) {
+        B.box(sx * 0.04, 0.02, 0.099, 0.036, angry ? 0.014 : 0.024, 0.012, '#f4f4f2');
+        B.box(sx * 0.04, 0.02, 0.106, 0.017, angry ? 0.012 : 0.017, 0.008, '#2a2018');
+        B.box(sx * 0.04, 0.02, 0.1105, 0.008, 0.01, 0.004, '#050505');
+        if (angry) { const g = new THREE.BoxGeometry(0.052, 0.012, 0.014); g.rotateZ(sx * -0.45); B.geo(g, new THREE.Matrix4().makeTranslation(sx * 0.04, 0.05, 0.103), '#3a3a3a'); }
+        else B.box(sx * 0.04, 0.052, 0.101, 0.05, 0.01, 0.014, '#3a2a20');
+      }
+      if (angry) { B.box(0, -0.055, 0.1, 0.06, 0.03, 0.012, '#2a0a0c'); B.box(0, -0.043, 0.107, 0.05, 0.008, 0.006, '#f2f2f0'); }
+      else B.box(0, -0.052, 0.102, 0.05, 0.01, 0.012, '#9a4a4a');
+    });
+    const noseGeo = mergedGeo((B) => { B.box(0, -0.012, 0.108, 0.028, 0.045, 0.036, '#ffffff'); B.box(0, -0.034, 0.112, 0.032, 0.012, 0.016, '#ffffff'); for (const sx of [-1, 1]) B.box(sx * 0.109, 0, 0, 0.012, 0.042, 0.028, '#ffffff'); });
+    const glassGeo = mergedGeo((B) => { for (const sx of [-1, 1]) { B.box(sx * 0.04, 0.02, 0.114, 0.056, 0.004, 0.006, '#151515'); B.box(sx * 0.04, 0.0, 0.114, 0.056, 0.004, 0.006, '#151515'); B.box(sx * 0.068, 0.01, 0.114, 0.004, 0.026, 0.006, '#151515'); B.box(sx * 0.012, 0.01, 0.114, 0.004, 0.026, 0.006, '#151515'); B.box(sx * 0.109, 0.02, 0.05, 0.004, 0.004, 0.1, '#151515'); } B.box(0, 0.02, 0.114, 0.02, 0.004, 0.006, '#151515'); });
     this.parts = {
+      face: mk(faceGeo(false), true), faceA: mk(faceGeo(true), true), nose: mk(noseGeo), glasses: mk(glassGeo, true),
       torso: mk(box(0.36, 0.56, 0.2)),
       head: mk(new THREE.SphereGeometry(0.11, 10, 8)),
       legL: mk(box(0.15, 0.82, 0.17, true)), legR: mk(box(0.15, 0.82, 0.17, true)),
       armL: mk(box(0.1, 0.58, 0.12, true)), armR: mk(box(0.1, 0.58, 0.12, true)),
-      hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.6)),
+      hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
       cap: mk(new THREE.CylinderGeometry(0.125, 0.135, 0.05, 12)),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
     };
@@ -75,12 +89,14 @@ export class Pedestrians {
       this.list.push(p);
       const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
-      this.parts.head.setColorAt(i, c.set(pick(SKIN)));
+      const skin = pick(SKIN);
+      this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
+      p.has.glasses = elder ? Math.random() < 0.5 : Math.random() < 0.12;
       for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
-      for (const k of ['cane', 'bag', 'roll']) this.parts[k].setColorAt(i, c.set('#ffffff'));
+      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'glasses']) this.parts[k].setColorAt(i, c.set('#ffffff'));
       for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, zero);
     }
     for (const k of Object.values(this.parts)) if (k.instanceColor) k.instanceColor.needsUpdate = true;
@@ -220,12 +236,16 @@ export class Pedestrians {
       if (angry) aR = -2.5 + Math.sin(t * 15 + i) * 0.35;
       if (running) { aR = -2.4 + Math.sin(p.phase) * 0.45; aL = -Math.sin(p.phase) * 1.1; }
       place(P_.torso, hunch, 0, 0.28, 0);
-      place(P_.head, hunch, 0, 0.71, p.elder ? 0.05 : 0.02);
+      const hz = p.elder ? 0.05 : 0.02, scold = p.elder && (running || (p.mood >= 2 && p.cool <= 0));
+      place(P_.head, hunch, 0, 0.71, hz);
+      place(P_.nose, hunch, 0, 0.71, hz);
+      if (scold) { place(P_.faceA, hunch, 0, 0.71, hz); P_.face.setMatrixAt(i, this._zero); } else { place(P_.face, hunch, 0, 0.71, hz); P_.faceA.setMatrixAt(i, this._zero); }
+      if (p.has.glasses) place(P_.glasses, hunch, 0, 0.71, hz); else P_.glasses.setMatrixAt(i, this._zero);
       place(P_.legL, 0, 0.09, 0, 0, sw);
       place(P_.legR, 0, -0.09, 0, 0, -sw);
       place(P_.armL, hunch, 0.24, 0.54, 0, aL);
       place(P_.armR, hunch, -0.24, 0.54, 0, aR);
-      if (p.has.hair) place(P_.hair, hunch, 0, 0.73, p.elder ? 0.05 : 0.02);
+      if (p.has.hair) place(P_.hair, hunch, 0, 0.735, (p.elder ? 0.05 : 0.02) - 0.012);
       if (p.has.cap) place(P_.cap, hunch, 0, 0.82, p.elder ? 0.06 : 0.03);
       if (p.has.cane && !running) ground(P_.cane, -0.3, 0.2, 0.05);
       if (p.has.bag) place(P_.bag, 0, 0.33, -0.12, 0.02);

@@ -177,7 +177,7 @@ export class Batch {
   }
 
   /** Extrude a convex 2D profile. map(p,q,t) -> [x,y,z]. */
-  extrude(profile, map, t0, t1, col) {
+  extrude(profile, map, t0, t1, col, caps = true) {
     const n = profile.length;
     let mx = 0, my = 0;
     for (const p of profile) { mx += p[0]; my += p[1]; }
@@ -187,7 +187,7 @@ export class Batch {
       const a = profile[i], b = profile[(i + 1) % n];
       this.quad(map(a[0], a[1], t0), map(b[0], b[1], t0), map(b[0], b[1], t1), map(a[0], a[1], t1), col, null, ref);
     }
-    for (let i = 1; i < n - 1; i++) {
+    if (caps) for (let i = 1; i < n - 1; i++) {
       this.tri(map(profile[0][0], profile[0][1], t0), map(profile[i][0], profile[i][1], t0), map(profile[i + 1][0], profile[i + 1][1], t0), col, null, ref);
       this.tri(map(profile[0][0], profile[0][1], t1), map(profile[i][0], profile[i][1], t1), map(profile[i + 1][0], profile[i + 1][1], t1), col, null, ref);
     }
