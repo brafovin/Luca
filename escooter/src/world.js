@@ -175,7 +175,8 @@ const DOORS = ['#3b2f2a', '#2d3f4f', '#5a2a24', '#2b2d30', '#3d5a3d', '#7a5a34']
 
 /* ---------------------------------------------------------------- chunk builder */
 class ChunkBuilder {
-  constructor(ci, cj) {
+  constructor(ci, cj, skip) {
+    this.skipCars = skip || null; this.carIdx = 0; this.cars = [];
     this.ci = ci; this.cj = cj;
     this.rnd = mulberry32((ci * 73856093) ^ (cj * 19349663) ^ 0x5eed);
     this.S = new BatchSet();
@@ -476,9 +477,15 @@ class ChunkBuilder {
     const base = new THREE.Matrix4().makeRotationY(dir > 0 ? Math.PI / 2 : -Math.PI / 2);
     base.setPosition(s, 0, z);
     S.setTransform(this.rot ? new THREE.Matrix4().multiplyMatrices(this.rotM, base) : base);
-    const { L, W } = addCar(S, this.rnd);
+    const idx = this.carIdx++;
+    const skipped = !!(this.skipCars && this.skipCars.has(idx)); // destroyed earlier: still consume the random numbers, draw nothing
+    const dim = addCar(skipped ? new BatchSet() : S, this.rnd);
+    const { L, W } = dim;
+    const mm = this.rot ? new THREE.Matrix4().multiplyMatrices(this.rotM, base) : base;
     S.setTransform(this.rot ? this.rotM : null);
+    if (skipped) return;
     this.box2(s - L / 2, z - W / 2, s + L / 2, z + W / 2);
+    this.cars.push({ idx, x: mm.elements[12] + this.ci * P, z: mm.elements[14] + this.cj * P, yaw: Math.atan2(mm.elements[8], mm.elements[10]), type: dim.type, col: dim.col, L, W, H: dim.H, ci: this.ci, cj: this.cj });
   }
 
   /* ---------- intersection ---------- */
@@ -1334,8 +1341,8 @@ const MESHDEF = {
 };
 
 /** Pure data generation (runs in a worker or on the main thread). */
-export function generateChunk(ci, cj) {
-  const cb = isTrackChunk(ci, cj) ? buildTrackChunk(ci, cj) : new ChunkBuilder(ci, cj).build();
+export function generateChunk(ci, cj, skip) {
+  const cb = isTrackChunk(ci, cj) ? buildTrackChunk(ci, cj) : new ChunkBuilder(ci, cj, skip).build();
   const batches = {};
   const transfer = [];
   for (const [name, b] of Object.entries(cb.S.b)) {
@@ -1348,7 +1355,7 @@ export function generateChunk(ci, cj) {
   for (const v of cb.lamps) lamps.push(v.x, v.y, v.z);
   const glowPts = new Float32Array(cb.glowPts), glowG = new Float32Array(cb.glowG);
   transfer.push(glowPts.buffer, glowG.buffer);
-  return { data: { ci, cj, batches, cols: cb.colliders, lamps, glowPts, glowG, stations: cb.stations }, transfer };
+  return { data: { ci, cj, batches, cols: cb.colliders, lamps, glowPts, glowG, stations: cb.stations, cars: cb.cars || [] }, transfer };
 }
 
 export class World {
@@ -1357,6 +1364,7 @@ export class World {
     this.M = M;
     this.chunks = new Map();
     this.pending = new Set();
+    this.destroyed = new Map(); // chunk key -> Set of destroyed parked-car indices
     this.colliders = new Colliders();
     this.radius = 2;
     this.stations = new Map();
@@ -1420,7 +1428,7 @@ export class World {
     const lamps = [];
     for (let i = 0; i < d.lamps.length; i += 3) lamps.push(new THREE.Vector3(d.lamps[i] + ox, d.lamps[i + 1], d.lamps[i + 2] + oz));
     this.scene.add(group);
-    const chunk = { ci, cj, group, meshes, cols, lamps };
+    const chunk = { ci, cj, group, meshes, cols, lamps, cars: d.cars || [] };
     for (const s of d.stations) this.stations.set(k, s);
     this.chunks.set(k, chunk);
     return chunk;
@@ -1440,8 +1448,26 @@ export class World {
     for (let i = ci - this.radius; i <= ci + this.radius; i++) for (let j = cj - this.radius; j <= cj + this.radius; j++) if (!this.chunks.has(this.key(i, j))) this.buildChunkSync(i, j);
   }
   buildChunkSync(ci, cj) {
-    const { data } = generateChunk(ci, cj);
+    const { data } = generateChunk(ci, cj, this.destroyed.get(this.key(ci, cj)) || null);
     return this.instantiate(data);
+  }
+  /** parked cars (world coords) within r of a point */
+  parkedCarsNear(x, z, r) {
+    const out = [];
+    const [ci, cj] = this.chunkAt(x, z);
+    for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
+      const ch = this.chunks.get(this.key(i, j));
+      if (!ch) continue;
+      for (const c of ch.cars) if (Math.hypot(c.x - x, c.z - z) < r + c.L / 2) out.push(c);
+    }
+    return out;
+  }
+  /** remove one parked car from its chunk (rebuilds the chunk mesh without it) */
+  destroyParked(rec) {
+    const k = this.key(rec.ci, rec.cj);
+    let set = this.destroyed.get(k); if (!set) this.destroyed.set(k, (set = new Set()));
+    set.add(rec.idx);
+    if (this.chunks.has(k)) { this.removeChunk(k); this.buildChunkSync(rec.ci, rec.cj); }
   }
   removeChunk(k) {
     const ch = this.chunks.get(k);
@@ -1469,7 +1495,8 @@ export class World {
         const k = this.key(i, j);
         if (this.pending.has(k)) continue;
         this.pending.add(k);
-        this.workers[this.nextWorker++ % this.workers.length].postMessage({ ci: i, cj: j });
+        const sk = this.destroyed.get(k);
+        this.workers[this.nextWorker++ % this.workers.length].postMessage({ ci: i, cj: j, skip: sk ? [...sk] : null });
       }
     } else {
       let built = 0;

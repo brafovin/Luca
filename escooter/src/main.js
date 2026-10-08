@@ -19,6 +19,7 @@ import { Birds } from './birds.js';
 import { Blood } from './blood.js';
 import { Emergency } from './ambulance.js';
 import { Smoke } from './smoke.js';
+import { CarDamage } from './damage.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './util.js';
 
@@ -60,7 +61,7 @@ const me = {
 };
 const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
 const parkDyn = [];
-const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), glow: tex.glow });
+const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), glow: tex.glow, pool: tex.pool });
 const peds = new Pedestrians(scene, M, 16, 6);
 traffic.peds = peds;
 const rain = new Rain(scene);
@@ -586,6 +587,13 @@ function resolveShot(ev) {
     const lat = Math.abs(dx * fz - dz * fx);
     if (lat < 0.38 + t * 0.015 && t < bt) { bt = t; best = p; }
   }
+  const cr = carDmg.ray(ox, oz, fx, fz, Math.min(range, best ? bt : range));
+  if (cr && (!best || cr.t < bt)) {
+    addTracer(ox, eyeY - 0.1, oz, ox + fx * cr.t, eyeY - 0.15, oz + fz * cr.t);
+    smoke.emit(ox + fx * cr.t, 0.9, oz + fz * cr.t, 0, 0.6, 0, 'cig');
+    audio.thud(3); carDmg.hit(cr.target, 34, ox, oz);
+    return;
+  }
   const hitD = best ? bt : range;
   addTracer(ox, eyeY - 0.1, oz, ox + fx * hitD, eyeY - 0.1 - (best ? 0.0 : 0), oz + fz * hitD);
   smoke.emit(ox + fx * 0.3, eyeY - 0.1, oz + fz * 0.3, fx * 0.3, 0.1, fz * 0.3, 'cig');
@@ -613,7 +621,11 @@ function resolvePunch(ev) {
     if ((dx * fx + dz * fz) / d < 0.5) continue; // roughly in front
     if (d < bd) { bd = d; best = p; }
   }
-  if (!best) { audio.whoosh && audio.whoosh(); return; }
+  if (!best) {
+    const ct = carDmg.nearest(ev.x + fx * 1.0, ev.z + fz * 1.0, 0.7);
+    if (ct) { audio.thud(5); st.crashT = 0.1; $('crash').style.opacity = 0.2; carDmg.hit(ct, knife ? 14 : 9, ev.x, ev.z); return; }
+    audio.whoosh && audio.whoosh(); return;
+  }
   const dx = best.x - ev.x, dz = best.z - ev.z;
   const r = peds.hit(best, dx, dz, knife ? 52 : 12 + Math.random() * 6, { long: knife });
   audio.thud(r === 'ko' ? 9 : 4);
@@ -1364,12 +1376,17 @@ function updateBubbles() {
     el.classList.remove('hidden');
     el.style.transform = `translate(${((_bv.x * 0.5 + 0.5) * W).toFixed(0)}px, ${((-_bv.y * 0.5 + 0.5) * H).toFixed(0)}px) translate(-50%,-100%)`;
     const teen = p.kind === 'teen';
-    const face = teen ? (p.rowdy ? '😈' : '😎') : p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : '🙂';
-    const who = teen ? (p.rowdy ? 'Halbstarker' : 'Netter Typ') : p.kind === 'oma' ? 'Oma' : 'Opa';
+    const face = teen ? (p.rowdy ? '😈' : '😎') : p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : p.kind === 'bum' ? '🍺' : '🙂';
+    const who = teen ? (p.rowdy ? 'Halbstarker' : 'Netter Typ') : p.kind === 'bum' ? 'Obdachloser' : p.kind === 'oma' ? 'Oma' : 'Opa';
     const html = `<b>${face} ${who}</b>${p.sayT > 0 ? '<span>' + p.say + '</span>' : ''}${teen ? '' : `<i><u style="width:${p.anger.toFixed(0)}%;background:${p.anger > 80 ? '#ff3b3b' : p.anger > 50 ? '#ff9a2a' : '#ffd23a'}"></u></i>`}`;
     if (el._h !== html) { el._h = html; el.innerHTML = html; }
   }
 }
+const carDmg = new CarDamage(scene, M, smoke, tex.glow, world, traffic);
+traffic.onRecycle = (c) => carDmg.dispose(c);
+carDmg.onDestroyed = () => { st.score = Math.max(0, st.score - 200); audio.thud(15); toast('💥 Auto zerstört', 'es brennt – −200 Punkte', 2600); };
+let carHitToast = 0;
+carDmg.onHit = () => { if (performance.now() - carHitToast > 6000) { carHitToast = performance.now(); toast('Auto beschädigt', 'mehrmals treffen (Schuss, Schlag, Rammen) zerstört es', 1800); } };
 peds.colliders = world.colliders;
 peds.smoke = smoke;
 peds.onShove = (p) => {
@@ -1382,8 +1399,9 @@ peds.onShove = (p) => {
 peds.onTeenAngry = () => { if (!st.warnedTeen) { st.warnedTeen = true; toast('Halbstarke sind sauer', 'Sie kommen dir nach – fahr weg (sie sind nur zu Fuß unterwegs) oder box sie nieder', 3200); } };
 traffic.onGreet = () => { if (!st.warnedGreet || performance.now() - st.warnedGreet > 25000) { st.warnedGreet = performance.now(); toast('👋 Jugendlicher auf Simson winkt dir zu', '', 1600); } };
 peds.onSmack = (p) => {
-  const who = p.kind === 'oma' ? 'Oma' : 'Opa';
-  const how = p.kind === 'oma' ? 'mit der Handtasche' : 'mit dem Gehstock';
+  const bum = p.kind === 'bum';
+  const who = bum ? 'Obdachloser' : p.kind === 'oma' ? 'Oma' : 'Opa';
+  const how = bum ? 'mit der Bierflasche' : p.kind === 'oma' ? 'mit der Handtasche' : 'mit dem Gehstock';
   earn(-25);
   toast(`${who} erwischt dich!`, `Ein Schlag ${how} · −25 €`, 2400);
   audio.thud(6); audio.bell();
@@ -1391,8 +1409,9 @@ peds.onSmack = (p) => {
   if (st.mode === 'walk') walker.stun = 1.1; else scooter.v *= 0.2;
 };
 peds.onMood = (p, mood) => {
-  const who = p.kind === 'oma' ? 'Oma' : 'Opa';
-  if (mood === 3) toast(`${who} ist stinksauer!`, 'Sie rennt dir mit 10 km/h hinterher – fahr weg!', 3000);
+  const bum = p.kind === 'bum';
+  const who = bum ? 'Der Obdachlose' : p.kind === 'oma' ? 'Oma' : 'Opa';
+  if (mood === 3) toast(`${who} ist stinksauer!`, `${bum ? 'Er' : 'Sie'} rennt dir mit 10 km/h hinterher – fahr weg!`, 3000);
   else if (mood === 1 && !st.warnedAnnoy) { st.warnedAnnoy = true; toast(`${who} wird sauer`, 'Fahr nicht dauernd neben ihr her …', 2400); }
 };
 
@@ -1455,7 +1474,7 @@ function tick(dt, now, render = true) {
       const h = Math.min(simAcc, Math.abs(scooter.v) > 300 ? 1 / 600 : Math.abs(scooter.v) > 80 ? 1 / 320 : Math.abs(scooter.v) > 35 ? 1 / 150 : 1 / 90);
       scooter.update(h, rideInp, world, cfg.battMode === 'off' ? 0 : cfg.battMode === 'real' ? 1 : 3, dynAll);
       simAcc -= h; steps++;
-      if (!walking && scooter.impact > 1.8) onCrash(scooter.impact);
+      if (!walking && scooter.impact > 1.8) { onCrash(scooter.impact); if (scooter.impact > 3 && !(st.ramCool > 0)) { st.ramCool = 0.5; carDmg.rammed(scooter.x + Math.sin(scooter.heading) * 1.0, scooter.z + Math.cos(scooter.heading) * 1.0, scooter.impact); } }
     }
     if (walking) {
       parkDyn.length = 0;
@@ -1536,7 +1555,7 @@ function tick(dt, now, render = true) {
   }
   // day / night
   sky.setTime(cfg.hours);
-  blood.update(dt); updateSmoke(dt);
+  traffic.setNight(sky.night); blood.update(dt); updateSmoke(dt); carDmg.update(dt, me.x, me.z); if (st.ramCool > 0) st.ramCool -= dt;
   { const d = ems.active ? Math.hypot(ems.x - me.x, ems.z - me.z) : 1e9; audio.sirenEms(ems.active ? clamp(1 - d / 200, 0, 1) * (ems.state === 'medics' ? 0.4 : 1) : 0); }
   birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
   sky.update(dt, _focus.copy(camera.position).lerp(_focus2.set(me.x, 0, me.z), 0.5).setY(0));
@@ -1638,4 +1657,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { toggleGun, resolveShot, tracers, blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { carDmg, toggleGun, resolveShot, tracers, blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

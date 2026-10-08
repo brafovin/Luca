@@ -12,7 +12,13 @@ const OMA_COAT = ['#9a7ab8', '#5a9aa0', '#c98a9a', '#a8b878', '#d8c8a0'];
 const OMA_HAIR = ['#f2f2f2', '#d8d8e8', '#c9a8e0', '#e8e0d8'];
 const OPA_COAT = ['#8a7a5a', '#5a6a4a', '#6a6a72', '#7a5a3a'];
 
+const SAY_BUM = {
+  1: ['Haste mal \'nen Euro?', 'Ey, gib mal Kleingeld!', 'Prost, du Lauch!', 'Hick! Haste Feuer?'],
+  2: ['GIB MAL FÜR \'N BIER RÜBER!', 'Ich hab Hunger und Durst, Alter!', 'Ey, ich red mit dir!', 'Du Geizkragen!'],
+  3: ['DU SCHULDEST MIR \'N BIER!', 'Bleib stehen, du Pfeife!', 'Ich krieg dich, hick!'],
+};
 const SAY = {
+  bum: SAY_BUM,
   oma: {
     1: ['Hallo?! Geht\'s noch?', 'Junge, fahr woanders!', 'Das ist ein Gehweg-Rollator-Bereich!', 'Ach du meine Güte!'],
     2: ['Das melde ich dem Ordnungsamt!', 'Früher gab\'s sowas nicht!', 'Ich rufe meinen Enkel an!', 'So eine Frechheit!'],
@@ -28,11 +34,11 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3) {
     this.list = [];
     this.young = count;
     this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
-    this.count = count + elders + kids + playKids + playPars + teens;
+    this.count = count + elders + kids + playKids + playPars + teens + bums;
     this.nTeens = teens;
     const total = this.count;
     this.sites = [];
@@ -82,6 +88,12 @@ export class Pedestrians {
         B.box(0, -0.065, 0.092, 0.1, 0.045, 0.016, '#3a2e28');                                                                                                  // stubble
         const sc = new THREE.BoxGeometry(0.006, 0.07, 0.006); sc.rotateZ(0.5); B.geo(sc, new THREE.Matrix4().makeTranslation(0.062, 0.03, 0.098), '#b86a60');      // scar
       }), true),
+      beer: mk(mergedGeo((B) => { B.cyl(0, -0.085, 0, 0.034, 0.17, '#4a2a10', 10); B.cyl(0, 0.085, 0, 0.034, 0.03, '#4a2a10', 10, true, 0.014); B.cyl(0, 0.115, 0, 0.014, 0.07, '#4a2a10', 8); B.cyl(0, 0.183, 0, 0.017, 0.012, '#d8b040', 8); B.cyl(0, -0.03, 0, 0.0355, 0.07, '#e8d8a0', 10); }), true),
+      faceB: mk(mergedGeo((B) => { // tired, red nose, gray beard
+        for (const sx of [-1, 1]) { B.box(sx * 0.04, 0.017, 0.099, 0.034, 0.016, 0.012, '#efe8dc'); B.box(sx * 0.04, 0.019, 0.106, 0.016, 0.014, 0.008, '#2a2018'); B.box(sx * 0.04, 0.03, 0.104, 0.044, 0.012, 0.012, '#8a7a6a'); B.box(sx * 0.04, 0.0, 0.1, 0.038, 0.008, 0.01, '#8a6a64'); B.box(sx * 0.04, 0.05, 0.1, 0.05, 0.01, 0.014, '#9a9a96'); }
+        B.box(0, -0.012, 0.108, 0.034, 0.05, 0.04, '#d98070'); B.box(0, -0.036, 0.112, 0.04, 0.014, 0.018, '#d98070');
+        B.box(0, -0.075, 0.088, 0.115, 0.075, 0.03, '#8a8880'); B.box(0, -0.04, 0.106, 0.07, 0.016, 0.014, '#8a8880'); B.box(0, -0.06, 0.112, 0.036, 0.012, 0.01, '#4a1a1a');
+      }), true),
       hood: mk(new THREE.SphereGeometry(0.148, 14, 10, Math.PI * 0.82, Math.PI * 1.36, 0, Math.PI * 0.7)),
       torso: mk(box(0.36, 0.56, 0.2)),
       head: mk(new THREE.SphereGeometry(0.11, 10, 8)),
@@ -95,9 +107,9 @@ export class Pedestrians {
     };
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (let i = 0; i < total; i++) {
-      const elder = i >= count && i < count + elders;
       const nk = i - count - elders;
-      const kind = i < count ? 'young' : elder ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : 'teen';
+      const kind = i < count ? 'young' : nk < 0 ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : nk < kids + playKids + playPars + teens ? 'teen' : 'bum';
+      const elder = kind === 'oma' || kind === 'opa' || kind === 'bum';
       const pick = (a) => a[Math.floor(Math.random() * a.length)];
       const p = { active: false, kind, elder, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: '', sayT: 0, cool: 0, lane: 0, s: 0 };
       p.has = { hair: kind !== 'opa' || Math.random() < 0.3, cap: kind === 'opa' && Math.random() < 0.75, cane: kind === 'opa' || (kind === 'oma' && Math.random() < 0.3), bag: kind === 'oma', roll: kind === 'oma' && Math.random() < 0.55 };
@@ -106,22 +118,24 @@ export class Pedestrians {
         p.slot = nk - kids - playKids - playPars; p.rowdy = (p.slot % 5) < 3; p.has.hair = Math.random() < 0.7; p.has.cap = Math.random() < 0.55; p.has.cane = p.has.bag = p.has.roll = false;
         p.smoker = p.rowdy ? (p.slot % 5) !== 1 : false; p.ts = 'sit'; p.aggro = 0;
       }
+      if (kind === 'bum') { p.has.hair = true; p.has.cap = Math.random() < 0.8; p.has.cane = p.has.bag = p.has.roll = false; p.has.glasses = false; p.speed = 0.6; }
       if (kind === 'ppar') { p.protect = true; p.slot = nk - kids - playKids; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; }
       if (kind === 'young') { p.has.hair = Math.random() < 0.85; p.has.cane = false; p.has.bag = Math.random() < 0.3; }
       if (p.has.roll) p.has.cane = false;
       if (p.has.cane && kind === 'oma') p.has.bag = false;
       this.list.push(p);
-      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'teen' ? pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9']) : CLOTH[i % CLOTH.length];
+      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'bum' ? pick(['#5a4a38', '#3e4a3a', '#4a3f52', '#6a5a44', '#44464a']) : kind === 'teen' ? pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9']) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
       p.has.glasses = elder ? Math.random() < 0.5 : Math.random() < 0.12;
       for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : kind === 'kid' || kind === 'pkid' ? pick(['#2a4a8a', '#3a3a3f', '#6a3f7a', '#2f6a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
+      this.parts.beer.setColorAt(i, c.set('#ffffff')); this.parts.faceB.setColorAt(i, c.set('#ffffff'));
       this.parts.hood.setColorAt(i, c.set(kind === 'teen' ? pick(['#101114', '#1d1d22', '#2a1414', '#14202c']) : '#000000'));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
-      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'faceR', 'glasses', 'swing', 'cigT']) this.parts[k].setColorAt(i, c.set('#ffffff'));
+      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'faceR', 'glasses', 'swing', 'cigT', 'beer', 'faceB']) this.parts[k].setColorAt(i, c.set('#ffffff'));
       for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, zero);
     }
     for (const k of Object.values(this.parts)) if (k.instanceColor) k.instanceColor.needsUpdate = true;
@@ -187,6 +201,7 @@ export class Pedestrians {
     place(P_.head, h, 0, 0.71, 0.02, 0, hs); place(P_.nose, h, 0, 0.71, 0.02, 0, hs);
     if (o.faceR) { place(P_.faceR, h, 0, 0.71, 0.02, 0, hs); P_.face.setMatrixAt(i, this._zero); } else { place(P_.face, h, 0, 0.71, 0.02, 0, hs); P_.faceR.setMatrixAt(i, this._zero); }
     P_.faceA.setMatrixAt(i, this._zero);
+    P_.beer.setMatrixAt(i, this._zero); P_.faceB.setMatrixAt(i, this._zero);
     if (o.hood) place(P_.hood, h, 0, 0.73, 0.0, 0, hs); else P_.hood.setMatrixAt(i, this._zero);
     if (p.has.glasses) place(P_.glasses, h, 0, 0.71, 0.02, 0, hs); else P_.glasses.setMatrixAt(i, this._zero);
     place(P_.legL, 0, 0.09, 0, 0, o.legL || 0); place(P_.legR, 0, -0.09, 0, 0, o.legR || 0);
@@ -427,8 +442,10 @@ export class Pedestrians {
         const d = Math.hypot(px - x, pz - z);
         if (p.chase <= 0) {
           if (p.cool > 0) p.cool -= dt;
-          if (d < 4.8 && p.cool <= 0 && p.down <= 0) p.anger = Math.min(100, p.anger + (1 - d / 4.8) * (7 + 1.15 * Math.min(pspeed, 14)) * dt);
-          else if (d > 7) p.anger = Math.max(0, p.anger - 3.5 * dt);
+          const rng = p.kind === 'bum' ? 10 : 4.8, gain = p.kind === 'bum' ? 4.5 : 1;
+          if (p.kind === 'bum' && d < 18 && p.sayT <= 0 && p.down <= 0 && Math.random() < dt * 0.14) { const L = ['Prost!', 'Haste mal \'nen Euro?', 'Hick … schönes Wetter, was?', 'Ey, Chef! Kleingeld?']; this.say(p, L[Math.floor(Math.random() * L.length)], 2.6); }
+          if (d < rng && p.cool <= 0 && p.down <= 0) p.anger = Math.min(100, p.anger + (1 - d / rng) * (7 + 1.15 * Math.min(pspeed, 14)) * dt * gain);
+          else if (d > (p.kind === 'bum' ? 11 : 7)) p.anger = Math.max(0, p.anger - 3.5 * dt);
           const mood = p.anger >= 100 ? 3 : p.anger >= 60 ? 2 : p.anger >= 28 ? 1 : 0;
           if (mood !== p.mood && mood > p.mood) {
             p.mood = mood;
@@ -488,11 +505,12 @@ export class Pedestrians {
           const target = Math.atan2(px - x, pz - z);
           let dd = target - yaw; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI;
           yaw += dd * Math.min(1, dt * 6);
-        } else yaw = ty;
+        } else yaw = ty + (p.kind === 'bum' ? Math.sin(t * 1.6 + i) * 0.35 : 0);
         p.yaw = yaw;
       }
       p.moving = moving; p.yawNow = yaw;
       // ---- pose
+      const bum = p.kind === 'bum';
       const sc = p.elder ? 0.93 : 1;
       const sw = (moving || running) ? Math.sin(p.phase) * (running ? 0.95 : p.elder ? 0.32 : 0.55) : 0;
       const hunch = (p.elder ? (running ? 0.18 : 0.3) : 0) - (p.flinch > 0 ? 0.5 * Math.sin(Math.min(1, p.flinch / 0.3) * Math.PI) : 0);
@@ -501,12 +519,14 @@ export class Pedestrians {
       if (lie > 0) { tt.makeRotationX(-Math.PI / 2 * lie); b.multiply(tt); }
       b.setPosition(x, 0.12 + 0.2 * lie, z);
       tt.makeScale(sc, sc, sc); b.multiply(tt);
-      const place = (mesh, rot0, ox, oy, oz, rot1 = 0) => {
+      const place = (mesh, rot0, ox, oy, oz, rot1 = 0, px = 0, py = 0, pz = 0, rot2 = 0) => {
         m.copy(b);
         tt.makeTranslation(0, 0.84, 0); m.multiply(tt);
         if (rot0) { tt.makeRotationX(rot0); m.multiply(tt); }
         tt.makeTranslation(ox, oy, oz); m.multiply(tt);
         if (rot1) { tt.makeRotationX(rot1); m.multiply(tt); }
+        if (px || py || pz) { tt.makeTranslation(px, py, pz); m.multiply(tt); }
+        if (rot2) { tt.makeRotationX(rot2); m.multiply(tt); }
         mesh.setMatrixAt(i, m);
       };
       const ground = (mesh, ox, oz, rotX = 0) => { m.copy(b); tt.makeTranslation(ox, 0, oz); m.multiply(tt); if (rotX) { tt.makeRotationX(rotX); m.multiply(tt); } mesh.setMatrixAt(i, m); };
@@ -516,11 +536,14 @@ export class Pedestrians {
       else if (p.has.cane && !running) aR = -0.55 + sw * 0.1;
       if (angry) aR = -2.5 + Math.sin(t * 15 + i) * 0.35;
       if (running) { aR = -2.4 + Math.sin(p.phase) * 0.45; aL = -Math.sin(p.phase) * 1.1; }
+      let drinkPh = 0;
+      if (bum && !running && !angry) { const cyc = (t * 0.1 + p.phase * 0.17) % 1; drinkPh = cyc < 0.26 ? Math.sin(Math.min(1, cyc / 0.26) * Math.PI) : 0; aR = (0.2 + Math.sin(t * 0.9 + i) * 0.1) * (1 - drinkPh) + (-2.5) * drinkPh; aL = -sw * 0.6; }
       place(P_.torso, hunch, 0, 0.28, 0);
       const hz = p.elder ? 0.05 : 0.02, scold = p.elder && (running || (p.mood >= 2 && p.cool <= 0));
       place(P_.head, hunch, 0, 0.71, hz);
       place(P_.nose, hunch, 0, 0.71, hz);
-      if (scold) { place(P_.faceA, hunch, 0, 0.71, hz); P_.face.setMatrixAt(i, this._zero); } else { place(P_.face, hunch, 0, 0.71, hz); P_.faceA.setMatrixAt(i, this._zero); }
+      if (bum) { place(P_.faceB, hunch, 0, 0.71, hz); P_.face.setMatrixAt(i, this._zero); P_.faceA.setMatrixAt(i, this._zero); }
+      else { P_.faceB.setMatrixAt(i, this._zero); if (scold) { place(P_.faceA, hunch, 0, 0.71, hz); P_.face.setMatrixAt(i, this._zero); } else { place(P_.face, hunch, 0, 0.71, hz); P_.faceA.setMatrixAt(i, this._zero); } }
       if (p.has.glasses) place(P_.glasses, hunch, 0, 0.71, hz); else P_.glasses.setMatrixAt(i, this._zero);
       place(P_.legL, 0, 0.09, 0, 0, sw);
       place(P_.legR, 0, -0.09, 0, 0, -sw);
@@ -530,6 +553,7 @@ export class Pedestrians {
       if (p.has.cap) place(P_.cap, hunch, 0, 0.82, p.elder ? 0.06 : 0.03);
       if (p.has.cane && !running) ground(P_.cane, -0.3, 0.2, 0.05);
       if (p.has.bag) place(P_.bag, 0, 0.33, -0.12, 0.02);
+      if (bum) { if (p.down > 0) P_.beer.setMatrixAt(i, this._zero); else place(P_.beer, hunch, -0.24, 0.54, 0, aR, 0, -0.6, 0.06, 1.2 * drinkPh); } else P_.beer.setMatrixAt(i, this._zero);
       if (p.has.roll && !running) ground(P_.roll, 0, 0.5);
       this.dyn.push({ x, z, r: 0.32, vx: 0, vz: 0, ped: p });
     }
