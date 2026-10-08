@@ -67,6 +67,14 @@ export class WalkerModel {
       const band = mk(new THREE.CylinderGeometry(0.057, 0.057, 0.04, 10), mat(0xdfe5e8, { metalness: 0.3 }), piv); band.position.y = -0.34;
       const gl = mat(0x141517), gk = mat(0xff7a1a);
       const hg = new THREE.Group(); hg.position.set(0, -0.6, 0.01); piv.add(hg);
+      if (sx < 0) { // the knife lives in the right hand
+        const kn = new THREE.Group(); kn.position.set(0, -0.06, 0.02); kn.visible = false; hg.add(kn);
+        mk(new THREE.BoxGeometry(0.03, 0.12, 0.03), mat(0x1a1a1c), kn).position.y = -0.0;
+        mk(new THREE.BoxGeometry(0.06, 0.02, 0.04), mat(0x888d92, { metalness: 0.9, roughness: 0.3 }), kn).position.y = -0.07;
+        const bl = mk(new THREE.BoxGeometry(0.018, 0.26, 0.05), mat(0xdfe3e8, { metalness: 0.95, roughness: 0.15 }), kn); bl.position.y = -0.21;
+        const tip = mk(new THREE.BoxGeometry(0.014, 0.05, 0.03), mat(0xdfe3e8, { metalness: 0.95, roughness: 0.15 }), kn); tip.position.set(0, -0.36, -0.01);
+        this.knifeMesh = kn;
+      }
       const palm = mk(new THREE.BoxGeometry(0.08, 0.075, 0.034), mat(0x3a2f28), hg); palm.position.y = -0.03;
       const back = mk(new THREE.BoxGeometry(0.082, 0.07, 0.016), mat(0x2b2d33), hg); back.position.set(0, -0.03, -0.022);
       const kn = mk(new THREE.BoxGeometry(0.075, 0.012, 0.014), mat(0x1b1c20), hg); kn.position.set(0, -0.062, -0.025);
@@ -118,7 +126,7 @@ export class Walker {
     this.model.group.visible = false;
     scene.add(this.model.group);
     this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
-    this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
+    this.knife = false; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
   }
   place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
   update(dt, inp, col, dyn) {
@@ -126,7 +134,7 @@ export class Walker {
     // ---- boxing
     this.boxT += dt;
     if (this.punchCool > 0) this.punchCool -= dt;
-    if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide ^= 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
+    if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide = this.knife ? 1 : this.punchSide ^ 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
     if (this.punchT < 1) {
       this.punchT = Math.min(1, this.punchT + dt / 0.3);
       if (!this.punched && this.punchT >= 0.4) { this.punched = true; this.punchEvent = { x: this.x, z: this.z, yaw: this.yaw, side: this.punchSide }; }
@@ -167,4 +175,5 @@ export class Walker {
     this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null);
   }
   setVisible(v) { this.model.group.visible = v; }
+  setKnife(on) { this.knife = on; if (this.model.knifeMesh) this.model.knifeMesh.visible = on; }
 }

@@ -66,6 +66,20 @@ export class GameAudio {
     this.wind.g.gain.setTargetAtTime(s.paused ? 0 : Math.pow(Math.min(sp / 17, 1), 2) * 0.09, t, 0.1);
     this.squeal.g.gain.setTargetAtTime(s.paused ? 0 : (s.braking && sp > 4 ? Math.min((sp - 4) / 8, 1) * 0.045 * Math.min(1, (s.brakeAmt || 0)) : 0), t, 0.05);
   }
+  /** ambulance two-tone horn */
+  sirenEms(level) {
+    if (!this.ctx) return;
+    const c = this.ctx;
+    if (!this.emsO) {
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 660;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1700;
+      const g = c.createGain(); g.gain.value = 0; o.connect(f); f.connect(g); g.connect(this.master); o.start();
+      this.emsO = o; this.emsG = g;
+    }
+    const t = c.currentTime;
+    this.emsO.frequency.setTargetAtTime(Math.floor(t * 2.2) % 2 ? 1000 : 740, t, 0.01);
+    this.emsG.gain.setTargetAtTime(Math.max(0, level) * 0.06, t, 0.1);
+  }
   whoosh() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BatchSet } from './batch.js';
-import { P } from './world.js';
+import { P, blockType, PLAY } from './world.js';
 import { pushOut } from './phys.js';
 import { clamp, damp } from './util.js';
 
@@ -28,11 +28,13 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4) {
     this.list = [];
     this.young = count;
-    this.count = count + elders;
+    this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
+    this.count = count + elders + kids + playKids + playPars;
     const total = this.count;
+    this.sites = [];
     this.dyn = [];
     this.colliders = null;
     this.onSmack = null; this.onMood = null;
@@ -75,28 +77,32 @@ export class Pedestrians {
       hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
       cap: mk(new THREE.CylinderGeometry(0.125, 0.135, 0.05, 12)),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
+      swing: mk(mergedGeo((B) => { for (const sx of [-0.14, 0.14]) B.box(sx, -0.8, 0, 0.012, 1.6, 0.012, '#8a8d92'); B.box(0, -1.6, 0, 0.4, 0.04, 0.2, '#d42020'); }), true),
     };
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (let i = 0; i < total; i++) {
-      const elder = i >= count;
-      const kind = !elder ? 'young' : (i - count) % 2 === 0 ? 'oma' : 'opa';
+      const elder = i >= count && i < count + elders;
+      const nk = i - count - elders;
+      const kind = i < count ? 'young' : elder ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : 'ppar';
       const pick = (a) => a[Math.floor(Math.random() * a.length)];
       const p = { active: false, kind, elder, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: '', sayT: 0, cool: 0, lane: 0, s: 0 };
       p.has = { hair: kind !== 'opa' || Math.random() < 0.3, cap: kind === 'opa' && Math.random() < 0.75, cane: kind === 'opa' || (kind === 'oma' && Math.random() < 0.3), bag: kind === 'oma', roll: kind === 'oma' && Math.random() < 0.55 };
+      if (kind === 'kid' || kind === 'pkid') { p.child = true; p.protect = true; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; p.slot = kind === 'kid' ? nk : nk - kids; if (kind === 'kid') { p.parent = nk; this.list[nk].protect = true; this.list[nk].hasKid = i; } }
+      if (kind === 'ppar') { p.protect = true; p.slot = nk - kids - playKids; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; }
       if (kind === 'young') { p.has.hair = Math.random() < 0.85; p.has.cane = false; p.has.bag = Math.random() < 0.3; }
       if (p.has.roll) p.has.cane = false;
       if (p.has.cane && kind === 'oma') p.has.bag = false;
       this.list.push(p);
-      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : CLOTH[i % CLOTH.length];
+      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
       p.has.glasses = elder ? Math.random() < 0.5 : Math.random() < 0.12;
-      for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : PANTS[i % PANTS.length]));
+      for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : kind === 'kid' || kind === 'pkid' ? pick(['#2a4a8a', '#3a3a3f', '#6a3f7a', '#2f6a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
-      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'glasses']) this.parts[k].setColorAt(i, c.set('#ffffff'));
+      for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'glasses', 'swing']) this.parts[k].setColorAt(i, c.set('#ffffff'));
       for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, zero);
     }
     for (const k of Object.values(this.parts)) if (k.instanceColor) k.instanceColor.needsUpdate = true;
@@ -119,9 +125,127 @@ export class Pedestrians {
       const x = axis === 'x' ? p.s : p.lane, z = axis === 'x' ? p.lane : p.s;
       if (Math.hypot(x - px, z - pz) < 25) continue;
       p.active = true; p.speed = p.elder ? 0.65 + Math.random() * 0.35 : 1.1 + Math.random() * 0.6; p.wait = 0; p.down = 0;
-      p.anger = 0; p.mood = 0; p.chase = 0; p.cool = 0; p.say = ''; p.sayT = 0; p.x = x; p.z = z; p.hp = 100; p.ko = false; p.flinch = 0; p.hitStreak = 0; p.hitT = 0;
+      p.anger = 0; p.mood = 0; p.chase = 0; p.cool = 0; p.say = ''; p.sayT = 0; p.x = x; p.z = z; p.hp = 100; p.ko = false; p.stabbed = false; p.taken = false; p.flinch = 0; p.hitStreak = 0; p.hitT = 0;
       return;
     }
+  }
+
+  /** nearest park blocks that hold a playground */
+  refreshSites(px, pz) {
+    this._siteT = (this._siteT || 0) - 1;
+    if (this._siteT > 0) return;
+    this._siteT = 30;
+    const ci = Math.round(px / P), cj = Math.round(pz / P), out = [];
+    for (let i = ci - 2; i <= ci + 2; i++) for (let j = cj - 2; j <= cj + 2; j++) {
+      if (blockType(i, j) !== 'park') continue;
+      const ox = i * P, oz = j * P, d = Math.hypot(ox + PLAY.cx - px, oz + PLAY.cz - pz);
+      if (d < 120) out.push({ ox, oz, d });
+    }
+    out.sort((a, b) => a.d - b.d);
+    this.sites = out;
+  }
+
+  /** draw one figure (child / play parent); o: x,y,z,yaw,sc,sw,hunch,legL,legR,aL,aR,head */
+  drawFigure(i, p, o) {
+    const P_ = this.parts, m = this._m, b = this._b, tt = this._t;
+    b.makeRotationY(o.yaw);
+    b.setPosition(o.x, o.y, o.z);
+    tt.makeScale(o.sc, o.sc, o.sc); b.multiply(tt);
+    const hs = o.head || 1;
+    const place = (mesh, rot0, ox, oy, oz, rot1 = 0, sc2 = 1, rz = 0) => {
+      m.copy(b);
+      tt.makeTranslation(0, 0.84, 0); m.multiply(tt);
+      if (rot0) { tt.makeRotationX(rot0); m.multiply(tt); }
+      tt.makeTranslation(ox, oy, oz); m.multiply(tt);
+      if (rot1) { tt.makeRotationX(rot1); m.multiply(tt); }
+      if (rz) { tt.makeRotationZ(rz); m.multiply(tt); }
+      if (sc2 !== 1) { tt.makeScale(sc2, sc2, sc2); m.multiply(tt); }
+      mesh.setMatrixAt(i, m);
+    };
+    const h = o.hunch || 0;
+    place(P_.torso, h, 0, 0.28, 0);
+    place(P_.head, h, 0, 0.71, 0.02, 0, hs); place(P_.nose, h, 0, 0.71, 0.02, 0, hs);
+    place(P_.face, h, 0, 0.71, 0.02, 0, hs); P_.faceA.setMatrixAt(i, this._zero);
+    if (p.has.glasses) place(P_.glasses, h, 0, 0.71, 0.02, 0, hs); else P_.glasses.setMatrixAt(i, this._zero);
+    place(P_.legL, 0, 0.09, 0, 0, o.legL || 0); place(P_.legR, 0, -0.09, 0, 0, o.legR || 0);
+    place(P_.armL, h, 0.24, 0.54, 0, o.aL || 0, 1, o.azL || 0); place(P_.armR, h, -0.24, 0.54, 0, o.aR || 0, 1, o.azR || 0);
+    if (p.has.hair) place(P_.hair, h, 0, 0.735, 0.008, 0, hs); else P_.hair.setMatrixAt(i, this._zero);
+    for (const k of ['cap', 'cane', 'bag', 'roll']) P_[k].setMatrixAt(i, this._zero);
+    if (o.swing) { // swing seat + chains, hinged at the beam
+      m.makeRotationY(o.swing.yaw); m.setPosition(o.swing.x, o.swing.y, o.swing.z);
+      tt.makeRotationX(-o.swing.th); m.multiply(tt);
+      P_.swing.setMatrixAt(i, m);
+    } else P_.swing.setMatrixAt(i, this._zero);
+  }
+  hideFigure(i) { for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, this._zero); }
+
+  updateSpecial(i, p, dt, t, px, pz, R) {
+    const sc = p.child ? 0.64 : 1;
+    let o;
+    if (p.kind === 'kid') {
+      const par = this.list[p.parent];
+      if (!par || !par.active || par.down > 0) { p.active = false; this.hideFigure(i); return; }
+      p.active = true;
+      const yaw = par.yawNow ?? par.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw);
+      p.x = par.x + Math.cos(yaw) * 0.52 - fx * 0.05; p.z = par.z - Math.sin(yaw) * 0.52 - fz * 0.05; p.yaw = yaw;
+      const mv = par.moving !== false;
+      if (mv) p.phase = par.phase * 1.35;
+      const sw = mv ? Math.sin(p.phase) * 0.6 : 0;
+      o = { x: p.x, y: 0.12, z: p.z, yaw, sc, sw, legL: sw, legR: -sw, aL: -2.3, azL: 0.0, aR: sw * 0.8, head: 1.28 };
+      this.dyn.push({ x: p.x, z: p.z, r: 0.2, vx: 0, vz: 0 });
+    } else {
+      const slot = p.kind === 'pkid' ? Math.floor(p.slot / 5) : Math.floor(p.slot / 2);
+      const site = this.sites[slot];
+      if (!site) { p.active = false; this.hideFigure(i); return; }
+      p.active = true;
+      if (p.phase0 === undefined) p.phase0 = p.phase;
+      const T = t + p.phase0 * 3;
+      if (p.kind === 'ppar') {
+        const [bx, bz] = PLAY.parents[p.slot % 2];
+        const wave = Math.sin(T * 0.35) > 0.75;
+        p.x = site.ox + bx; p.z = site.oz + bz + 0.2;
+        const yaw = Math.PI + Math.sin(T * 0.3) * 0.4;
+        o = { x: p.x, y: 0.12, z: p.z, yaw, sc: 1, hunch: 0.02 + Math.sin(T) * 0.01, aL: wave ? -2.5 + Math.sin(T * 6) * 0.3 : -0.1, aR: -0.05, legL: 0, legR: 0 };
+        this.dyn.push({ x: p.x, z: p.z, r: 0.3, vx: 0, vz: 0 });
+      } else {
+        const role = p.slot % 5, ox = site.ox, oz = site.oz;
+        const sw_ = PLAY.swing, sl = PLAY.slide, sb = PLAY.sand, rn = PLAY.run;
+        if (role < 2) { // swing
+          const th = 0.6 * Math.sin(T * 1.7 + role * 1.6), L = sw_.len;
+          const sx = ox + sw_.x + sw_.xs[role], sy = sw_.beam - L * Math.cos(th), sz = oz + sw_.z + L * Math.sin(th);
+          const pump = Math.sin(T * 1.7 + role * 1.6 + 1.4);
+          p.x = sx; p.z = sz;
+          o = { x: sx, y: sy + 0.04 - 0.84 * sc, z: sz, yaw: 0, sc, hunch: -0.15 - th * 0.35, legL: -1.35 + pump * 0.5, legR: -1.35 + pump * 0.5, aL: -1.0, aR: -1.0, head: 1.28,
+            swing: { x: ox + sw_.x + sw_.xs[role], y: sw_.beam, z: oz + sw_.z, th, yaw: 0 } };
+        } else if (role === 2) { // slide
+          const u = (T % 6.4), top = sl.top, rz0 = sl.z + 0.7, rz1 = sl.z + 4.0, ry0 = top, ry1 = 0.28;
+          let x, y, z, yaw, legL = 0, legR = 0, aL = 0, aR = 0, hunch = 0;
+          if (u < 1.8) { const k = u / 1.8; x = sl.x - 1.12; z = sl.z - 0.15; y = 0.12 + k * top; yaw = Math.PI / 2; legL = Math.sin(u * 9) * 0.7; legR = -legL; aL = aR = -2.4; }
+          else if (u < 2.4) { const k = (u - 1.8) / 0.6; x = sl.x - 1.12 + 1.12 * k; z = sl.z - 0.15 + 0.15 * k; y = 0.12 + top; yaw = Math.PI / 2 * (1 - k); legL = Math.sin(u * 9) * 0.4; legR = -legL; }
+          else if (u < 3.2) { x = sl.x; z = sl.z; y = 0.12 + top; yaw = 0; }
+          else if (u < 4.5) { const k = (u - 3.2) / 1.3, e = k * k * 0.6 + k * 0.4; x = sl.x; z = rz0 + (rz1 - rz0) * e; y = ry0 + (ry1 - ry0) * e + 0.1 - 0.84 * sc + 0.84 * sc; y = ry0 + (ry1 - ry0) * e + 0.14 - 0.84 * sc + 0.0; yaw = 0; legL = legR = -1.45; aL = aR = -2.7; hunch = -0.1; }
+          else { const k = (u - 4.5) / 1.9; const ax = sl.x, az = rz1 + 0.2, bx2 = sl.x - 1.6, bz2 = sl.z - 0.2; x = ax + (bx2 - ax) * k; z = az + (bz2 - az) * k; y = 0.12; yaw = Math.atan2(bx2 - ax, bz2 - az); legL = Math.sin(u * 10) * 0.8; legR = -legL; aL = -legL * 0.8; aR = legL * 0.8; }
+          if (u >= 3.2 && u < 4.5) y += 0; else y = (u >= 3.2 && u < 4.5) ? y : y - 0.12 + 0.12;
+          p.x = ox + x; p.z = oz + z;
+          o = { x: ox + x, y: (u >= 3.2 && u < 4.5) ? y : y, z: oz + z, yaw, sc, legL, legR, aL, aR, hunch, head: 1.28 };
+        } else if (role === 3) { // sandbox: crouching and digging
+          const dx = Math.sin(p.phase0 * 7) * 1.2, dz = Math.cos(p.phase0 * 5) * 0.8;
+          p.x = ox + sb.x + dx; p.z = oz + sb.z + dz;
+          const dig = Math.sin(T * 5);
+          o = { x: p.x, y: 0.22 - 0.2, z: p.z, yaw: Math.atan2(dx * -0.3, 1) + Math.sin(T * 0.4) * 0.5, sc, hunch: 0.7, legL: -1.35, legR: -1.15, aL: -1.2 + dig * 0.5, aR: -1.2 - dig * 0.5, head: 1.28 };
+        } else { // running around
+          const cx = ox + (rn.x0 + rn.x1) / 2, cz = oz + (rn.z0 + rn.z1) / 2, ax = (rn.x1 - rn.x0) / 2, az = (rn.z1 - rn.z0) / 2;
+          const w = 0.55 + p.phase0 * 0.03, a = T * w;
+          const x = cx + Math.sin(a) * ax, z = cz + Math.sin(a * 1.7 + 1) * az;
+          const vx = Math.cos(a) * ax * w, vz = Math.cos(a * 1.7 + 1) * az * w * 1.7;
+          p.x = x; p.z = z;
+          const ph = T * 12, sw = Math.sin(ph) * 0.95;
+          o = { x, y: 0.12 + Math.abs(Math.cos(ph)) * 0.05, z, yaw: Math.atan2(vx, vz), sc, hunch: 0.18, legL: sw, legR: -sw, aL: -sw * 1.1, aR: sw * 1.1, head: 1.28 };
+        }
+        this.dyn.push({ x: p.x, z: p.z, r: 0.2, vx: 0, vz: 0 });
+      }
+    }
+    this.drawFigure(i, p, o);
   }
 
   /** Bell / horn: startles elders nearby. */
@@ -132,7 +256,7 @@ export class Pedestrians {
   say(p, text, t = 3) { p.say = text; p.sayT = t; }
 
   /** Player punches ped p (from direction dx,dz). Returns 'hit' | 'ko' | null */
-  hit(p, dx, dz, dmg = 14) {
+  hit(p, dx, dz, dmg = 14, opts = {}) {
     if (!p.active || p.down > 0) return null;
     p.hp = (p.hp ?? 100) - dmg; p.flinch = 0.3; p.hitT = 6;
     p.hitStreak = (p.hitStreak || 0) + 1;
@@ -141,7 +265,7 @@ export class Pedestrians {
     if (p.axis === 'x') p.s += (dx / l) * 0.18; else p.s += (dz / l) * 0.18;
     if (p.elder) { p.anger = Math.min(100, p.anger + 30); }
     else { const say = ['Aua!', 'Hey, spinnst du?!', 'Lass das!', 'Hilfe!']; this.say(p, say[Math.floor(Math.random() * say.length)], 1.6); }
-    if (p.hp <= 0) { p.down = 12; p.ko = true; p.chase = 0; p.say = ''; return 'ko'; }
+    if (p.hp <= 0) { p.down = opts.long ? 9999 : 12; p.ko = true; p.chase = 0; p.say = ''; if (opts.long) p.stabbed = true; return 'ko'; }
     return 'hit';
   }
 
@@ -149,10 +273,12 @@ export class Pedestrians {
     const px = player.x, pz = player.z, pspeed = player.speed || 0;
     const t = now * 0.001;
     this.dyn.length = 0;
+    this.refreshSites(px, pz);
     const m = this._m, b = this._b, l = this._l, tt = this._t;
     const P_ = this.parts;
     for (let i = 0; i < this.count; i++) {
       const p = this.list[i];
+      if (p.kind === 'kid' || p.kind === 'pkid' || p.kind === 'ppar') { this.updateSpecial(i, p, dt, t, px, pz, R); continue; }
       if (!p.active) this.spawn(p, px, pz, R);
       if (!p.active) { for (const k of Object.keys(P_)) P_[k].setMatrixAt(i, this._zero); continue; }
       let x = p.x, z = p.z;
@@ -182,7 +308,7 @@ export class Pedestrians {
         }
         if (p.sayT > 0) p.sayT -= dt;
       }
-      if (p.down > 0) { p.down -= dt; moving = false; if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 55; p.anger = p.elder ? 70 : p.anger; p.cool = 4; } }
+      if (p.down > 0) { p.down -= dt; moving = false; if (p.stabbed) p.down = 9999; if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 55; p.anger = p.elder ? 70 : p.anger; p.cool = 4; } }
       if (p.flinch > 0) p.flinch -= dt;
       if (p.hitT > 0) { p.hitT -= dt; if (p.hitT <= 0) p.hitStreak = 0; }
       if (running && moving) {
@@ -227,6 +353,7 @@ export class Pedestrians {
         } else yaw = ty;
         p.yaw = yaw;
       }
+      p.moving = moving; p.yawNow = yaw;
       // ---- pose
       const sc = p.elder ? 0.93 : 1;
       const sw = (moving || running) ? Math.sin(p.phase) * (running ? 0.95 : p.elder ? 0.32 : 0.55) : 0;
