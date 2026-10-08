@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "luca-shop.*" }],
+      "destination": "/kukirin-shop/",
+      "permanent": false
+    }
+  ]
+}
