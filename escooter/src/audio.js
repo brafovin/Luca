@@ -123,6 +123,24 @@ export class GameAudio {
     const og = c.createGain(); og.gain.setValueAtTime(0.6, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
     o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.28);
   }
+  door() { // soft hiss + motor of an automatic glass door
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(900, t + 0.4); f.Q.value = 0.8;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t, Math.random()); n.stop(t + 0.55);
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(110, t); o.frequency.linearRampToValueAtTime(190, t + 0.4);
+    const og = c.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.linearRampToValueAtTime(0.025, t + 0.1); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.55);
+  }
+  scan() { // checkout beep
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'square'; o.frequency.value = 1760;
+    const g = c.createGain(); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.1);
+  }
   whoosh() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BatchSet, shade, geometryFromArrays } from './batch.js';
 import { mulberry32, hash2, clamp } from './util.js';
 import { addCar } from './cars.js';
+import { supermarket, gasStation, dealer } from './storebuild.js';
 
 export const P = 100; // grid pitch (m)
 export const RH = 5.9; // half width of asphalt (roadway + parking strips)
@@ -71,12 +72,16 @@ export function blockType(i, j) {
   if (i === 0 && j === -1) return 'houses';
   if (i === 1 && j === 0) return 'vescshop';
   if (i === -1 && j === 0) return 'mopedshop';
+  if (i === 0 && j === 1) return 'supermarket';
+  if (i === -1 && j === 1) return 'gasstation';
+  if (i === 1 && j === 1) return 'dealer';
   const h = hash2(i, j, 7);
   if (h < 0.44) return 'perimeter';
   if (h < 0.64) return 'houses';
   if (h < 0.76) return 'park';
   if (h < 0.88) return 'modern';
-  return 'shop';
+  const sub = hash2(i, j, 33);
+  return sub < 0.3 ? 'supermarket' : sub < 0.55 ? 'gasstation' : 'shop';
 }
 export function hasStation(i, j) {
   return hash2(i, j, 21) < 0.22 || (i === 1 && j === 0);
@@ -225,7 +230,7 @@ class ChunkBuilder {
     }
     // lawn / garden overlay
     const t = blockType(this.ci, this.cj);
-    this.b('grass').plane(LOT0, LOT0, LOT1, LOT1, CURB + 0.004, t === 'modern' || t === 'shop' ? [0.8, 0.85, 0.78] : [1, 1, 1], 4);
+    this.b('grass').plane(LOT0, LOT0, LOT1, LOT1, CURB + 0.004, t === 'modern' || t === 'shop' || t === 'supermarket' || t === 'gasstation' || t === 'dealer' ? [0.8, 0.85, 0.78] : [1, 1, 1], 4);
   }
 
   markings() {
@@ -1324,6 +1329,9 @@ class ChunkBuilder {
     else if (t === 'park') this.park();
     else if (t === 'modern') this.modern();
     else if (t === 'vescshop') this.vescShop();
+    else if (t === 'supermarket') supermarket(this);
+    else if (t === 'gasstation') gasStation(this);
+    else if (t === 'dealer') dealer(this);
     else if (t === 'mopedshop') this.vescShop({ moped: true, accent: '#2a8ad8', sign: 'shopsign2' });
     else this.shop();
     return this;
@@ -1336,7 +1344,7 @@ const MESHDEF = {
   generic: ['generic', 1, 1], plain: ['plain', 1, 1], roof: ['roof', 1, 1], foliage: ['foliage', 1, 1], paint: ['paint', 1, 1],
   glass: ['glass', 0, 1], cglass: ['carGlass', 0, 0], water: ['water', 0, 1], sign: ['sign', 0, 1], shopsign: ['shopSign', 0, 0], poster: ['poster', 1, 1], lampW: ['lampW', 0, 0], shopGlow: ['shopGlow', 0, 0], lampG: ['lampG', 0, 0],
   f_plaster: ['f_plaster', 1, 1], f_brick: ['f_brick', 1, 1], f_panel: ['f_panel', 1, 1], f_glass: ['f_glass', 1, 1],
-  shopsign2: ['shopSign2', 0, 0], tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
+  shopsign2: ['shopSign2', 0, 0], shopsign3: ['shopSign3', 0, 0], shopsign4: ['shopSign4', 0, 0], shopsign5: ['shopSign5', 0, 0], fuelpylon: ['fuelPylon', 0, 0], bright: ['bright', 0, 1], tlight: ['tlight', 0, 0], pool: ['pool', 0, 0],
   trackAsphalt: ['asphalt', 0, 1], trackGround: ['runoff', 0, 1], grassT: ['grassT', 0, 1],
 };
 

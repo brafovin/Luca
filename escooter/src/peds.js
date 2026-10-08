@@ -3,6 +3,7 @@ import { BatchSet } from './batch.js';
 import { P, blockType, PLAY } from './world.js';
 import { pushOut } from './phys.js';
 import { clamp, damp } from './util.js';
+import { shopperRoute } from './stores.js';
 
 const SKIN = ['#e8bd9a', '#c98d62', '#8d5a3b', '#f1cfb2', '#6b4630'];
 const CLOTH = ['#2f4a7a', '#8a2f2f', '#2f6a4a', '#d6b24a', '#4a4a4f', '#c9c9c9', '#6a3f7a', '#e07a2e', '#244e5f', '#7a6a58'];
@@ -34,14 +35,15 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 4) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 4, shoppers = 8, staff = 5) {
     this.list = [];
     this.young = count;
     this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
     this.nTeens = teens; this.nGangs = gangs;
     this.gangs = []; for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: 'x', lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g % 4 !== 3 });
     teens += gangs * 3; // walking gangs are teens too (3 per gang)
-    this.count = count + elders + kids + playKids + playPars + teens + bums;
+    this.stores = []; this.staffSpots = []; this.onPick = null;
+    this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff;
     const total = this.count;
     this.sites = [];
     this.dyn = [];
@@ -103,6 +105,13 @@ export class Pedestrians {
       armL: mk(box(0.1, 0.58, 0.12, true)), armR: mk(box(0.1, 0.58, 0.12, true)),
       hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
       cap: mk(new THREE.CylinderGeometry(0.125, 0.135, 0.05, 12)),
+      cart: mk(mergedGeo((B) => {
+        B.box(0, 0.24, 0, 0.5, 0.04, 0.88, '#9aa0a6');
+        for (const sx of [-1, 1]) { B.box(sx * 0.25, 0.62, 0, 0.025, 0.5, 0.88, '#c9ccd0'); B.box(sx * 0.1, 0.1, 0.36, 0.05, 0.16, 0.05, '#1a1a1a'); B.box(sx * 0.1, 0.1, -0.36, 0.05, 0.16, 0.05, '#1a1a1a'); }
+        B.box(0, 0.62, 0.44, 0.5, 0.5, 0.025, '#c9ccd0'); B.box(0, 0.62, -0.44, 0.5, 0.5, 0.025, '#c9ccd0');
+        B.box(0, 1.0, -0.5, 0.5, 0.04, 0.04, '#d42020'); for (const sx of [-1, 1]) B.box(sx * 0.25, 0.9, -0.47, 0.03, 0.3, 0.03, '#d42020');
+        B.box(-0.1, 0.4, 0.1, 0.2, 0.2, 0.2, '#e8c020'); B.box(0.12, 0.38, -0.1, 0.18, 0.16, 0.22, '#d4301e'); B.box(0.0, 0.42, 0.25, 0.12, 0.24, 0.12, '#2f6aa6'); B.box(-0.12, 0.38, -0.25, 0.2, 0.14, 0.14, '#a8703a');
+      }), true),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
       cigT: mk(mergedGeo((B) => { B.box(0.022, -0.052, 0.14, 0.016, 0.016, 0.09, '#f2f0e8'); B.box(0.022, -0.052, 0.19, 0.0145, 0.0145, 0.012, '#ff6a1a'); B.box(0.022, -0.052, 0.098, 0.0165, 0.0165, 0.03, '#d8a860'); }), true),
       swing: mk(mergedGeo((B) => { for (const sx of [-0.14, 0.14]) B.box(sx, -0.8, 0, 0.012, 1.6, 0.012, '#8a8d92'); B.box(0, -1.6, 0, 0.4, 0.04, 0.2, '#d42020'); }), true),
@@ -110,7 +119,7 @@ export class Pedestrians {
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (let i = 0; i < total; i++) {
       const nk = i - count - elders;
-      const kind = i < count ? 'young' : nk < 0 ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : nk < kids + playKids + playPars + teens ? 'teen' : 'bum';
+      const kind = i < count ? 'young' : nk < 0 ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : nk < kids + playKids + playPars + teens ? 'teen' : (nk - kids - playKids - playPars - teens) < bums ? 'bum' : (nk - kids - playKids - playPars - teens - bums) < shoppers ? 'shopper' : 'staff';
       const elder = kind === 'oma' || kind === 'opa' || kind === 'bum';
       const pick = (a) => a[Math.floor(Math.random() * a.length)];
       const p = { active: false, kind, elder, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: '', sayT: 0, cool: 0, lane: 0, s: 0 };
@@ -123,6 +132,7 @@ export class Pedestrians {
         else { p.slot = -1; p.gang = Math.floor((ts_ - parkT) / 3); p.gk = (ts_ - parkT) % 3; p.rowdy = this.gangs[p.gang].rowdy; p.smoker = p.rowdy && p.gk !== 1; p.ts = 'walk'; p.active = false; }
       }
       if (kind === 'bum') { p.has.hair = true; p.has.cap = Math.random() < 0.8; p.has.cane = p.has.bag = p.has.roll = false; p.has.glasses = false; p.speed = 0.6; }
+      if (kind === 'shopper' || kind === 'staff') { p.active = false; p.has.hair = Math.random() < 0.85; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; p.store = null; p.respawn = Math.random() * 40; p.px = undefined; p.sidx = kind === 'staff' ? nk - kids - playKids - playPars - teens - bums - shoppers : 0; }
       if (kind === 'ppar') { p.protect = true; p.slot = nk - kids - playKids; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; }
       if (kind === 'young') { p.has.hair = Math.random() < 0.85; p.has.cane = false; p.has.bag = Math.random() < 0.3; }
       if (p.has.roll) p.has.cane = false;
@@ -214,6 +224,7 @@ export class Pedestrians {
     if (o.cap && p.has.cap && !o.hood) place(P_.cap, h, 0, 0.82, 0.03, 0, hs); else P_.cap.setMatrixAt(i, this._zero);
     if (o.cig) place(P_.cigT, h, 0, 0.71, 0.02, 0, hs); else P_.cigT.setMatrixAt(i, this._zero);
     for (const k of ['cane', 'bag', 'roll']) P_[k].setMatrixAt(i, this._zero);
+    if (o.cart) place(P_.cart, 0, 0, -0.84, 0.82); else P_.cart.setMatrixAt(i, this._zero);
     if (o.swing) { // swing seat + chains, hinged at the beam
       m.makeRotationY(o.swing.yaw); m.setPosition(o.swing.x, o.swing.y, o.swing.z);
       tt.makeRotationX(-o.swing.th); m.multiply(tt);
@@ -392,6 +403,108 @@ export class Pedestrians {
     }
   }
 
+  /** common knock-out handling of store people; true while lying down */
+  downBranch(i, p, dt) {
+    if (p.down <= 0) return false;
+    p.down -= dt; if (p.stabbed) p.down = 9999;
+    if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; }
+    this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT || 0, sc: 1, lie: 1 });
+    this.dyn.push({ x: p.px, z: p.pz, r: 0.3, vx: 0, vz: 0, ped: p });
+    p.x = p.px; p.z = p.pz;
+    return true;
+  }
+  roadOf(p) {
+    const rx = Math.round(p.px / P) * P, rz = Math.round(p.pz / P) * P;
+    if (Math.abs(p.px - rx) < Math.abs(p.pz - rz)) { p.axis = 'z'; p.lane = p.px; } else { p.axis = 'x'; p.lane = p.pz; }
+  }
+
+  /** customers walking through the aisles of a store (with shopping cart), picking goods, paying and leaving */
+  updateShopper(i, p, dt, t, player) {
+    if (p.store && !this.stores.includes(p.store)) { p.store.nShop = Math.max(0, p.store.nShop - 1); p.store = null; }
+    if (!p.store) {
+      if (p.active) { p.active = false; this.hideFigure(i); }
+      p.respawn = (p.respawn || 0) - dt;
+      if (p.respawn > 0) return;
+      const stt = this.stores.find((q) => q.L.shoppers > 0 && q.nShop < q.L.shoppers);
+      if (!stt) { p.respawn = 2; return; }
+      const L = stt.L, rnd = Math.random;
+      const route = shopperRoute(L, rnd, stt.slots).map((r) => ({ x: r.x + stt.ox, z: r.z + stt.oz, pick: r.pick ? { x: r.pick.x + stt.ox, z: r.pick.z + stt.oz, y: r.pick.y } : null }));
+      const till = L.tills[Math.floor(rnd() * L.tills.length)];
+      route.push({ x: till.queue.x + stt.ox, z: till.queue.z + stt.oz, pay: true });
+      route.push({ x: till.gap + stt.ox, z: till.queue.z + stt.oz }, { x: till.gap + stt.ox, z: L.z0 + 2.4 + stt.oz }, { x: L.cx + stt.ox, z: L.z0 + 2.4 + stt.oz }, { x: L.cx + stt.ox, z: L.z0 - 6 + stt.oz });
+      stt.nShop++; p.store = stt; p.route = route; p.ri = 1; p.px = route[0].x; p.pz = route[0].z; p.yawT = Math.PI / 2 * 0;
+      p.active = true; p.down = 0; p.hp = 100; p.ko = false; p.stabbed = false; p.taken = false; p.waitT = 0; p.pickDone = true; p.say = ''; p.sayT = 0; p.walkPh = Math.random() * 6; p.flinch = 0;
+      p.cartOn = L.kind === 'supermarket'; p.spd = 0.8 + Math.random() * 0.35; p.phase0 = Math.random() * 6; p.armUp = 0;
+    }
+    if (p.taken) { p.store.nShop = Math.max(0, p.store.nShop - 1); p.store = null; p.taken = false; p.respawn = 20; p.active = false; this.hideFigure(i); return; }
+    if (p.flinch > 0) p.flinch -= dt;
+    if (p.sayT > 0) p.sayT -= dt;
+    if (this.downBranch(i, p, dt)) { this.roadOf(p); return; }
+    const pl = player || { x: 1e9, z: 1e9 };
+    const dxp = pl.x - p.px, dzp = pl.z - p.pz, dp = Math.hypot(dxp, dzp);
+    let moving = false;
+    const node = p.route[p.ri];
+    if (!node) { p.store.nShop = Math.max(0, p.store.nShop - 1); p.store = null; p.respawn = 10 + Math.random() * 25; p.active = false; this.hideFigure(i); return; }
+    if (p.waitT > 0) {
+      p.waitT -= dt;
+      if (node.pick) {
+        const ty = Math.atan2(node.pick.x - p.px, node.pick.z - p.pz); let dd = ty - p.yawT; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI; p.yawT += dd * Math.min(1, dt * 6);
+        p.armUp = Math.min(1, p.waitT > 0.5 ? (2.6 - p.waitT) * 1.5 : p.waitT * 2);
+        if (!p.pickDone && p.waitT < 1.3) { p.pickDone = true; if (this.onPick) this.onPick(p.store, node.pick); }
+      }
+      if (node.pay) { p.yawT = Math.PI; if (p.waitT < 3.5 && !p.paidSaid) { p.paidSaid = true; this.say(p, 'Danke, tschüss!', 2); } }
+      if (p.waitT <= 0) { p.ri++; p.armUp = 0; p.paidSaid = false; }
+    } else {
+      const dx = node.x - p.px, dz = node.z - p.pz, d = Math.hypot(dx, dz);
+      if (d < 0.3) {
+        if (node.pick) { p.waitT = 2.6; p.pickDone = false; }
+        else if (node.pay) p.waitT = 4.5;
+        else p.ri++;
+      } else {
+        let sp = p.spd;
+        const fwd = (dx * dxp + dz * dzp) / (d * (dp || 1));
+        if (dp < 1.5 && fwd > 0.4) { sp = 0; if (p.sayT <= 0 && Math.random() < dt * 0.6) this.say(p, ['Entschuldigung!', 'Darf ich mal vorbei?', 'Hallo?'][Math.floor(Math.random() * 3)], 2.4); }
+        p.px += (dx / d) * sp * dt; p.pz += (dz / d) * sp * dt;
+        p.walkPh = (p.walkPh || 0) + dt * sp * 5.4; moving = sp > 0;
+        const ty = Math.atan2(dx, dz); let dd = ty - p.yawT; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI; p.yawT += dd * Math.min(1, dt * 7);
+      }
+    }
+    const sw = moving ? Math.sin(p.walkPh) * 0.5 : 0, cartOn = p.cartOn;
+    const o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 1, hunch: p.flinch > 0 ? -0.4 : 0.05 + p.armUp * 0.1, legL: sw, legR: -sw, aL: cartOn ? -1.15 : -sw, aR: cartOn ? -1.15 : sw, head: 1.0, cart: cartOn };
+    if (p.armUp > 0.01) { o.aR = -0.4 - p.armUp * 1.5; o.aL = cartOn ? -1.15 : 0.1; }
+    this.drawFigure(i, p, o);
+    p.x = p.px; p.z = p.pz;
+    this.dyn.push({ x: p.px, z: p.pz, r: 0.34, vx: 0, vz: 0, ped: p });
+    if (cartOn) { const cx = p.px + Math.sin(p.yawT) * 0.95, cz = p.pz + Math.cos(p.yawT) * 0.95; this.dyn.push({ x: cx, z: cz, r: 0.36, vx: 0, vz: 0, ped: p }); }
+    this.roadOf(p);
+  }
+
+  /** shop assistants: cashiers, petrol station clerk, car salesman */
+  updateStaff(i, p, dt, t, player) {
+    const spot = this.staffSpots[p.sidx];
+    if (!spot) { if (p.active) { p.active = false; this.hideFigure(i); } p.spotKey = null; return; }
+    if (p.spotKey !== spot.key) { // (re)assigned: set uniform colour
+      p.spotKey = spot.key; p.px = spot.x; p.pz = spot.z; p.yawT = spot.yaw; p.active = true; p.down = 0; p.hp = 100; p.ko = false; p.stabbed = false; p.taken = false; p.sayT = 0; p.cool = 0; p.phase0 = Math.random() * 6;
+      const c = new THREE.Color(); this.parts.torso.setColorAt(i, c.set(spot.color)); this.parts.armL.setColorAt(i, c); this.parts.armR.setColorAt(i, c); this.parts.torso.instanceColor.needsUpdate = true; this.parts.armL.instanceColor.needsUpdate = true; this.parts.armR.instanceColor.needsUpdate = true;
+    }
+    if (p.taken) { this.hideFigure(i); p.active = false; return; }
+    if (p.flinch > 0) p.flinch -= dt; if (p.sayT > 0) p.sayT -= dt; if (p.cool > 0) p.cool -= dt;
+    if (this.downBranch(i, p, dt)) { this.roadOf(p); return; }
+    p.active = true;
+    const pl = player || { x: 1e9, z: 1e9 };
+    const dxp = pl.x - p.px, dzp = pl.z - p.pz, dp = Math.hypot(dxp, dzp);
+    let yaw = spot.yaw;
+    if (dp < 6.5) { yaw = Math.atan2(dxp, dzp); if (p.cool <= 0 && p.sayT <= 0 && dp < 5) { p.cool = 14 + Math.random() * 8; const L = spot.lines; this.say(p, L[Math.floor(Math.random() * L.length)], 3.2); p.waveT = 1.6; } }
+    let dd = yaw - p.yawT; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI; p.yawT += dd * Math.min(1, dt * 4);
+    if (p.waveT > 0) p.waveT -= dt;
+    const T = t + p.phase0;
+    const o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 1, hunch: 0.03 + (p.flinch > 0 ? -0.4 : 0), legL: 0, legR: 0, aL: -0.55 + Math.sin(T * 1.1) * 0.05, aR: p.waveT > 0 ? -2.6 + Math.sin(T * 8) * 0.3 : -0.55, head: 1.0 };
+    this.drawFigure(i, p, o);
+    p.x = p.px; p.z = p.pz;
+    this.dyn.push({ x: p.px, z: p.pz, r: 0.34, vx: 0, vz: 0, ped: p });
+    this.roadOf(p);
+  }
+
   hideFigure(i) { for (const k of Object.keys(this.parts)) this.parts[k].setMatrixAt(i, this._zero); }
 
   updateSpecial(i, p, dt, t, px, pz, R) {
@@ -503,6 +616,8 @@ export class Pedestrians {
       const p = this.list[i];
       if (p.kind === 'kid' || p.kind === 'pkid' || p.kind === 'ppar') { this.updateSpecial(i, p, dt, t, px, pz, R); continue; }
       if (p.kind === 'teen') { this.updateTeen(i, p, dt, t, player); continue; }
+      if (p.kind === 'shopper') { this.updateShopper(i, p, dt, t, player); continue; }
+      if (p.kind === 'staff') { this.updateStaff(i, p, dt, t, player); continue; }
       if (!p.active) this.spawn(p, px, pz, R);
       if (!p.active) { for (const k of Object.keys(P_)) P_[k].setMatrixAt(i, this._zero); continue; }
       let x = p.x, z = p.z;

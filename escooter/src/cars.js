@@ -11,7 +11,7 @@ function makeWheelParts() {
   hubGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.245, 8); hubGeo.rotateZ(Math.PI / 2);
   discGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.02, 14); discGeo.rotateZ(Math.PI / 2);                   // brake disc behind the spokes
 }
-function addWheel(G, wx, wy, wz, sx) {
+export function addWheel(G, wx, wy, wz, sx) {
   const m = new THREE.Matrix4();
   G.geo(wheelGeo, m.makeTranslation(wx, wy, wz), '#111213');
   G.geo(rimGeo, m.makeTranslation(wx + sx * 0.004, wy, wz), '#aeb2b8');
@@ -20,6 +20,7 @@ function addWheel(G, wx, wy, wz, sx) {
   G.geo(hubGeo, m.makeTranslation(wx + sx * 0.006, wy, wz), '#c9ccd1');
   G.box(wx + sx * 0.12, wy + 0.19, wz + 0.1, 0.02, 0.04, 0.012, '#d8d8d8'); // tyre lettering/valve
 }
+export function ensureWheelParts() { if (!wheelGeo) makeWheelParts(); }
 const sxOff = (v, W) => v * (W > 1.9 ? 1 : 0.9), yMir = (t) => (t >= 0.82 ? 1.14 : 1.02);
 const wheelTorus = new THREE.TorusGeometry(0.2, 0.025, 6, 14);
 
@@ -87,10 +88,14 @@ export function addCar(S, rnd, opts = {}) {
   else { L = 3.6; W = 1.66; H = 1.5; }
   const col = opts.color || CARCOL[Math.floor(rnd() * CARCOL.length)];
   const hw = W / 2;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+  if (!opts.noWheels) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const wz = sz * L * 0.31, wx = sx * (hw - 0.13);
     addWheel(G, wx, 0.335, wz, sx);
   }
+  // sports car: the whole body is the sedan squashed down and widened a little (wheels stay round)
+  const prevM = S.m ? S.m.clone() : null;
+  let sq = null;
+  if (opts.sport) { sq = new THREE.Matrix4().makeScale(1.05, 0.8, 1.06); S.setTransform(prevM ? prevM.clone().multiply(sq) : sq); }
   const lowH = 0.62;
   const hoodY = type >= 0.82 ? 0.9 : 0.97, noseY = type >= 0.82 ? 0.78 : 0.84;
   const body = type >= 0.82
@@ -201,5 +206,15 @@ export function addCar(S, rnd, opts = {}) {
   }
   if (type < 0.35 && rnd() < 0.5) G.box(0, yt - 0.02, prof[1][0] - 0.05, W * 0.8, 0.04, 0.2, '#16171a'); // spoiler
   if (rnd() < 0.5) G.cyl(0.0, yt + 0.02, prof[1][0] + 0.2, 0.008, 0.28, '#111', 4, false); // antenna
+  if (opts.sport) {
+    S.setTransform(prevM);
+    const Ls = L * 1.06, Ws = W * 1.05, Hs = H * 0.8;
+    // big rear wing on two struts, quad exhaust tips, side blades, front splitter lip
+    for (const sx of [-1, 1]) { G.box(sx * Ws * 0.3, Hs - 0.02, -Ls / 2 + 0.35, 0.05, 0.18, 0.1, '#111214'); G.cyl(sx * 0.42, 0.34, -Ls / 2 - 0.1, 0.045, 0.12, '#b9bcc0', 8, false); G.cyl(sx * 0.22, 0.34, -Ls / 2 - 0.1, 0.04, 0.12, '#b9bcc0', 8, false); G.box(sx * (Ws / 2 + 0.01), 0.42, Ls * 0.1, 0.03, 0.12, 0.7, '#0f1012'); }
+    PA.box(0, Hs + 0.07, -Ls / 2 + 0.3, Ws * 0.88, 0.05, 0.42, col);
+    G.box(0, Hs + 0.045, -Ls / 2 + 0.52, Ws * 0.88, 0.02, 0.03, '#0d0e10');
+    G.box(0, 0.31, Ls / 2 + 0.08, Ws * 0.94, 0.03, 0.22, '#0d0e10');
+    return { L: Ls, W: Ws, H: Hs + 0.12, type, col, cab: { prof: prof.map(([a, b]) => [a * 1.06, b * 0.8]), yb: yb * 0.8, yt: yt * 0.8, cw: cw * 1.05, cen: [cen[0] * 1.06, cen[1] * 0.8] }, sport: true };
+  }
   return { L, W, H, type, col, cab: { prof, yb, yt, cw, cen } };
 }
