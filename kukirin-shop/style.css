@@ -430,3 +430,8 @@ details p { color: var(--muted); margin-top: 12px; }
   .extra-imgs { height: 190px; }
   .tab { padding: 10px 16px; }
 }
+
+/* Produktdialog: linke Spalte durchgehend hell */
+@media (min-width: 961px) {
+  .pd { background: linear-gradient(90deg, var(--paper) 51.2%, #fff 51.2%); }
+}
