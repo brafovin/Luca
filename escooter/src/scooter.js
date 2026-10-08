@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
+import { CARS, buildCarModel } from './pcar.js';
 import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, buildSimson, decorate, paintModel } from './models.js';
 
 const WHEELBASE = 1.16;
@@ -50,8 +51,8 @@ const ZERO3 = new THREE.Vector3();
 const HYPER_V = 1388.9, HYPER_A = 230; // 5000 km/h
 const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
 export class Scooter {
-  constructor(tex) {
-    this.tex = tex;
+  constructor(tex, M) {
+    this.tex = tex; this.M = M;
     this.vesc = false;
     this.wheelie = 0; this.wheelieV = 0; this.wheelieT = 0; this.inWheelie = false; this.wheelieEvent = null;
     this.root = new THREE.Group();
@@ -74,6 +75,7 @@ export class Scooter {
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
     const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
     this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx), simson: buildSimson(ctx), schwalbe: buildSimson(ctx, { id: 'schwalbe', name: 'Simson Schwalbe KR51', variant: 'schwalbe', color: 0x2f8a56, accent: 0xf2e8c8, v: 17.0 }), sr50: buildSimson(ctx, { id: 'sr50', name: 'Simson SR50', color: 0xe8541a, accent: 0x14151a, v: 17.6 }) };
+    if (this.M) for (const c of Object.values(CARS)) this.models[c.id] = buildCarModel({ M: this.M }, c);
     this.wbar = true; this.oneHand = false; this.handMix = 0; this.wheelieOne = false;
     for (const m of Object.values(this.models)) {
       if (!m.noDecor) decorate(m);
@@ -100,6 +102,7 @@ export class Scooter {
     this.foot = m.foot; this.spec = m.spec; this.wb = m.wheelbase; this.half = m.half;
     this.vescGlow = m.glow;
     this.rider.position.y = m.riderDY || 0;
+    this.rider.visible = !m.car && !this.parked;
     this.spot.position.set(...m.spotPos);
     this.setVesc(this.vesc);
   }
@@ -583,7 +586,7 @@ export class Scooter {
     // collisions
     this.impact = 0;
     if (world) this.collide(world.colliders, dyn);
-    if (this.impact > 11 && !(this.fallT > 0)) { // heavy crash: rider goes down
+    if (this.impact > 11 && !(this.fallT > 0) && !this.model.car) { // heavy crash: rider goes down
       this.fallT = 1.7; this.fallDir = Math.random() < 0.5 ? 1 : -1; this.fellEvent = true;
       this.v *= 0.2;
     }
@@ -598,7 +601,8 @@ export class Scooter {
 
     // lean (physical: tan(phi)=a_lat/g) with critically damped-ish spring
     let leanT = clamp(Math.atan2(aLat, G) * 0.8 + 0.1 * this.steerIn * Math.min(1, av / 2), -0.55, 0.55);
-    if (this.fallT > 0) leanT = this.fallDir * 1.3;
+    if (this.model.car) leanT = 0;
+    else if (this.fallT > 0) leanT = this.fallDir * 1.3;
     else if (this.parked && Math.abs(this.v) < 0.2) leanT = 0.14; // side stand
     const w0 = 11, zeta = 0.8;
     this.leanV += (w0 * w0 * (leanT - this.lean) - 2 * zeta * w0 * this.leanV) * dt;
@@ -636,8 +640,8 @@ export class Scooter {
 
   collide(col, dyn) {
     const sx = Math.sin(this.heading), cz = Math.cos(this.heading);
-    const offs = [0.62, 0, -0.62];
-    const r = 0.3;
+    const offs = this.model.colOffs || [0.62, 0, -0.62];
+    const r = this.model.colR || 0.3;
     let worst = 0;
     const respond = (nx, nz, ovx, ovz) => {
       const Vx = sx * this.v - ovx, Vz = cz * this.v - ovz;
@@ -716,6 +720,8 @@ export class Scooter {
     this.steer.rotation.y = this.delta * 1.25;
     this.frontWheel.rotation.x = this.wheelAng;
     this.rearWheel.rotation.x = this.wheelAng;
+    const mdl = this.model;
+    if (mdl.car) { this.rider.visible = false; mdl.driver.visible = !this.parked; mdl.update(this); }
   }
 
   /* ------------------------------------------------------------ lights + display */

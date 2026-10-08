@@ -173,7 +173,7 @@ export class Walker {
     if (inp.strafeL) { mx -= rx; mz -= rz; }
     const l = Math.hypot(mx, mz);
     const run = !!inp.sprint && l > 0;
-    const target = l > 0 ? (run ? 5.4 : 1.9) : 0;
+    const target = l > 0 ? (run ? 5.4 : 1.9) * (this.speedMul || 1) : 0;
     this.running = run;
     const k = l > 0 ? 7 : 10;
     this.vx = damp(this.vx, l > 0 ? (mx / l) * target * Math.min(1, l) : 0, k, dt);

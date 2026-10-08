@@ -1,3 +1,6 @@
+import { CARS, CAR_IDS } from './pcar.js';
+import { Shops } from './shops.js';
+import { LAYOUT } from './stores.js';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -45,7 +48,7 @@ const tex = makeTextures(renderer);
 const M = createMaterials(tex);
 const sky = new Sky(scene, renderer, camera);
 const world = new World(scene, M);
-const scooter = new Scooter(tex);
+const scooter = new Scooter(tex, M);
 scene.add(scooter.root);
 const audio = new GameAudio();
 const walker = new Walker(scene);
@@ -64,6 +67,7 @@ const store0 = (k, d) => { try { const v = localStorage.getItem('g4_' + k); retu
 const parkDyn = [];
 const traffic = new Traffic(scene, M, 12, 9, { police: store0('police', true), glow: tex.glow, pool: tex.pool });
 const peds = new Pedestrians(scene, M, 30, 10, 6);
+const shops = new Shops(scene, M, peds, audio);
 traffic.peds = peds;
 const rain = new Rain(scene);
 const birds = new Birds(scene, 18);
@@ -139,6 +143,7 @@ const SHOP_MODELS = {
   sr50: { price: 950, key: '', name: 'Simson SR50', sound: [220, 262, 330, 392], shop: 2 },
   schwalbe: { price: 1100, key: '', name: 'Simson Schwalbe KR51', sound: [196, 262, 330, 440], shop: 2 },
 };
+for (const c of Object.values(CARS)) SHOP_MODELS[c.id] = { price: c.price, key: '', name: c.name, sound: [262, 330, 392, 523, 659], shop: 3, car: true };
 const MTX_PRICE = 600, PZ_PRICE = 250, CIG_PRICE = 8;
 const st = {
   running: false, paused: true, fp: false, userHead: null, resScale: 1,
@@ -146,7 +151,7 @@ const st = {
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
   landDip: 0, hitT: 0, wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
-  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
+  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), car_mini: store.get('car_mini', false), car_sedan: store.get('car_sedan', false), car_suv: store.get('car_suv', false), car_sport: store.get('car_sport', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
 };
 
 /* ------------------------------------------------------------------ quality */
@@ -298,9 +303,10 @@ window.addEventListener('keydown', (e) => {
     case 'KeyX': switchModel(); break;
     case 'KeyK': setPolice(!cfg.police); break;
     case 'KeyV': toggleTrack(); break;
-    case 'KeyF': { const tb = nearestTable(); if (tb) openShop(tb); else toggleMount(); break; }
+    case 'KeyF': interactF(); break;
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
+    case 'KeyI': dropBasket(); break;
     case 'KeyG': st.showFps = !st.showFps; $('fps').classList.toggle('hidden', !st.showFps); break;
   }
 });
@@ -769,7 +775,8 @@ function dismount() {
   st.mode = 'walk';
   scooter.parked = true; scooter.v = 0;
   scooter.rider.visible = false;
-  walker.place(scooter.x + Math.sin(h) * 0.1 - Math.cos(h) * 0.95, scooter.z + Math.cos(h) * 0.1 + Math.sin(h) * 0.95, h);
+  const dOff = scooter.model.dismountOff || 0.95;
+  walker.place(scooter.x + Math.sin(h) * 0.1 - Math.cos(h) * dOff, scooter.z + Math.cos(h) * 0.1 + Math.sin(h) * dOff, h);
   walker.setVisible(!st.fp);
   camYaw = h;
   applySmoke();
@@ -777,7 +784,7 @@ function dismount() {
 }
 function mount() {
   const d = Math.hypot(scooter.x - walker.x, scooter.z - walker.z);
-  if (d > 3.4) { toast('Zu weit weg', 'geh näher an deinen Roller (F)', 1500); return; }
+  if (d > (scooter.model.mountR || 3.4)) { toast('Zu weit weg', 'geh näher an dein Fahrzeug (F)', 1500); return; }
   st.mode = 'ride'; if (st.knife) { st.knife = false; walker.setKnife(false); } if (st.gun) { st.gun = false; walker.setGun(false); }
   scooter.parked = false; scooter.rider.visible = true; scooter.v = 0;
   walker.setVisible(false);
@@ -792,12 +799,13 @@ function setVesc(on) {
   shopBeacon.visible = !(on && allOwned());
   $('vescBadge').classList.toggle('hidden', !(on && !scooter.model.noVesc));
 }
-const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3, simson: () => st.simson, sr50: () => st.sr50, schwalbe: () => st.schwalbe };
-const MODEL_ORDER = ['g4', 'g2', 'zt3', 'simson', 'sr50', 'schwalbe', 'dt3', 'sonic'];
+const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3, simson: () => st.simson, sr50: () => st.sr50, schwalbe: () => st.schwalbe, car_mini: () => st.car_mini, car_sedan: () => st.car_sedan, car_suv: () => st.car_suv, car_sport: () => st.car_sport };
+const MODEL_ORDER = ['g4', 'g2', 'zt3', 'simson', 'sr50', 'schwalbe', 'dt3', 'sonic', ...CAR_IDS];
 const allOwned = () => false; // paint jobs are always for sale, so the shop never runs out
 const atShop = () => Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9;
 function syncModelSelect() {
   const sel = $('optModel');
+  for (const id of CAR_IDS) if (![...sel.options].some((o) => o.value === id)) { const o = document.createElement('option'); o.value = id; sel.appendChild(o); }
   for (const o of sel.options) {
     const sm = SHOP_MODELS[o.value];
     if (!sm) continue;
@@ -834,7 +842,13 @@ function buyModel(id) {
   setModel(id, true);
   audio.chime(sm.sound);
   toast(sm.name + '!', `bis ${Math.round(scooter.topKmh)} km/h${scooter.spec.vT > scooter.spec.vN ? ' Turbo' : ''}${id === 'sonic' && !st.vesc ? ' · mit VESC 500 km/h' : ''} · X wechselt den Roller`, 4500);
+  if (sm.car && st.mode === 'walk') deliverCar();
   net.sendEvent && net.sendEvent(id);
+}
+function deliverCar() {
+  const o = LAYOUT.dealer.out;
+  scooter.reset(DOX + o.x, DOZ + o.z, o.yaw); scooter.parked = true; scooter.v = 0; scooter.rider.visible = false;
+  toast('🚗 Dein Auto steht vor dem Autohaus', 'Geh zum Auto und drücke F zum Einsteigen', 4200);
 }
 const buyDT3 = () => buyModel('dt3'), buySonic = () => buyModel('sonic');
 function toggleOneHand() {
@@ -862,7 +876,69 @@ function buyVesc() {
   toast('VESC eingebaut!', `Turbo bis ${Math.round(scooter.topKmh)} km/h`, 4200);
   net.sendEvent && net.sendEvent('vesc');
 }
+const shopActors = [];
 const interact = buyVesc; // (debug hook name)
+
+/* ------------------------------------------------------------------ stores: take products, basket, pay */
+st.basket = []; st.pickT = null; st.tillT = null; st.inSite = null; st.energyT = 0;
+const fmtEur = (v) => v.toFixed(2).replace('.', ',') + ' €';
+const basketTotal = () => st.basket.reduce((a, b) => a + b.price, 0);
+function interactF() {
+  const tb = nearestTable();
+  if (tb) { openShop(tb); return; }
+  if (st.mode === 'walk' && !st.track) {
+    if (st.pickT) {
+      const pr = shops.take(st.pickT); st.pickT = null;
+      st.basket.push({ id: pr.id, name: pr.name, price: pr.price, fx: pr.fx });
+      audio.click(1); st.pickFlash = 0.35;
+      toast('🧺 ' + pr.name, `${fmtEur(pr.price)} · im Korb: ${st.basket.length} · Summe ${fmtEur(basketTotal())}`, 1100);
+      return;
+    }
+    if (st.tillT && st.basket.length) { payBasket(); return; }
+  }
+  toggleMount();
+}
+function payBasket() {
+  const total = basketTotal();
+  if (st.money < total) { toast('Zu wenig Geld', `Der Einkauf kostet ${fmtEur(total)} – du hast ${Math.floor(st.money)} €. Leere den Korb (I) oder verdiene Geld.`, 3200); audio.beep(); return; }
+  earn(-total);
+  const n = st.basket.length;
+  for (let k = 0; k < Math.min(n, 6); k++) setTimeout(() => audio.scan(), k * 140);
+  let extra = '';
+  for (const it of st.basket) {
+    if (it.fx === 'energy') { st.energyT = 90; extra = ' · ⚡ schneller laufen (90 s)'; }
+    st.score += it.fx === 'misc' ? 10 : 25;
+  }
+  audio.chime([660, 880]);
+  toast('✅ Bezahlt: ' + fmtEur(total), `${n} Artikel${extra}`, 2600);
+  st.basket.length = 0; st.paidT = 1;
+}
+function dropBasket() {
+  if (!st.basket.length) return;
+  toast('Korb geleert', 'Waren zurückgelegt', 1200); st.basket.length = 0;
+}
+function updateStore(dt) {
+  if (st.energyT > 0) { st.energyT -= dt; if (st.energyT <= 0) toast('Energie weg', '', 900); }
+  walker.speedMul = st.energyT > 0 ? 1.35 : 1;
+  const site = shops.insideStore(me.x, me.z);
+  const key = site ? site.key : null;
+  if (st.inSite && !key && st.basket.length) { // left the store with unpaid goods
+    const fine = Math.min(Math.floor(st.money), 50 + st.basket.length * 10);
+    earn(-fine); const n = st.basket.length; st.basket.length = 0;
+    toast('🚨 Ladendiebstahl!', `Der Sicherheitsdienst nimmt dir ${n} Artikel ab und kassiert ${fine} € Strafe`, 3600);
+    audio.beep(); audio.thud(6);
+  }
+  st.inSite = key;
+  st.pickT = null; st.tillT = null;
+  if (st.mode === 'walk' && site && !st.shopOpen) {
+    const yaw = walker.yaw, pitch = -mouse.lookY, cp = Math.cos(pitch);
+    st.pickT = shops.pickTarget(walker.x, walker.y + walker.jy + 1.55, walker.z, Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp);
+    if (!st.pickT) st.tillT = shops.nearTill(walker.x, walker.z);
+  }
+  const bk = $('basket'), n = st.basket.length;
+  const html = n ? `🧺 <b>${n}</b> Artikel · ${fmtEur(basketTotal())}<small>${st.basket.slice(-4).map((b) => b.name).join(', ')}${n > 4 ? ' …' : ''}</small>` : '';
+  if (cache.basket !== html) { cache.basket = html; bk.innerHTML = html; bk.classList.toggle('hidden', !n); }
+}
 
 /* ------------------------------------------------------------------ walk-in shop: counters, buying, paint */
 const PAINTS = [
@@ -894,11 +970,13 @@ function buyPaint(id, part, colorId) {
   toast(`🎨 ${PAINTS.find((q) => q.id === colorId).name}`, price ? `−${price} €` : 'Werkslackierung', 1200);
   renderShop();
 }
-const ALL_TABLES = [...SHOP_TABLES, ...SHOP2_TABLES];
+const DL = LAYOUT.dealer, DOX = P * 1, DOZ = P * 1; // the dealership is block (1,1)
+const DEALER_TABLES = [{ id: 'cars', shop: 3, name: 'Autohaus – Fahrzeuge', x: DOX + DL.desk.x, z: DOZ + DL.desk.z, hx: 2.4, hz: 1.2 }, ...DL.cars.map((c) => ({ id: 'cars', shop: 3, name: 'Autohaus – ' + CARS[c.id].name, x: DOX + c.x, z: DOZ + c.z, hx: 2.5, hz: 2.5 }))];
+const ALL_TABLES = [...SHOP_TABLES, ...SHOP2_TABLES, ...DEALER_TABLES];
 function nearestTable() {
   if (st.track || st.shopOpen) return null;
   for (const t of ALL_TABLES) {
-    const dx = Math.max(Math.abs(me.x - t.x) - 1.75, 0), dz = Math.max(Math.abs(me.z - t.z) - 0.68, 0);
+    const dx = Math.max(Math.abs(me.x - t.x) - (t.hx || 1.75), 0), dz = Math.max(Math.abs(me.z - t.z) - (t.hz || 0.68), 0);
     if (Math.hypot(dx, dz) < 1.6) return t;
   }
   return null;
@@ -940,6 +1018,13 @@ function renderShop() {
     h += `<div class="srow"><div class="sinfo"><b>PZ-Tuning Lenker</b><small>Breiter, flacher Rennlenker mit Querstrebe und goldenen Klemmen – lenkt direkter (mehr Kurvengrip).</small></div>`
       + (st.pz ? `<span class="sown">✓ montiert</span>` : `<button class="buy" data-act="up" data-id="pz" ${st.money < PZ_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${PZ_PRICE} €</button>`) + `</div>`;
     h += (st.simson || st.sr50 || st.schwalbe) ? '' : `<div class="srow"><div class="sinfo"><small>Du besitzt noch keine Simson – die Teile werden eingebaut, sobald du sie hast.</small></div></div>`;
+  } else if (t.id === 'cars') {
+    h += `<div class="srow"><div class="sinfo"><small>Alle Autos fahren mit <b>WASD</b>, Shift = Sport. Gekaufte Autos stehen vor dem Autohaus. <b>C</b> = Ich-Perspektive.</small></div></div>`;
+    for (const id of CAR_IDS) {
+      const c = CARS[id];
+      h += `<div class="srow"><div class="sinfo"><b>${c.name}</b><small>${c.info}</small></div>`
+        + (st.model === id ? `<span class="sown">● aktiv</span>` : st[id] ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < c.price ? 'data-poor="1"' : ''}>Kaufen · ${c.price.toLocaleString('de-DE')} €</button>`) + `</div>`;
+    }
   } else if (t.id === 'kiosk') {
     h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
   } else if (t.id === 'scooters') {
@@ -950,7 +1035,7 @@ function renderShop() {
       h += `<div class="srow"><div class="sinfo"><b>${name}</b><small>${info}</small></div>${btn}</div>`;
     }
   } else {
-    const own = MODEL_ORDER.filter((k) => OWNED[k]());
+    const own = MODEL_ORDER.filter((k) => OWNED[k]() && !(scooter.models[k] && scooter.models[k].noPaint));
     if (!own.includes(st.paintSel)) st.paintSel = st.model;
     h += `<div class="srow"><div class="sinfo"><b>Roller wählen</b><small>Farbe ändern kostet ${PAINT_PRICE} € pro Teil (Werkslackierung gratis).</small></div><select id="paintSel">${own.map((k) => `<option value="${k}" ${k === st.paintSel ? 'selected' : ''}>${SHOP_MODELS[k] ? SHOP_MODELS[k].name : 'KuKirin G4'}</option>`).join('')}</select></div>`;
     const cur = st.paint[st.paintSel] || {};
@@ -968,7 +1053,7 @@ function renderShop() {
     const a = b.dataset.act;
     if (a === 'vesc') { buyVesc(); renderShop(); }
     else if (a === 'buy') { buyModelUI(b.dataset.id); }
-    else if (a === 'use') { setModel(b.dataset.id); renderShop(); }
+    else if (a === 'use') { setModel(b.dataset.id); if (SHOP_MODELS[b.dataset.id].car && st.mode === 'walk') deliverCar(); renderShop(); }
     else if (a === 'up') buyUpgrade(b.dataset.id);
     else if (a === 'cig') { if (st.money >= CIG_PRICE) { earn(-CIG_PRICE); st.cigs += 20; store.set('cigs', st.cigs); audio.chime([523, 659]); renderShop(); } }
     else if (a === 'paint') buyPaint(st.paintSel, b.dataset.part, b.dataset.color);
@@ -1023,6 +1108,17 @@ function applySmoke() {
 const _fw = new THREE.Vector3();
 function updateSmoke(dt) {
   const active = st.running && !st.paused;
+  if (active && scooter.model.car && st.mode === 'ride') {
+    const m = scooter.model, thr = scooter.thr || 0, sp = Math.abs(scooter.v);
+    st.exAcc = (st.exAcc || 0) + (3 + thr * 26 + Math.min(sp, 40) * 0.25) * dt * (m.dims.sport ? 1.4 : 1);
+    while (st.exAcc >= 1) {
+      st.exAcc--;
+      const pipe = m.exhaust.pipes[Math.floor(Math.random() * m.exhaust.pipes.length)];
+      _sp.copy(pipe); m.group.localToWorld(_sp);
+      const sh = Math.sin(scooter.heading), ch = Math.cos(scooter.heading);
+      smoke.emit(_sp.x, _sp.y, _sp.z, -sh * (0.7 + thr * 1.6) + sh * scooter.v * 0.35, 0.3 + thr * 0.4, -ch * (0.7 + thr * 1.6) + ch * scooter.v * 0.35, 'exhaust', Math.min(1, 0.25 + thr * 0.9));
+    }
+  }
   if (active && scooter.model.moped && st.mode === 'ride') {
     const m = scooter.model, up = st.mtx, thr = scooter.thr || 0;
     st.exAcc = (st.exAcc || 0) + (4 + thr * 24 + (up ? 6 : 0) + Math.min(Math.abs(scooter.v), 15) * 0.4) * dt;
@@ -1200,7 +1296,7 @@ function updateCamera(dt, first) {
   if (st.fp) {
     mouse.lookY = damp(mouse.lookY, 0, 1.5, dt);
     const fpp = s.model.fp || FP_DEF;
-    fpAnchor.position.y = fpp.y;
+    fpAnchor.position.set(fpp.x || 0, fpp.y, fpp.z !== undefined ? fpp.z : -0.12);
     fpAnchor.rotation.set(s.pitch * 0.4 + fpp.pitch + mouse.lookY - s.wheelie * 0.3, 0, -s.lean * 0.5, 'YXZ');
     scooter.root.updateMatrixWorld(true);
     fpLook.getWorldPosition(camera.position);
@@ -1209,9 +1305,10 @@ function updateCamera(dt, first) {
     camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh;
     camera.fov = lerp(camera.fov, baseFov + 6, 0.1);
   } else {
-    const dist = (3.5 + Math.min(spd / s.vTurbo, 1) * 1.8) * zoom;
+    const cmul = s.model.camMul || 1;
+    const dist = (3.5 + Math.min(spd / s.vTurbo, 1) * 1.8) * zoom * cmul;
     camDist = damp(camDist, dist, 3, dt);
-    const h = (1.95 + Math.min(spd / s.vTurbo, 1) * 0.4) * (0.7 + 0.3 * zoom);
+    const h = (1.95 + Math.min(spd / s.vTurbo, 1) * 0.4) * (0.7 + 0.3 * zoom) * (cmul > 1 ? 1 + (cmul - 1) * 0.55 : 1);
     const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
     const tx = s.x + sinY * 3.4, tz = s.z + cosY * 3.4, ty = (s.yOff || 0) - 0.3;
     let f = 1;
@@ -1242,7 +1339,7 @@ const arcLen = 90 * Math.PI * 1.5; // 270° arc
 const mapCtx = $('map').getContext('2d');
 let mapT = 0;
 const trkTmp = [];
-const BLOCK_COL = { mopedshop: '#2a6aa8', perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56', vescshop: '#b3601c' };
+const BLOCK_COL = { supermarket: '#2f8a4a', gasstation: '#a83030', dealer: '#2a8fb0', mopedshop: '#2a6aa8', perimeter: '#4a5463', houses: '#6b6454', park: '#3d6a3e', modern: '#46647a', shop: '#7d6f56', vescshop: '#b3601c' };
 function drawMap() {
   const c = mapCtx, W = 356, s = 0.9; // px per metre (retina 2x of 178)
   c.setTransform(1, 0, 0, 1, 0, 0);
@@ -1342,9 +1439,12 @@ function updateHUD(dt) {
   let prompt = '';
   const tbl = nearestTable();
   if (tbl) prompt = `<kbd>F</kbd> ${tbl.name} – ansehen & kaufen`;
+  else if (st.pickT) prompt = `<kbd>F</kbd> ${st.pickT.pr.name} nehmen · ${fmtEur(st.pickT.pr.price)}`;
+  else if (st.tillT && st.basket.length) prompt = `<kbd>F</kbd> Bezahlen · ${fmtEur(basketTotal())}`;
+  else if (st.tillT) prompt = 'Kasse – nimm erst Waren aus den Regalen (F)';
   else if (ds < 16 && !inShop(me.x, me.z)) prompt = '🛒 Geh in den Laden – an den Tischen kaufst du VESC, Roller & Farben';
   else if (Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z) < 16 && !inShop2(me.x, me.z)) prompt = '🛵 Simson-Laden – hinein: Simson, MTX10, PZ-Lenker, Zigaretten';
-  else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < 3.4) prompt = '<kbd>F</kbd> Aufsteigen';
+  else if (walking && Math.hypot(scooter.x - walker.x, scooter.z - walker.z) < (scooter.model.mountR || 3.4)) prompt = scooter.model.car ? '<kbd>F</kbd> Einsteigen' : '<kbd>F</kbd> Aufsteigen';
   if (cache.prompt !== prompt) { cache.prompt = prompt; $('prompt').innerHTML = prompt; $('prompt').classList.toggle('hidden', !prompt); }
   const ds2 = Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z), fmtD = (d) => (d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m');
   const shopLine = st.track ? '' : `<br>🛒 VESC-Shop: ${fmtD(ds)} · 🛵 Simson: ${fmtD(ds2)}`;
@@ -1530,6 +1630,7 @@ function tick(dt, now, render = true) {
     if (ems.active) traffic.extra.push({ x: ems.x, z: ems.z });
     const cars = st.track ? [] : traffic.update(dt2, me, sig);
     const pl = st.track ? [] : peds.update(dt2, me, sig, now);
+    if (!st.track) { shopActors.length = 0; shopActors.push(me); for (const d of pl) shopActors.push(d); shops.update(dt2, me.x, me.z, shopActors); updateStore(dt2); }
     dynAll.length = 0;
     for (const c of cars) dynAll.push(c);
     ems.update(dt2, traffic);
@@ -1676,7 +1777,7 @@ function tick(dt, now, render = true) {
   if (active || !st.started) updateCamera(dt, false);
   else updateCamera(dt, false);
 
-  audio.update({ moped: !!scooter.model.moped && st.mode === 'ride', v: st.mode === 'walk' ? 0 : scooter.v, thr: scooter.thr, rain: st.rainAmt || 0, braking: scooter.braking, brakeAmt: Math.max(scooter.brk, scooter.space || 0), paused: !active, battEmpty: scooter.batt <= 0.2 });
+  audio.update({ moped: !!(scooter.model.moped || scooter.model.car) && st.mode === 'ride', v: st.mode === 'walk' ? 0 : scooter.v, thr: scooter.thr, rain: st.rainAmt || 0, braking: scooter.braking, brakeAmt: Math.max(scooter.brk, scooter.space || 0), paused: !active, battEmpty: scooter.batt <= 0.2 });
 
   if (st.crashT > 0) { st.crashT -= dt; if (st.crashT <= 0) $('crash').style.opacity = 0; }
   if (active) { updateHUD(dt); updateBubbles(); }
@@ -1748,4 +1849,4 @@ async function boot() {
 boot();
 
 // debugging / testing hook
-window.__game = { carDmg, toggleGun, resolveShot, tracers, blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };
+window.__game = { shops, payBasket, interactF, deliverCar, LAYOUT, carDmg, toggleGun, resolveShot, tracers, blockType, PLAY, blood, ems, smoke, toggleSmoke, buyUpgrade, toggleKnife, resolvePunch, setModel, enterTrack, leaveTrack, trk, trackAt, trackProject, setPolice, updatePolice, net, walker, me, dismount, mount, interact, buyDT3, buySonic, buyModel, buyPaint, openShop, closeShop, nearestTable, SHOP_TABLES, inShop, inShop2, SHOP2, SHOP2_TABLES, toggleOneHand, setWbar, switchModel, mouse, traffic, peds, tick, scene, camera, renderer, scooter, world, sky, cfg, st, M, setHours: (h) => { cfg.hours = h; cfg.flow = false; }, teleport: (x, z, h) => { scooter.reset(x, z, h); camYaw = h; }, start: () => { st.started = true; setPaused(false); }, toggleCam, setPaused, applyQuality, keys };

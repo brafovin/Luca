@@ -381,6 +381,42 @@ function shopSign2Tex() {
   return c;
 }
 
+/** generic lit shop sign: dark panel, coloured frame, two-colour title and a subtitle */
+function labelSignTex(o) {
+  const c = cv(1024, 256), x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, o.bg0); g.addColorStop(1, o.bg1);
+  x.fillStyle = g; x.fillRect(0, 0, 1024, 256);
+  x.strokeStyle = o.frame; x.lineWidth = 10; x.strokeRect(12, 12, 1000, 232);
+  x.textBaseline = 'alphabetic'; x.textAlign = 'center';
+  x.font = `900 ${o.size || 120}px Arial Black, Arial, sans-serif`;
+  const w1 = x.measureText(o.t1).width, w2 = o.t2 ? x.measureText(' ' + o.t2).width : 0;
+  const x0 = 512 - (w1 + w2) / 2;
+  x.textAlign = 'left';
+  x.fillStyle = o.c1; x.fillText(o.t1, x0, 150);
+  if (o.t2) { x.fillStyle = o.c2; x.fillText(' ' + o.t2, x0 + w1, 150); }
+  x.textAlign = 'center'; x.font = '600 40px Arial, sans-serif'; x.fillStyle = o.sub;
+  x.fillText(o.subtitle, 512, 215);
+  if (o.deco) o.deco(x);
+  return c;
+}
+/** tall price pylon of the filling station */
+function fuelPylonTex() {
+  const c = cv(256, 512), x = c.getContext('2d');
+  x.fillStyle = '#0f1115'; x.fillRect(0, 0, 256, 512);
+  x.fillStyle = '#e0231c'; x.fillRect(0, 0, 256, 120);
+  x.fillStyle = '#ffffff'; x.font = '900 52px Arial Black, Arial'; x.textAlign = 'center'; x.fillText('STAR', 128, 62);
+  x.font = '800 36px Arial'; x.fillText('TANKEN', 128, 104);
+  const rows = [['Super E10', '1,89'], ['Super E5', '1,99'], ['Diesel', '1,79']];
+  rows.forEach(([n, pr], i) => {
+    const y = 130 + i * 126;
+    x.fillStyle = '#1c2026'; x.fillRect(10, y, 236, 114);
+    x.fillStyle = '#9fb4c4'; x.font = '700 30px Arial'; x.fillText(n, 128, y + 34);
+    x.fillStyle = '#ffd23a'; x.font = '900 66px Arial Black, Arial'; x.fillText(pr + '9', 128, y + 98);
+  });
+  return c;
+}
+
 export function makeTextures(renderer) {
   const rnd = mulberry32(1337);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -399,6 +435,10 @@ export function makeTextures(renderer) {
   T.beam.wrapT = THREE.ClampToEdgeWrapping;
   T.shopSign = mk(shopSignTex(), { aniso, repeat: false });
   T.shopSign2 = mk(shopSign2Tex(), { aniso, repeat: false });
+  T.shopSign3 = mk(labelSignTex({ bg0: '#0e2a18', bg1: '#071a0f', frame: '#2fcf5a', t1: 'SUPER', t2: 'MARKT', c1: '#ffffff', c2: '#ffd23a', sub: '#a9f0bf', subtitle: 'Frisch · Günstig · Alles unter einem Dach' }), { aniso, repeat: false });
+  T.shopSign4 = mk(labelSignTex({ bg0: '#3a0b0b', bg1: '#220606', frame: '#ffd23a', t1: 'STAR', t2: 'TANKSTELLE', c1: '#ffffff', c2: '#ffd23a', size: 104, sub: '#ffc9c9', subtitle: 'Super · Diesel · Shop · 24 h' }), { aniso, repeat: false });
+  T.shopSign5 = mk(labelSignTex({ bg0: '#101a2e', bg1: '#080e1a', frame: '#9fb4c4', t1: 'AUTO', t2: 'HAUS', c1: '#ffffff', c2: '#35e6ff', sub: '#b8d8ff', subtitle: 'Neuwagen · Sportwagen · Probefahrt' }), { aniso, repeat: false });
+  T.fuelPylon = mk(fuelPylonTex(), { aniso, repeat: false });
   T.signs = mk(signAtlas(), { aniso, repeat: false });
   T.poster = mk(posterAtlas(rnd), { aniso });
   T.facade = {};
