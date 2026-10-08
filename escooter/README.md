@@ -69,7 +69,15 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Boxen 🥊
+
+* Zu Fuß (`F` zum Absteigen): **`E` oder `J` halten = Schläge** (abwechselnd links/rechts, Kampfhaltung mit Deckung, in Ego-Sicht sieht man die roten Handschuhe).
+  Fußgänger, Oma und Opa in Reichweite (~1,4 m, vor dir) nehmen Schaden, taumeln, rufen „Aua!“. Nach etwa 5–7 Treffern ist die Person **K.O. und liegt ~12 s am Boden**
+  (−120 Punkte), steht dann wütend wieder auf. Boxen macht Senioren schnell sauer (sie verfolgen dich wieder).
+
 ## Autos & Menschen mit Gesichtern
+
+* Realistischere Autos: Karosserie mit abfallender Motorhaube/Heck, Kühlergrill, Stoßfänger, Nebelscheinwerfer, Außenspiegel, Auspuff, Räder mit Reifen, Felgen, Speichen, Bremsscheibe.
 
 * Autos sind innen **hohl mit Glasscheiben**: Armaturenbrett, Sitze (Vorder-/Rückbank), Lenkrad, Mittelkonsole, Innenspiegel. Busse haben Fahrerkabine, Sitzreihen und Haltestangen.
 * **Fahrende** Autos, Busse und Polizeiwagen haben **Fahrer (und teils Beifahrer/Fahrgäste)** mit Gesicht (Augen, Brauen, Nase, Mund, Ohren, Haare, manche mit Brille/Bart), beide Hände am Lenkrad.

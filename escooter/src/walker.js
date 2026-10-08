@@ -85,7 +85,7 @@ export class WalkerModel {
     this.phase = 0;
   }
   /** pose: phase (rad), amp 0..1, run (bool) */
-  pose(phase, amp, run, lean = 0, wave = 0) {
+  pose(phase, amp, run, lean = 0, wave = 0, box = null) {
     const sw = Math.sin(phase) * (run ? 0.95 : 0.6) * amp;
     this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
     this.arms[0].rotation.x = -sw * (run ? 1.1 : 0.8); this.arms[1].rotation.x = sw * (run ? 1.1 : 0.8);
@@ -94,6 +94,20 @@ export class WalkerModel {
     this.torso.position.y = 0.9 + Math.abs(Math.cos(phase)) * 0.025 * amp;
     this.head.rotation.x = -0.05;
     if (wave > 0) { this.arms[1].rotation.x = -2.6 + Math.sin(phase * 3) * 0.3 * wave; }
+    if (box) { // boxing stance: guard up, bobbing, twist into the punch
+      const g = box.guard, bob = Math.sin(box.t * 7) * 0.025 * g;
+      for (const [i, sx] of [[0, 1], [1, -1]]) {
+        const p = box.side === i ? box.p : 0; // 0..1..0 extension of the punching arm
+        this.arms[i].rotation.x = -1.2 * g - 0.35 * (1 - g) * 0 - 1.1 * p + (1 - g) * this.arms[i].rotation.x;
+        this.arms[i].rotation.z = sx * (0.35 * g * (1 - p));
+        this.arms[i].rotation.y = -sx * 0.5 * g * (1 - p) + sx * 0.15 * p;
+      }
+      this.torso.rotation.x = 0.18 * g + lean + (this.torso.rotation.x) * (1 - g);
+      this.torso.rotation.y = (box.side === 0 ? -1 : 1) * 0.5 * box.p * g;
+      this.torso.position.y = 0.9 - 0.03 * g + bob;
+      this.legs[0].rotation.x = 0.35 * g + (1 - g) * this.legs[0].rotation.x; this.legs[1].rotation.x = -0.3 * g + (1 - g) * this.legs[1].rotation.x;
+      this.head.rotation.x = -0.18 * g;
+    } else this.torso.rotation.y = 0;
   }
 }
 
@@ -104,10 +118,20 @@ export class Walker {
     this.model.group.visible = false;
     scene.add(this.model.group);
     this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
+    this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
   }
   place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
   update(dt, inp, col, dyn) {
     if (this.stun > 0) { this.stun -= dt; inp = {}; }
+    // ---- boxing
+    this.boxT += dt;
+    if (this.punchCool > 0) this.punchCool -= dt;
+    if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide ^= 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
+    if (this.punchT < 1) {
+      this.punchT = Math.min(1, this.punchT + dt / 0.3);
+      if (!this.punched && this.punchT >= 0.4) { this.punched = true; this.punchEvent = { x: this.x, z: this.z, yaw: this.yaw, side: this.punchSide }; }
+    }
+    if (this.guardT > 0) this.guardT -= dt;
     // turning (arrow keys / mouse handled outside via yaw)
     this.yaw = wrapAngle(this.yaw + ((inp.turnL ? 1 : 0) - (inp.turnR ? 1 : 0)) * 2.1 * dt + (inp.yawDelta || 0));
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
@@ -137,7 +161,10 @@ export class Walker {
     g.position.set(this.x, this.y, this.z);
     g.rotation.y = this.yaw;
     const amp = clamp(this.speed / 1.6, 0, 1);
-    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0);
+    const gd = Math.min(1, this.guardT * 3);
+    const ext = this.punchT < 1 ? Math.sin(Math.PI * Math.min(1, this.punchT * 1.1)) : 0;
+    this.punchExt = ext; this.guardAmt = gd;
+    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null);
   }
   setVisible(v) { this.model.group.visible = v; }
 }

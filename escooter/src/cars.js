@@ -3,7 +3,24 @@ import { limb, addSeated, SKINS } from './people.js';
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export const CARCOL = ['#c9ccd1', '#c9ccd1', '#1b1d20', '#1b1d20', '#ececec', '#ececec', '#5a5f66', '#1f3a63', '#8a1c1c', '#2e4a3a', '#d8d2c4', '#6e1f2a', '#33507a'];
-let wheelGeo = null;
+let wheelGeo = null, rimGeo = null, spokeGeo = null, hubGeo = null, discGeo = null;
+function makeWheelParts() {
+  wheelGeo = new THREE.CylinderGeometry(0.335, 0.335, 0.22, 18); wheelGeo.rotateZ(Math.PI / 2);                // tyre
+  rimGeo = new THREE.CylinderGeometry(0.215, 0.215, 0.232, 16); rimGeo.rotateZ(Math.PI / 2);                  // rim barrel
+  spokeGeo = new THREE.BoxGeometry(0.236, 0.05, 0.19); spokeGeo.translate(0, 0.1, 0);                          // one spoke (radial, along y)
+  hubGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.245, 8); hubGeo.rotateZ(Math.PI / 2);
+  discGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.02, 14); discGeo.rotateZ(Math.PI / 2);                   // brake disc behind the spokes
+}
+function addWheel(G, wx, wy, wz, sx) {
+  const m = new THREE.Matrix4();
+  G.geo(wheelGeo, m.makeTranslation(wx, wy, wz), '#111213');
+  G.geo(rimGeo, m.makeTranslation(wx + sx * 0.004, wy, wz), '#aeb2b8');
+  G.geo(discGeo, m.makeTranslation(wx - sx * 0.03, wy, wz), '#5a5d62');
+  for (let i = 0; i < 5; i++) { const r = new THREE.Matrix4().makeRotationX((i / 5) * Math.PI * 2); r.setPosition(wx + sx * 0.006, wy, wz); G.geo(spokeGeo, r, '#2c2d31'); }
+  G.geo(hubGeo, m.makeTranslation(wx + sx * 0.006, wy, wz), '#c9ccd1');
+  G.box(wx + sx * 0.12, wy + 0.19, wz + 0.1, 0.02, 0.04, 0.012, '#d8d8d8'); // tyre lettering/valve
+}
+const sxOff = (v, W) => v * (W > 1.9 ? 1 : 0.9), yMir = (t) => (t >= 0.82 ? 1.14 : 1.02);
 const wheelTorus = new THREE.TorusGeometry(0.2, 0.025, 6, 14);
 
 /**
@@ -15,7 +32,7 @@ export function addCar(S, rnd, opts = {}) {
   const lightB = opts.lights || 'generic';
   const PA = S.get('paint'), GL = S.get('cglass'), G = S.get('generic');
   const people = !!opts.people;
-  if (!wheelGeo) { wheelGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.22, 8); wheelGeo.rotateZ(Math.PI / 2); }
+  if (!wheelGeo) makeWheelParts();
   const wmat = new THREE.Matrix4();
 
   if (type === 'bus') {
@@ -72,11 +89,32 @@ export function addCar(S, rnd, opts = {}) {
   const hw = W / 2;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const wz = sz * L * 0.31, wx = sx * (hw - 0.13);
-    G.geo(wheelGeo, wmat.makeTranslation(wx, 0.33, wz), '#1a1b1d');
-    G.box(wx + sx * 0.115, 0.33, wz, 0.02, 0.36, 0.36, '#9a9da1');
+    addWheel(G, wx, 0.335, wz, sx);
   }
   const lowH = 0.62;
-  PA.box(0, 0.3 + lowH / 2 + 0.06, 0, W, lowH, L, col);
+  const hoodY = type >= 0.82 ? 0.9 : 0.97, noseY = type >= 0.82 ? 0.78 : 0.84;
+  const body = type >= 0.82
+    ? [[-L / 2, 0.36], [-L / 2, 0.9], [-L * 0.3, 0.97], [L * 0.3, 0.97], [L / 2 - 0.1, 0.8], [L / 2, 0.62], [L / 2, 0.42], [L / 2 - 0.2, 0.34]]
+    : [[-L / 2, 0.36], [-L / 2, 0.86], [-L * 0.36, 0.97], [L * 0.26, 0.99], [L / 2 - 0.08, 0.82], [L / 2, 0.6], [L / 2, 0.42], [L / 2 - 0.2, 0.34]];
+  PA.extrude(body, (p, q, t) => [t, q, p], -hw, hw, col);
+  for (const sx of [-1, 1]) { // shoulder crease / sill trim
+    G.box(sx * (hw + 0.004), 0.72, 0, 0.012, 0.025, L * 0.8, '#00000040'.slice(0, 7));
+    PA.box(sx * (hw - 0.02), 0.74, 0, 0.05, 0.05, L * 0.74, col);
+  }
+  G.box(0, 0.35, 0, W + 0.02, 0.1, L * 0.62, '#16171a'); // plastic sill
+  // front: grille, bumper, headlights, fog lamps; rear: bumper, exhaust
+  G.box(0, 0.7, L / 2 + 0.002, 0.74, 0.17, 0.03, '#0d0e10');
+  for (let i = 0; i < 4; i++) G.box(0, 0.65 + i * 0.04, L / 2 + 0.018, 0.7, 0.012, 0.012, '#6a6d72');
+  G.box(0, 0.48, L / 2 + 0.01, W - 0.04, 0.2, 0.2, '#1c1d20'); // front bumper
+  G.box(0, 0.36, L / 2 + 0.05, 0.8, 0.07, 0.06, '#111214'); // splitter
+  for (const sx of [-1, 1]) G.box(sx * (hw - 0.3), 0.46, L / 2 + 0.115, 0.16, 0.06, 0.02, '#e8e4d0'); // fog lamps
+  G.box(0, 0.52, -L / 2 - 0.01, W - 0.04, 0.22, 0.2, '#1c1d20'); // rear bumper
+  G.cyl(sxOff(0.52, W), 0.37, -L / 2 - 0.08, 0.035, 0.09, '#b9bcc0', 8, false);
+  for (const sx of [-1, 1]) { // wing mirrors
+    G.box(sx * (hw + 0.1), yMir(type), L * 0.16, 0.14, 0.09, 0.09, '#101113');
+    PA.box(sx * (hw + 0.03), yMir(type) - 0.02, L * 0.16, 0.1, 0.03, 0.07, col);
+    G.box(sx * (hw + 0.17), yMir(type), L * 0.16 + 0.002, 0.008, 0.07, 0.07, '#8fa4b4');
+  }
   G.box(0, 0.38, L / 2 - 0.12, W - 0.1, 0.22, 0.28, '#222427');
   G.box(0, 0.38, -L / 2 + 0.12, W - 0.1, 0.22, 0.28, '#222427');
   const yb = 0.3 + lowH + 0.06, yt = H - 0.04;

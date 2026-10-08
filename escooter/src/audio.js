@@ -66,6 +66,14 @@ export class GameAudio {
     this.wind.g.gain.setTargetAtTime(s.paused ? 0 : Math.pow(Math.min(sp / 17, 1), 2) * 0.09, t, 0.1);
     this.squeal.g.gain.setTargetAtTime(s.paused ? 0 : (s.braking && sp > 4 ? Math.min((sp - 4) / 8, 1) * 0.045 * Math.min(1, (s.brakeAmt || 0)) : 0), t, 0.05);
   }
+  whoosh() {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(2600, t + 0.14);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t); n.stop(t + 0.2);
+  }
   thud(power) {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
