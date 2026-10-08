@@ -248,7 +248,8 @@ window.addEventListener('keydown', (e) => {
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
     case 'KeyH': setWbar(!cfg.wbar); break;
     case 'KeyN': toggleKnife(); break;
-    case 'KeyZ': toggleSmoke(); break;
+    case 'KeyZ': smokeKey(); break;
+    case 'KeyY': putOut(); break;
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
@@ -841,13 +842,41 @@ function buyUpgrade(id) {
   toast(id === 'mtx' ? '🔧 MTX10 eingebaut' : '🔧 PZ-Lenker montiert', id === 'mtx' ? 'Mopeds jetzt bis 150 km/h' : 'mehr Grip in Kurven', 2600);
   renderShop();
 }
-function toggleSmoke() {
-  if (st.smokeT > 0) { st.smokeT = 0; applySmoke(); toast('Zigarette ausgedrückt', '', 1100); return; }
-  if (st.cigs <= 0) { toast('Keine Zigaretten mehr', 'Am Kiosk im Simson-Laden gibt es Nachschub (8 €)', 2200); return; }
-  st.cigs--; store.set('cigs', st.cigs); st.smokeT = 45; st.puffT = 2;
-  applySmoke(); toast('🚬 Zigarette an', `noch ${st.cigs} · Z = ausdrücken`, 1600);
+/* ---- cigarette: Z = light it / take a drag, Y = put it out */
+const cigFP = new THREE.Group(); // visible in first person (child of the camera)
+const cigFPEmber = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false });
+const cigFPTip = new THREE.Object3D();
+{
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.16), new THREE.MeshStandardMaterial({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = -0.08;
+  const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0172, 0.0172, 0.05), new THREE.MeshStandardMaterial({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0;
+  const ember = new THREE.Mesh(new THREE.BoxGeometry(0.0155, 0.0155, 0.012), cigFPEmber); ember.position.z = -0.166;
+  cigFPTip.position.z = -0.175;
+  cigFP.add(body, filt, ember, cigFPTip);
+  cigFP.visible = false; camera.add(cigFP);
+  for (const m of cigFP.children) m.renderOrder = 5;
 }
-function applySmoke() { const on = st.smokeT > 0; scooter.setSmoking(on); walker.model.cig.visible = on && st.mode === 'walk' && !st.fp; }
+function smokeKey() {
+  if (st.smokeT > 0) {
+    if (st.dragT >= 0) return; // already drawing
+    st.dragT = 0; st.dragPuff = 0;
+    return;
+  }
+  if (st.cigs <= 0) { toast('Keine Zigaretten mehr', 'Am Kiosk im Simson-Laden gibt es Nachschub (8 €)', 2200); return; }
+  st.cigs--; store.set('cigs', st.cigs); st.smokeT = 60; st.puffT = 3; st.dragT = -1;
+  applySmoke(); toast('🚬 Zigarette an', `noch ${st.cigs} · Z = ziehen · Y = ausdrücken`, 2200);
+}
+const toggleSmoke = smokeKey;
+function putOut() {
+  if (st.smokeT <= 0) return;
+  st.smokeT = 0; st.dragT = -1; applySmoke(); toast('Zigarette ausgedrückt', '', 1100);
+}
+function applySmoke() {
+  const on = st.smokeT > 0;
+  scooter.setSmoking(on);
+  walker.model.cig.visible = on && st.mode === 'walk';
+  if (!on) { scooter.dragAmt = 0; walker.model.dragAmt = 0; cigFP.visible = false; }
+}
+const _fw = new THREE.Vector3();
 function updateSmoke(dt) {
   const active = st.running && !st.paused;
   if (active && scooter.model.moped && st.mode === 'ride') {
@@ -861,17 +890,49 @@ function updateSmoke(dt) {
     }
   }
   if (st.smokeT > 0 && active) {
+    const walking = st.mode === 'walk', fp = st.fp && !st.dbgCam;
     st.smokeT -= dt;
-    const tipObj = st.mode === 'walk' ? walker.model.cigTip : scooter.cigTip;
-    tipObj.getWorldPosition(_sp);
-    st.cigAcc = (st.cigAcc || 0) + 5 * dt;
-    while (st.cigAcc >= 1) { st.cigAcc--; smoke.emit(_sp.x, _sp.y, _sp.z, 0, 0.12, 0, 'cig'); }
+    // --- drag animation: inhale (0..0.8 s, ember glows) -> hold (..1.3) -> exhale (..3.2)
+    let amt = 0, glow = 0;
+    if (st.dragT >= 0) {
+      st.dragT += dt;
+      const t = st.dragT;
+      amt = t < 0.8 ? t / 0.8 : t < 1.3 ? 1 : Math.max(0, 1 - (t - 1.3) / 0.5);
+      glow = t < 1.3 ? Math.min(1, t / 0.6) : Math.max(0, 1 - (t - 1.3) / 1.2);
+      if (t > 1.3) { // exhale a long cloud
+        st.exhAcc = (st.exhAcc || 0) + 26 * dt;
+        while (st.exhAcc >= 1) {
+          st.exhAcc--;
+          let dx, dy, dz;
+          if (fp) { camera.getWorldDirection(_fw); _sp.copy(camera.position).addScaledVector(_fw, 0.38); _sp.y -= 0.09; dx = _fw.x * 0.9; dy = 0.05; dz = _fw.z * 0.9; }
+          else { (walking ? walker.model.cigTip : scooter.cigTip).getWorldPosition(_sp); const yw = walking ? walker.yaw : scooter.heading; dx = Math.sin(yw) * 0.9; dy = 0.18; dz = Math.cos(yw) * 0.9; }
+          smoke.emit(_sp.x, _sp.y, _sp.z, dx, dy, dz, 'cig', 2);
+        }
+      }
+      if (t > 3.2) { st.dragT = -1; st.smokeT = Math.max(0, st.smokeT - 4); } // every drag burns the cigarette down a bit
+    }
+    scooter.dragAmt = amt; walker.model.dragAmt = amt;
+    const ec = _ec.setRGB(1, 0.42 + 0.5 * glow, 0.1 + 0.55 * glow);
+    scooter.cigEmber.color.copy(ec); walker.model.cigEmber.color.copy(ec); cigFPEmber.color.copy(ec);
+    scooter.cigEmberMesh.scale.setScalar(1 + glow * 0.5);
+    // --- first-person cigarette in the lower right of the view, lifts toward the face while drawing
+    cigFP.visible = fp;
+    if (fp) {
+      cigFP.position.set(0.05 - 0.04 * amt, -0.092 + 0.025 * amt, -0.21);
+      cigFP.rotation.set(0.0 + 0.08 * amt, 0.16 - 0.08 * amt, -0.04);
+      cigFP.getWorldPosition(_sp); cigFPTip.getWorldPosition(_sp);
+    } else (walking ? walker.model.cigTip : scooter.cigTip).getWorldPosition(_sp);
+    // idle wisp from the ember
+    st.cigAcc = (st.cigAcc || 0) + (4 + glow * 14) * dt;
+    while (st.cigAcc >= 1) { st.cigAcc--; smoke.emit(_sp.x, _sp.y, _sp.z, 0, 0.12 + glow * 0.1, 0, 'cig'); }
+    // casual puff now and then
     st.puffT -= dt;
-    if (st.puffT <= 0) { st.puffT = 5 + Math.random() * 3; const yaw = st.mode === 'walk' ? walker.yaw : scooter.heading; for (let i = 0; i < 7; i++) smoke.emit(_sp.x, _sp.y + 0.03, _sp.z, Math.sin(yaw) * 0.45, 0.2, Math.cos(yaw) * 0.45, 'cig'); }
-    if (st.smokeT <= 0) { applySmoke(); toast('Zigarette aufgeraucht', '', 1200); }
-  }
+    if (st.puffT <= 0 && st.dragT < 0) { st.puffT = 9 + Math.random() * 5; st.dragT = 0; }
+    if (st.smokeT <= 0) { st.dragT = -1; applySmoke(); toast('Zigarette aufgeraucht', '', 1200); }
+  } else if (st.smokeT <= 0 && cigFP.visible) cigFP.visible = false;
   smoke.update(dt);
 }
+const _ec = new THREE.Color();
 const _sp = new THREE.Vector3();
 function shopFlash(msg) { st.shopMsg = msg; renderShop(); clearTimeout(st.shopMsgT); st.shopMsgT = setTimeout(() => { st.shopMsg = ''; if (st.shopOpen) renderShop(); }, 2200); }
 function buyModelUI(id) { const v = scooter.v; scooter.v = 0; buyModel(id); scooter.v = v; renderShop(); }

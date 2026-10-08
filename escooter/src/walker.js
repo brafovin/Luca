@@ -42,8 +42,8 @@ export class WalkerModel {
     }
     // head
     this.head = new THREE.Group(); this.head.position.set(0, 0.64, 0.02); this.torso.add(this.head);
-    this.cig = new THREE.Group(); this.cig.position.set(0.028, 0.14, 0.108); this.cig.visible = false; this.head.add(this.cig);
-    { const b = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.075), mat(0xf2f0e8)); b.position.z = 0.04; this.cig.add(b); const e = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.011, 0.008), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false })); e.position.z = 0.081; this.cig.add(e); const tp = new THREE.Object3D(); tp.position.z = 0.085; this.cig.add(tp); this.cigTip = tp; }
+    this.cig = new THREE.Group(); this.cig.position.set(0.022, 0.118, 0.098); this.cig.rotation.x = 0.12; this.cig.visible = false; this.head.add(this.cig);
+    { const b = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.1), mat(0xf2f0e8)); b.position.z = 0.056; this.cig.add(b); const f = new THREE.Mesh(new THREE.BoxGeometry(0.0165, 0.0165, 0.032), mat(0xd8a860)); this.cig.add(f); this.cigEmber = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }); const e = new THREE.Mesh(new THREE.BoxGeometry(0.0145, 0.0145, 0.01), this.cigEmber); e.position.z = 0.111; this.cig.add(e); const tp = new THREE.Object3D(); tp.position.z = 0.118; this.cig.add(tp); this.cigTip = tp; }
     const bal = mat(0x0c0c0e, { roughness: 0.97 });
     const bh = mk(new THREE.SphereGeometry(0.1, 16, 12), bal, this.head); bh.position.y = 0.17; bh.scale.set(1, 1.1, 1.06);
     const neck = mk(new THREE.CylinderGeometry(0.05, 0.068, 0.13, 10), bal, this.head); neck.position.y = 0.04;
@@ -102,7 +102,7 @@ export class WalkerModel {
     if (run) { this.arms[0].rotation.z = -0.1; this.arms[1].rotation.z = 0.1; } else { this.arms[0].rotation.z = -0.05; this.arms[1].rotation.z = 0.05; }
     this.torso.rotation.x = (run ? 0.22 : 0.05) * amp + lean;
     this.torso.position.y = 0.9 + Math.abs(Math.cos(phase)) * 0.025 * amp;
-    this.head.rotation.x = -0.05;
+    this.head.rotation.x = -0.05 - (this.dragAmt || 0) * 0.28;
     if (wave > 0) { this.arms[1].rotation.x = -2.6 + Math.sin(phase * 3) * 0.3 * wave; }
     if (box) { // boxing stance: guard up, bobbing, twist into the punch
       const g = box.guard, bob = Math.sin(box.t * 7) * 0.025 * g;

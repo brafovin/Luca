@@ -23,8 +23,8 @@ export class Smoke {
     const cig = kind === 'cig';
     p.life = p.max = cig ? 1.8 + Math.random() * 1.4 : 0.9 + Math.random() * 0.8 + amount * 0.4;
     p.vx = vx + (Math.random() - 0.5) * (cig ? 0.15 : 0.5); p.vy = vy + (cig ? 0.25 : 0.2) * Math.random(); p.vz = vz + (Math.random() - 0.5) * (cig ? 0.15 : 0.5);
-    p.r0 = cig ? 0.035 : 0.12; p.r1 = cig ? 0.25 + Math.random() * 0.15 : 0.5 + amount * 0.5 + Math.random() * 0.25;
-    p.a = cig ? 0.5 : 0.42 + amount * 0.4;
+    p.r0 = cig ? 0.035 : 0.12; p.r1 = cig ? (0.25 + Math.random() * 0.15) * (amount > 1 ? 2.4 : 1) : 0.5 + amount * 0.5 + Math.random() * 0.25;
+    p.a = cig ? (amount > 1 ? 0.38 : 0.5) : 0.42 + amount * 0.4;
     p.s.material.color.setHex(cig ? 0xe4e6e8 : amount > 0.55 ? 0x8f949a : 0xaeb6bd);
     p.s.position.set(x, y, z); p.s.visible = true;
   }

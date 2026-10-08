@@ -196,12 +196,13 @@ export class Scooter {
     const chinPad = mk(new THREE.BoxGeometry(0.07, 0.012, 0.02), mJacketDark); chinPad.userData.pos = [0, -0.08, 0.08]; head.push(chinPad);
     const headG = new THREE.Group(); rider.add(headG); this.headG = headG;
     { // cigarette (shown while smoking)
-      const cg = new THREE.Group(); cg.position.set(0.028, -0.047, 0.108); cg.visible = false; headG.add(cg);
-      const body = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.075), std({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = 0.04; cg.add(body);
-      const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0125, 0.0125, 0.024), std({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0; cg.add(filt);
-      const ember = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.011, 0.008), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false })); ember.position.z = 0.081; cg.add(ember);
-      const tip = new THREE.Object3D(); tip.position.z = 0.085; cg.add(tip);
-      this.cig = cg; this.cigTip = tip;
+      const cg = new THREE.Group(); cg.position.set(0.022, -0.052, 0.098); cg.rotation.x = 0.12; cg.visible = false; headG.add(cg);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.1), std({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = 0.056; cg.add(body);
+      const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0165, 0.0165, 0.032), std({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0; cg.add(filt);
+      const emMat = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false });
+      const ember = new THREE.Mesh(new THREE.BoxGeometry(0.0145, 0.0145, 0.01), emMat); ember.position.z = 0.111; cg.add(ember);
+      const tip = new THREE.Object3D(); tip.position.z = 0.118; cg.add(tip);
+      this.cig = cg; this.cigTip = tip; this.cigEmber = emMat; this.cigEmberMesh = ember;
     }
     for (const m of head) headG.add(m);
     headG.scale.setScalar(K);
@@ -392,7 +393,7 @@ export class Scooter {
     this.bodyRoll = damp(this.bodyRoll || 0, -this.lean * 0.18, 5, dt);
     this.torsoG.rotation.set(br + this.bodyPitch, this.bodyYaw, this.bodyRoll, 'YXZ');
     this.headYaw = damp(this.headYaw || 0, clamp(this.steerIn * 0.45 + this.lean * 0.5, -0.6, 0.6), 6, dt);
-    this.headG.rotation.set(-this.bodyPitch * 0.6 - br * 0.5, this.headYaw - this.bodyYaw, -this.bodyRoll * 0.6, 'YXZ');
+    this.headG.rotation.set(-this.bodyPitch * 0.6 - br * 0.5 - (this.dragAmt || 0) * 0.22, this.headYaw - this.bodyYaw, -this.bodyRoll * 0.6, 'YXZ');
     this.torsoG.updateMatrix();
     for (let i = 0; i < 2; i++) this.shoulder[i].copy(this.shoulder0[i]).sub(this.pivotP).applyMatrix4(this.torsoG.matrix);
     this.pelvis.position.set(0, this.hip[0].y - 0.02, this.hip[0].z);

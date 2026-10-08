@@ -74,7 +74,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * Zweiter, begehbarer Laden **einen Block westlich vom Start** (blaue Markierung auf Minimap/Leuchtfeuer, Schild „SIMSON S51“). Drei Tische (mit `F`):
   **Simson-Händler** – drei Mopeds: **S51** (800 €), **SR50** (950 €, orange) und **Schwalbe KR51** (1100 €, grün, mit Verkleidung); alle 50-cm³-Zweitakter, **~60 km/h**, sitzender Fahrer, Zweitakt-Sound, **Auspuff qualmt** (mehr bei Gas). **Kein VESC** (Moped!).
   **Tuning** – **MTX10-Motor** (600 €, passt auf alle Mopeds): großer Zylinder, roter Resonanzauspuff, **150 km/h**, brutale Beschleunigung, mehr Qualm; **PZ-Tuning-Lenker** (250 €): breiter Rennlenker mit Querstrebe, mehr Kurvengrip.
-  **Kiosk** – **Zigaretten** (20 Stück, 8 €): `Z` zündet eine an (Glut, Rauchwölkchen, ~45 s), nochmal `Z` drückt sie aus. Die Simson lässt sich auch beim VESC-Shop lackieren.
+  **Kiosk** – **Zigaretten** (20 Stück, 8 €): `Z` zündet eine an – sie steckt dann im Mund (auch in der **Ego-Perspektive** siehst du sie unten im Bild). Nochmal `Z` = **ziehen**: die Glut leuchtet auf, der Kopf lehnt sich zurück, dann bläst du eine Rauchwolke aus; ab und zu zieht dein Fahrer von selbst. `Y` drückt sie aus. Jede Zigarette hält ~60 s. Die Simson lässt sich auch beim VESC-Shop lackieren.
 
 ## Kinder, Spielplätze, Messer & Krankenwagen
 
