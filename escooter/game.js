@@ -31534,7 +31534,7 @@ void main() {
     car_mini: { id: "car_mini", name: "Stadtflitzer", type: 0.12, color: "#e8c020", price: 2500, kmh: 135, a: 4.6, knee: 12, aLat: 8.4, drag2: 55e-5, brake: 8.5, info: "Kleiner Flitzer \xB7 135 km/h" },
     car_sedan: { id: "car_sedan", name: "Limousine", type: 0.45, color: "#1f3a63", price: 5e3, kmh: 190, a: 6.2, knee: 17, aLat: 9.4, drag2: 42e-5, brake: 9.5, info: "Bequeme Reiselimousine \xB7 190 km/h" },
     car_suv: { id: "car_suv", name: "Gel\xE4ndewagen", type: 0.7, color: "#2e4a3a", price: 7500, kmh: 165, a: 5.6, knee: 14, aLat: 7.6, drag2: 5e-4, brake: 9, info: "Hoher SUV, solide \xB7 165 km/h" },
-    car_sport: { id: "car_sport", name: "Supersportwagen", type: 0.45, sport: true, color: "#c8141c", price: 12e3, kmh: 250, a: 11, knee: 26, aLat: 12, drag2: 32e-5, brake: 13, info: "Tiefer Renner mit Heckfl\xFCgel \xB7 250 km/h \xB7 qualmender Vierfach-Auspuff" }
+    car_sport: { id: "car_sport", name: "Supersportwagen", type: 0.45, sport: true, color: "#c8141c", price: 12e3, kmh: 600, a: 15, knee: 60, aLat: 28, drag2: 4e-5, brake: 22, info: "Tiefer Renner mit Heckfl\xFCgel \xB7 600 km/h \xB7 qualmender Vierfach-Auspuff" }
   };
   var CAR_IDS = Object.keys(CARS);
   var V32 = (x, y, z) => new Vector3(x, y, z);
@@ -33918,7 +33918,7 @@ void main() {
   var STAFF = {
     supermarket: { color: "#2fb04a", lines: ["Guten Tag!", "Willkommen im Supermarkt!", "Bitte alles auf das Band legen.", "Zahlen Sie bar?"] },
     gas: { color: "#c82020", lines: ["Willkommen an der Tankstelle!", "Welche S\xE4ule war es?", "Noch etwas dazu?"] },
-    dealer: { color: "#1a2230", lines: ["Willkommen im Autohaus!", "Interesse an einem Sportwagen?", "Probefahrt? Kaufen und losfahren!", "Der rote schafft 250 km/h!"] }
+    dealer: { color: "#1a2230", lines: ["Willkommen im Autohaus!", "Interesse an einem Sportwagen?", "Probefahrt? Kaufen und losfahren!", "Der rote schafft 600 km/h!"] }
   };
   var Shops = class {
     constructor(scene2, M2, peds2, audio2) {

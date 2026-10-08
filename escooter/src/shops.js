@@ -10,7 +10,7 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vect
 const STAFF = {
   supermarket: { color: '#2fb04a', lines: ['Guten Tag!', 'Willkommen im Supermarkt!', 'Bitte alles auf das Band legen.', 'Zahlen Sie bar?'] },
   gas: { color: '#c82020', lines: ['Willkommen an der Tankstelle!', 'Welche Säule war es?', 'Noch etwas dazu?'] },
-  dealer: { color: '#1a2230', lines: ['Willkommen im Autohaus!', 'Interesse an einem Sportwagen?', 'Probefahrt? Kaufen und losfahren!', 'Der rote schafft 250 km/h!'] },
+  dealer: { color: '#1a2230', lines: ['Willkommen im Autohaus!', 'Interesse an einem Sportwagen?', 'Probefahrt? Kaufen und losfahren!', 'Der rote schafft 600 km/h!'] },
 };
 
 /** runtime side of the walk-in stores: glass sliding doors, products on the shelves, tills, shop staff */

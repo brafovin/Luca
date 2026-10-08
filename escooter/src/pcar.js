@@ -9,7 +9,7 @@ export const CARS = {
   car_mini: { id: 'car_mini', name: 'Stadtflitzer', type: 0.12, color: '#e8c020', price: 2500, kmh: 135, a: 4.6, knee: 12, aLat: 8.4, drag2: 0.00055, brake: 8.5, info: 'Kleiner Flitzer · 135 km/h' },
   car_sedan: { id: 'car_sedan', name: 'Limousine', type: 0.45, color: '#1f3a63', price: 5000, kmh: 190, a: 6.2, knee: 17, aLat: 9.4, drag2: 0.00042, brake: 9.5, info: 'Bequeme Reiselimousine · 190 km/h' },
   car_suv: { id: 'car_suv', name: 'Geländewagen', type: 0.7, color: '#2e4a3a', price: 7500, kmh: 165, a: 5.6, knee: 14, aLat: 7.6, drag2: 0.0005, brake: 9.0, info: 'Hoher SUV, solide · 165 km/h' },
-  car_sport: { id: 'car_sport', name: 'Supersportwagen', type: 0.45, sport: true, color: '#c8141c', price: 12000, kmh: 250, a: 11, knee: 26, aLat: 12, drag2: 0.00032, brake: 13, info: 'Tiefer Renner mit Heckflügel · 250 km/h · qualmender Vierfach-Auspuff' },
+  car_sport: { id: 'car_sport', name: 'Supersportwagen', type: 0.45, sport: true, color: '#c8141c', price: 12000, kmh: 600, a: 15, knee: 60, aLat: 28, drag2: 0.00004, brake: 22, info: 'Tiefer Renner mit Heckflügel · 600 km/h · qualmender Vierfach-Auspuff' },
 };
 export const CAR_IDS = Object.keys(CARS);
 
