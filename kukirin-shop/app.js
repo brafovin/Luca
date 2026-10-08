@@ -1,13 +1,15 @@
 const FREE_SHIPPING_FROM = 99;
 const SHIPPING_FEE = 4.9;
-const CART_KEY = "kukirin-cart-v1";
+const MAX_QTY = 5;
+const CART_KEY = "kukirin-cart-v2";
 const ORDERS_KEY = "kukirin-orders-v1";
 
 const $ = (sel) => document.querySelector(sel);
 const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+const eur0 = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 let cart = loadJSON(CART_KEY, {});
-let state = { cat: "all", sort: "featured" };
+let state = { tag: "all", sort: "featured", q: "" };
 
 function loadJSON(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -16,75 +18,87 @@ function saveJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage nicht verfügbar */ }
 }
 
-// ---------- Produktbild (SVG-Platzhalter) ----------
-function scooterSVG(color, accessory = false) {
-  if (accessory) {
-    return `<svg viewBox="0 0 320 200" role="img" aria-hidden="true">
-      <circle cx="160" cy="100" r="62" fill="${color}" opacity=".18"/>
-      <rect x="112" y="64" width="96" height="72" rx="18" fill="none" stroke="${color}" stroke-width="8"/>
-      <circle cx="160" cy="100" r="12" fill="${color}"/>
-    </svg>`;
-  }
-  return `<svg viewBox="0 0 320 200" role="img" aria-hidden="true">
-    <ellipse cx="160" cy="182" rx="120" ry="8" fill="#000" opacity=".35"/>
-    <circle cx="68" cy="146" r="30" fill="#0c0e14" stroke="#3a4066" stroke-width="6"/>
-    <circle cx="68" cy="146" r="10" fill="${color}"/>
-    <circle cx="252" cy="146" r="30" fill="#0c0e14" stroke="#3a4066" stroke-width="6"/>
-    <circle cx="252" cy="146" r="10" fill="${color}"/>
-    <path d="M68 146 H236 L248 132 H92 Z" fill="#2a3050"/>
-    <rect x="86" y="122" width="150" height="14" rx="7" fill="${color}"/>
-    <path d="M238 128 L214 34" stroke="#cfd3e6" stroke-width="9" stroke-linecap="round"/>
-    <path d="M196 30 H238" stroke="#cfd3e6" stroke-width="9" stroke-linecap="round"/>
-    <circle cx="198" cy="30" r="6" fill="${color}"/>
-    <path d="M252 146 L240 130" stroke="#8d94b3" stroke-width="6" stroke-linecap="round"/>
-  </svg>`;
-}
-const imageFor = (p) => scooterSVG(p.color, p.cat === "zubehoer");
+const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
+const isAbe = (p) => p.tags.includes("abe");
 
 // ---------- Produktliste ----------
 function visibleProducts() {
-  let list = PRODUCTS.filter((p) => state.cat === "all" || p.cat === state.cat);
+  const q = state.q.trim().toLowerCase();
+  let list = PRODUCTS.filter((p) =>
+    (state.tag === "all" || p.tags.includes(state.tag)) &&
+    (!q || `${p.name} ${p.tagline}`.toLowerCase().includes(q)));
   const sorters = {
     "price-asc": (a, b) => a.price - b.price,
     "price-desc": (a, b) => b.price - a.price,
     name: (a, b) => a.name.localeCompare(b.name, "de"),
+    featured: (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0),
   };
-  if (sorters[state.sort]) list = [...list].sort(sorters[state.sort]);
-  return list;
+  return [...list].sort(sorters[state.sort]);
+}
+
+function metaChips(p) {
+  const c = p.cmp;
+  return [c.motor, c.speed, c.range].filter((v) => v && v !== "–").slice(0, 3)
+    .map((v) => `<span>${v}</span>`).join("");
 }
 
 function renderGrid() {
-  $("#grid").innerHTML = visibleProducts().map((p) => `
+  const list = visibleProducts();
+  $("#empty").hidden = list.length > 0;
+  $("#grid").innerHTML = list.map((p, i) => `
     <article class="card">
       <button class="card-img" data-open="${p.id}" aria-label="${p.name} ansehen">
-        ${p.badge ? `<span class="badge">${p.badge}</span>` : ""}
-        ${imageFor(p)}
+        ${p.badge ? `<span class="badge ${isAbe(p) ? "abe" : ""}">${p.badge}</span>` : ""}
+        <img src="${p.gallery[0]}" alt="${p.name}" width="450" height="450" ${i > 2 ? 'loading="lazy"' : ""} />
+        <img class="alt" src="${p.gallery[1]}" alt="" width="450" height="450" loading="lazy" />
       </button>
       <div class="card-body">
-        <div class="card-name" data-open="${p.id}">${p.name}</div>
+        <button class="card-name" data-open="${p.id}">${p.name}</button>
         <div class="card-tag">${p.tagline}</div>
+        <div class="meta">${metaChips(p)}</div>
         <div class="card-foot">
-          <div class="price">${eur.format(p.price)}${p.oldPrice ? `<s>${eur.format(p.oldPrice)}</s>` : ""}</div>
-          <button class="add-btn" data-add="${p.id}">In den Warenkorb</button>
+          <div class="price">${eur0.format(p.price)}</div>
+          <button class="add-btn" data-add="${p.id}">+ Hinzufügen</button>
         </div>
       </div>
     </article>`).join("");
 }
 
-// ---------- Warenkorb ----------
-const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
+function setTag(tag) {
+  state.tag = tag;
+  document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.tag === tag));
+  renderGrid();
+}
 
+// ---------- Vergleichstabelle ----------
+function renderCompare() {
+  const rows = [...PRODUCTS].sort((a, b) => a.price - b.price);
+  $("#cmpTable").innerHTML = `
+    <thead><tr>
+      <th>Modell</th><th>Preis</th><th>Motor</th><th>Akku</th><th>Speed</th><th>Reichweite</th><th>Reifen</th><th>Straße (ABE)</th>
+    </tr></thead>
+    <tbody>${rows.map((p) => `
+      <tr>
+        <td><button class="model" data-open="${p.id}"><img src="${p.gallery[0]}" alt="" width="52" height="52" loading="lazy" />${p.name.replace("Kukirin ", "")}</button></td>
+        <td><strong>${eur0.format(p.price)}</strong></td>
+        <td>${p.cmp.motor}</td><td>${p.cmp.akku}</td><td>${p.cmp.speed}</td><td>${p.cmp.range}</td><td>${p.cmp.tire}</td>
+        <td>${isAbe(p) ? '<span class="yes">✓ Ja</span>' : '<span class="no">Nur Privatgelände</span>'}</td>
+      </tr>`).join("")}
+    </tbody>`;
+}
+
+// ---------- Warenkorb ----------
 function addToCart(id, qty = 1) {
   if (!findProduct(id)) return;
-  cart[id] = Math.min((cart[id] || 0) + qty, 10);
+  cart[id] = Math.min((cart[id] || 0) + qty, MAX_QTY);
   updateCart();
   const c = $("#cartCount");
   c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump");
-  toast(`${findProduct(id).name} hinzugefügt`);
+  toast(`${findProduct(id).name} im Warenkorb`);
 }
 
 function changeQty(id, delta) {
-  cart[id] = Math.min((cart[id] || 0) + delta, 10);
+  cart[id] = Math.min((cart[id] || 0) + delta, MAX_QTY);
   if (cart[id] <= 0) delete cart[id];
   updateCart();
 }
@@ -96,8 +110,7 @@ function totals() {
 }
 
 function updateCart() {
-  // Unbekannte IDs (z. B. alter Katalog) aus dem Speicher entfernen
-  for (const id of Object.keys(cart)) if (!findProduct(id)) delete cart[id];
+  for (const id of Object.keys(cart)) if (!findProduct(id)) delete cart[id]; // veraltete Einträge
   saveJSON(CART_KEY, cart);
 
   const entries = Object.entries(cart);
@@ -109,7 +122,7 @@ function updateCart() {
     ? entries.map(([id, q]) => {
         const p = findProduct(id);
         return `<div class="line">
-          <div class="thumb">${imageFor(p)}</div>
+          <div class="thumb"><img src="${p.gallery[0]}" alt="" width="76" height="76" /></div>
           <div>
             <div class="line-name">${p.name}</div>
             <div class="qty">
@@ -124,14 +137,11 @@ function updateCart() {
           </div>
         </div>`;
       }).join("")
-    : `<p class="cart-empty">Dein Warenkorb ist leer.</p>`;
+    : `<div class="cart-empty"><p>Dein Warenkorb ist leer.</p><a class="btn btn-primary" href="#shop" data-close-cart>Scooter ansehen</a></div>`;
 
   $("#cartSubtotal").textContent = eur.format(t.subtotal);
   $("#cartShipping").textContent = entries.length ? (t.shipping ? eur.format(t.shipping) : "Gratis") : "–";
   $("#cartTotal").textContent = eur.format(t.total);
-  $("#shipHint").textContent = entries.length && t.shipping
-    ? `Noch ${eur.format(FREE_SHIPPING_FROM - t.subtotal)} bis zum Gratis-Versand.`
-    : "";
   $("#checkoutBtn").disabled = !entries.length;
 }
 
@@ -150,17 +160,29 @@ function openProduct(id) {
   dlg.innerHTML = `
     <button class="icon-btn pd-close" data-close aria-label="Schließen">✕</button>
     <div class="pd">
-      <div class="pd-img">${imageFor(p)}</div>
-      <div>
+      <div class="pd-gallery">
+        <div class="pd-main"><img id="pdMain" src="${p.gallery[0]}" alt="${p.name}" width="900" height="900" /></div>
+        <div class="pd-thumbs">${p.gallery.map((src, i) => `
+          <button class="${i === 0 ? "active" : ""}" data-thumb="${src}" aria-label="Bild ${i + 1}"><img src="${src}" alt="" width="62" height="62" loading="lazy" /></button>`).join("")}
+        </div>
+      </div>
+      <div class="pd-info">
         <h3>${p.name}</h3>
-        <div class="price">${eur.format(p.price)}${p.oldPrice ? `<s>${eur.format(p.oldPrice)}</s>` : ""}</div>
-        <p>${p.desc}</p>
+        <div class="pd-tag">${p.tagline}</div>
+        <div class="price">${eur.format(p.price)}</div>
+        <div class="small muted">Inkl. MwSt. · ${p.price >= FREE_SHIPPING_FROM ? "Versandkostenfrei" : "zzgl. Versand"}</div>
+        <div class="zone ${isAbe(p) ? "ok" : "warn"}" style="margin-top:14px">
+          ${isAbe(p) ? "✓ Mit ABE – für öffentliche Straßen geeignet (max. 20 km/h, Versicherungskennzeichen nötig)" : "⚠️ Keine deutsche ABE – nur für Privatgelände"}
+        </div>
+        <p class="pd-desc">${p.desc}</p>
+        <ul class="ticks">${p.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
         <table class="specs">${Object.entries(p.specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>
         <button class="btn btn-primary block" data-add="${p.id}" data-close-after>In den Warenkorb</button>
-        <p class="small" style="margin-top:10px">Inkl. MwSt. · Lieferzeit 1–3 Werktage</p>
+        <p class="pd-note">Herstellerangaben („bis zu“-Werte). Reichweite hängt von Gewicht, Gelände und Fahrweise ab.</p>
       </div>
     </div>`;
   dlg.showModal();
+  dlg.scrollTop = 0;
 }
 
 // ---------- Rechtstexte (Platzhalter) ----------
@@ -169,7 +191,7 @@ const LEGAL = {
   datenschutz: ["Datenschutzerklärung", "Hier gehört deine Datenschutzerklärung nach DSGVO hin (verantwortliche Stelle, Verarbeitungszwecke, Hosting, Zahlungsanbieter, Betroffenenrechte). Diese Demo speichert Warenkorb und Testbestellungen nur lokal im Browser."],
   agb: ["Allgemeine Geschäftsbedingungen", "Platzhalter: Vertragsschluss, Preise, Zahlung, Lieferung, Eigentumsvorbehalt, Gewährleistung. Bitte durch rechtssichere AGB ersetzen (z. B. Händlerbund, IT-Recht-Kanzlei)."],
   widerruf: ["Widerrufsbelehrung", "Platzhalter: Du hast das Recht, binnen 14 Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Muster-Widerrufsbelehrung und -formular bitte mit deinen Händlerdaten einfügen."],
-  versand: ["Versand & Zahlung", `Versand innerhalb Deutschlands: ${eur.format(SHIPPING_FEE)}, ab ${eur.format(FREE_SHIPPING_FROM)} Warenwert gratis. Lieferzeit 1–3 Werktage (Platzhalter). Zahlungsarten: Rechnung, PayPal, Kreditkarte, Vorkasse (Demo).`],
+  versand: ["Versand & Zahlung", `Versand innerhalb Deutschlands: ${eur.format(SHIPPING_FEE)}, ab ${eur.format(FREE_SHIPPING_FROM)} Warenwert gratis. Lieferzeit 1–3 Werktage Bearbeitung (Platzhalter). Zahlungsarten: Rechnung, PayPal, Kreditkarte, Vorkasse (Demo).`],
 };
 
 function openLegal(key) {
@@ -185,6 +207,9 @@ function openLegal(key) {
 function openCheckout() {
   if (!Object.keys(cart).length) return;
   setCartOpen(false);
+  const needsAck = Object.keys(cart).some((id) => !isAbe(findProduct(id)));
+  $("#privateGroundCheck").hidden = !needsAck;
+  $("#privateGround").required = needsAck;
   $("#checkoutTotal").textContent = eur.format(totals().total);
   $("#checkoutDialog").showModal();
 }
@@ -224,27 +249,33 @@ function toast(msg) {
 
 // ---------- Events ----------
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("button, [data-open]");
+  const t = e.target.closest("button, [data-open], [data-close-cart]");
   if (!t) return;
   const d = t.dataset;
 
   if (d.add) {
     addToCart(d.add);
     if ("closeAfter" in d) t.closest("dialog").close();
-  } else if (d.open) openProduct(d.open);
-  else if (d.inc) changeQty(d.inc, 1);
+  } else if (d.open) {
+    const dlg = t.closest("dialog");
+    if (dlg) dlg.close();
+    openProduct(d.open);
+  } else if (d.thumb) {
+    $("#pdMain").src = d.thumb;
+    t.parentElement.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === t));
+  } else if (d.inc) changeQty(d.inc, 1);
   else if (d.dec) changeQty(d.dec, -1);
   else if (d.remove) { delete cart[d.remove]; updateCart(); }
   else if (d.legal) openLegal(d.legal);
+  else if (d.tag) setTag(d.tag);
+  else if (d.pick) {
+    setTag(d.pick);
+    $("#shop").scrollIntoView({ behavior: "smooth" });
+  } else if ("closeCart" in d) setCartOpen(false);
   else if ("close" in d) t.closest("dialog").close();
-  else if (d.cat) {
-    state.cat = d.cat;
-    document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === t));
-    renderGrid();
-  }
 });
 
-// Klick auf den Dialog-Hintergrund schließt ihn
+// Hero-Tag ist ein <button data-open>, Tabellen-/Karten-Namen ebenso
 document.querySelectorAll("dialog").forEach((dlg) =>
   dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); }));
 
@@ -254,10 +285,21 @@ $("#cartOverlay").addEventListener("click", () => setCartOpen(false));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") setCartOpen(false); });
 $("#checkoutBtn").addEventListener("click", openCheckout);
 $("#sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; renderGrid(); });
+$("#searchInput").addEventListener("input", (e) => { state.q = e.target.value; renderGrid(); });
+$("#resetFilters").addEventListener("click", () => {
+  state.q = ""; $("#searchInput").value = ""; setTag("all");
+});
 $("#checkoutForm").addEventListener("submit", (e) => { e.preventDefault(); submitOrder(e.target); });
 
+// Sticky-CTA (mobil) nur zwischen Hero und Shop zeigen
+if ("IntersectionObserver" in window) {
+  const watch = (sel, cls) => new IntersectionObserver(([e]) => document.body.classList.toggle(cls, e.isIntersecting), { threshold: 0.05 }).observe($(sel));
+  watch("#shop", "in-shop");
+  watch(".hero", "in-hero");
+}
+
 // ---------- Init ----------
-$("#heroVisual").innerHTML = scooterSVG("#ff6b35");
 $("#year").textContent = new Date().getFullYear();
 renderGrid();
+renderCompare();
 updateCart();

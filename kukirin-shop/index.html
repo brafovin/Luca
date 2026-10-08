@@ -3,61 +3,89 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kukirin Shop – E-Scooter & Zubehör</title>
-  <meta name="description" content="Kukirin E-Scooter und Zubehör online kaufen – schnelle Lieferung, 14 Tage Widerruf, Support auf Deutsch." />
+  <title>Kukirin Shop – E-Scooter kaufen</title>
+  <meta name="description" content="Kukirin E-Scooter online kaufen: G2 Pro ABE mit Straßenzulassung, G3 Pro, G4 und mehr. Schneller Versand, 14 Tage Widerruf, Support auf Deutsch." />
+  <meta name="theme-color" content="#0b0b0d" />
+  <link rel="preload" as="image" href="img/g3-pro-3.jpg" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <div class="topbar">⚡ Gratis Versand ab 99 € · 14 Tage Widerruf · Support auf Deutsch</div>
+  <div class="topbar">
+    <span>🚚 Versandkostenfrei ab 99 €</span>
+    <span>↩️ 14 Tage Widerruf</span>
+    <span>🛠️ Support auf Deutsch</span>
+  </div>
 
   <header class="site-header">
     <div class="wrap header-inner">
       <a class="logo" href="#top" aria-label="Kukirin Shop Startseite">KUKIRIN<span>SHOP</span></a>
       <nav class="nav" aria-label="Hauptnavigation">
-        <a href="#shop">Produkte</a>
-        <a href="#why">Warum Kukirin</a>
+        <a href="#shop">Scooter</a>
+        <a href="#finder">Berater</a>
+        <a href="#vergleich">Vergleich</a>
+        <a href="#recht">Zulassung</a>
         <a href="#faq">FAQ</a>
       </nav>
       <button class="cart-btn" id="cartToggle" aria-label="Warenkorb öffnen">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 7H6"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 7H6"/></svg>
         <span class="cart-count" id="cartCount">0</span>
       </button>
     </div>
   </header>
 
   <main id="top">
+    <!-- HERO -->
     <section class="hero">
+      <div class="hero-bg" aria-hidden="true">KUKIRIN</div>
       <div class="wrap hero-inner">
         <div class="hero-text">
-          <p class="eyebrow">Dein Shop für Kukirin E-Scooter</p>
-          <h1>Fahr schneller<br />ans Ziel. <em>Elektrisch.</em></h1>
-          <p class="lead">Leistungsstarke E-Scooter von Kukirin – für den täglichen Weg zur Arbeit genauso wie für Touren am Wochenende.</p>
+          <p class="eyebrow"><span class="dot"></span> Neu im Shop: G4 · G3 Pro · G2 Master</p>
+          <h1><span>Mehr Kraft.</span><span>Mehr Reichweite.</span><span><em>Mehr Spaß.</em></span></h1>
+          <p class="lead">E-Scooter von Kukirin – vom legalen Pendler mit ABE bis zum Dual-Motor-Kraftpaket mit 80 km Reichweite.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary" href="#shop">Zu den Scootern</a>
-            <a class="btn btn-ghost" href="#why">Mehr erfahren</a>
+            <a class="btn btn-primary" href="#shop">Alle Scooter ansehen</a>
+            <a class="btn btn-ghost" href="#finder">Welcher passt zu mir?</a>
           </div>
+          <ul class="hero-stats">
+            <li><strong>bis 80 km</strong><span>Reichweite</span></li>
+            <li><strong>bis 70 km/h</strong><span>Topspeed*</span></li>
+            <li><strong>ab 249 €</strong><span>Einstiegspreis</span></li>
+          </ul>
         </div>
-        <div class="hero-visual" id="heroVisual" aria-hidden="true"></div>
+        <div class="hero-visual">
+          <img src="img/g3-pro-3.jpg" alt="Kukirin G3 Pro E-Scooter" width="900" height="900" fetchpriority="high" />
+          <button class="hero-tag" data-open="g3-pro">
+            <strong>Kukirin G3 Pro</strong>
+            <span>2 × 1.200 W · 80 km</span>
+            <em>ab 1.259 €</em>
+          </button>
+        </div>
       </div>
+      <p class="wrap fine">* Nur auf Privatgelände. Auf öffentlichen Straßen in Deutschland gelten 20 km/h und ABE-Pflicht.</p>
     </section>
 
+    <!-- USPs -->
     <section class="usps wrap" aria-label="Vorteile">
-      <div><strong>🚚 Schnell geliefert</strong><span>Versandfertig in 1–3 Werktagen</span></div>
-      <div><strong>🔧 Service &amp; Ersatzteile</strong><span>Zubehör direkt im Shop</span></div>
-      <div><strong>↩️ 14 Tage Widerruf</strong><span>Einfache Rückgabe</span></div>
-      <div><strong>🔒 Sicher bezahlen</strong><span>Rechnung, PayPal, Karte</span></div>
+      <div><span class="ico">🚚</span><div><strong>Schneller Versand</strong><small>1–3 Werktage Bearbeitung</small></div></div>
+      <div><span class="ico">🔒</span><div><strong>Sicher bezahlen</strong><small>Rechnung, PayPal, Karte</small></div></div>
+      <div><span class="ico">↩️</span><div><strong>14 Tage Widerruf</strong><small>Einfache Rückgabe</small></div></div>
+      <div><span class="ico">🇩🇪</span><div><strong>Support auf Deutsch</strong><small>Hilfe bei Ersatzteilen</small></div></div>
     </section>
 
+    <!-- SHOP -->
     <section class="shop wrap" id="shop">
       <div class="section-head">
-        <h2>Unsere Produkte</h2>
+        <div>
+          <p class="kicker">Sortiment</p>
+          <h2>Unsere Kukirin E-Scooter</h2>
+        </div>
         <div class="controls">
-          <div class="chips" role="tablist" aria-label="Kategorie">
-            <button class="chip active" data-cat="all">Alle</button>
-            <button class="chip" data-cat="scooter">E-Scooter</button>
-            <button class="chip" data-cat="zubehoer">Zubehör</button>
-          </div>
+          <label class="search">
+            <span class="sr-only">Suche</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="searchInput" type="search" placeholder="Modell suchen …" autocomplete="off" />
+          </label>
           <label class="sort">
             <span class="sr-only">Sortierung</span>
             <select id="sortSelect">
@@ -69,38 +97,101 @@
           </label>
         </div>
       </div>
-      <div class="grid" id="grid"></div>
+      <div class="chips" id="chips" role="group" aria-label="Filter">
+        <button class="chip active" data-tag="all">Alle</button>
+        <button class="chip" data-tag="abe">🛣️ Mit ABE (Straße)</button>
+        <button class="chip" data-tag="sitz">💺 Mit Sitz</button>
+        <button class="chip" data-tag="power">⚡ Dual / Power</button>
+        <button class="chip" data-tag="budget">💶 Bis 500 €</button>
+      </div>
+      <div class="grid" id="grid" aria-live="polite"></div>
+      <p class="empty" id="empty" hidden>Kein Modell gefunden. <button class="link" id="resetFilters">Filter zurücksetzen</button></p>
     </section>
 
-    <section class="why" id="why">
+    <!-- FINDER -->
+    <section class="finder" id="finder">
       <div class="wrap">
-        <h2>Warum Kukirin?</h2>
-        <div class="why-grid">
-          <article><h3>Kraftvoll</h3><p>Starke Motoren und große Akkus sorgen für souveräne Beschleunigung und Reichweite.</p></article>
-          <article><h3>Robust</h3><p>Stabile Rahmen, Luftreifen und gute Bremsen – gebaut für echte Straßen.</p></article>
-          <article><h3>Faltbar</h3><p>Die meisten Modelle lassen sich klappen und passen in Kofferraum oder Flur.</p></article>
-          <article><h3>Fair im Preis</h3><p>Viel Leistung fürs Geld – von der Stadt-Flunder bis zum Offroad-Biest.</p></article>
+        <p class="kicker">Berater</p>
+        <h2>Welcher Scooter passt zu dir?</h2>
+        <div class="finder-grid">
+          <button class="finder-card" data-pick="abe">
+            <span class="ico">🛣️</span>
+            <h3>Ich will auf der Straße fahren</h3>
+            <p>Nur mit ABE und max. 20 km/h legal. Dein Modell: <strong>G2 Pro ABE</strong>.</p>
+            <em>Zeigen →</em>
+          </button>
+          <button class="finder-card" data-pick="sitz">
+            <span class="ico">💺</span>
+            <h3>Ich fahre lange Strecken</h3>
+            <p>Abnehmbarer Sitz und große Akkus: <strong>G2 Max</strong>, <strong>G2 Pro</strong>.</p>
+            <em>Zeigen →</em>
+          </button>
+          <button class="finder-card" data-pick="power">
+            <span class="ico">⚡</span>
+            <h3>Ich will maximale Power</h3>
+            <p>Dual-Motor und bis zu 70 km/h: <strong>G2 Master</strong>, <strong>G3 Pro</strong>, <strong>G4</strong>.</p>
+            <em>Zeigen →</em>
+          </button>
+          <button class="finder-card" data-pick="budget">
+            <span class="ico">💶</span>
+            <h3>Ich habe ein kleines Budget</h3>
+            <p>Starke Technik ab 249 €: <strong>S1 Max</strong>, <strong>M4 Max</strong>, <strong>G2</strong>.</p>
+            <em>Zeigen →</em>
+          </button>
         </div>
       </div>
     </section>
 
+    <!-- VERGLEICH -->
+    <section class="compare wrap" id="vergleich">
+      <p class="kicker">Vergleich</p>
+      <h2>Alle Modelle im Überblick</h2>
+      <div class="table-wrap">
+        <table class="cmp" id="cmpTable"></table>
+      </div>
+      <p class="fine">Herstellerangaben, „bis zu“-Werte. „–“ = vom Hersteller nicht angegeben.</p>
+    </section>
+
+    <!-- RECHT -->
+    <section class="legal-band" id="recht">
+      <div class="wrap legal-inner">
+        <div>
+          <p class="kicker light">Wichtig vor dem Kauf</p>
+          <h2>Darf ich damit auf die Straße?</h2>
+          <p>Auf öffentlichen Straßen und Radwegen sind in Deutschland nur E-Scooter erlaubt, die die <strong>eKFV</strong> erfüllen: <strong>ABE</strong>, Versicherungskennzeichen und maximal <strong>20 km/h</strong>.</p>
+          <p>Alle Modelle ohne ABE-Kennzeichnung sind ausschließlich für <strong>Privatgelände</strong> bestimmt. Wir weisen die Zulassung bei jedem Produkt aus.</p>
+        </div>
+        <ul class="checklist">
+          <li><strong>G2 Pro ABE</strong> – für den Straßenverkehr (20 km/h)</li>
+          <li><strong>Alle anderen Modelle</strong> – nur Privatgelände</li>
+          <li><strong>Versicherungskennzeichen</strong> ist für ABE-Modelle Pflicht</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- FAQ -->
     <section class="faq wrap" id="faq">
+      <p class="kicker">FAQ</p>
       <h2>Häufige Fragen</h2>
       <details>
-        <summary>Darf ich den Scooter in Deutschland auf der Straße fahren?</summary>
-        <p>In Deutschland gilt die eKFV: Auf öffentlichen Straßen sind nur Fahrzeuge mit Allgemeiner Betriebserlaubnis (ABE), Versicherungskennzeichen und max. 20 km/h erlaubt. Prüfe vor dem Kauf die Zulassungsangaben des jeweiligen Modells. Nicht zugelassene Modelle dürfen nur auf Privatgelände genutzt werden.</p>
-      </details>
-      <details>
         <summary>Wie lange dauert der Versand?</summary>
-        <p>Lagernde Artikel verlassen unser Lager in der Regel innerhalb von 1–3 Werktagen. Scooter werden per Spedition oder Paketdienst versichert versendet.</p>
+        <p>Lagernde Artikel verlassen unser Lager in der Regel innerhalb von 1–3 Werktagen. Scooter werden versichert per Spedition oder Paketdienst versendet.</p>
       </details>
       <details>
         <summary>Kann ich meinen Scooter zurückgeben?</summary>
         <p>Ja, du hast ein 14-tägiges Widerrufsrecht ab Erhalt der Ware. Details findest du in der Widerrufsbelehrung.</p>
       </details>
       <details>
-        <summary>Gibt es Garantie?</summary>
-        <p>Es gilt die gesetzliche Gewährleistung. Bei Defekten hilft dir unser Support auf Deutsch weiter.</p>
+        <summary>Gibt es Garantie und Ersatzteile?</summary>
+        <p>Es gilt die gesetzliche Gewährleistung. Bei Defekten hilft dir unser Support auf Deutsch; Ersatzteile besorgen wir auf Anfrage.</p>
+      </details>
+      <details>
+        <summary>Wie sind die Reichweitenangaben zu verstehen?</summary>
+        <p>Es handelt sich um Herstellerangaben unter Idealbedingungen (ebene Strecke, mittleres Fahrergewicht, Eco-Modus). In der Praxis kann die Reichweite geringer ausfallen.</p>
+      </details>
+      <details>
+        <summary>Brauche ich einen Führerschein?</summary>
+        <p>Für ABE-zugelassene E-Scooter im Straßenverkehr ist kein Führerschein nötig, aber ein Mindestalter von 14 Jahren und das Versicherungskennzeichen. Privatgelände-Modelle unterliegen diesen Regeln nicht – dort gelten die Regeln des Grundstückseigentümers.</p>
       </details>
     </section>
   </main>
@@ -109,7 +200,7 @@
     <div class="wrap footer-inner">
       <div>
         <a class="logo" href="#top">KUKIRIN<span>SHOP</span></a>
-        <p class="muted">Unabhängiger Online-Shop für Kukirin E-Scooter &amp; Zubehör. Kukirin ist eine Marke des jeweiligen Rechteinhabers.</p>
+        <p class="muted">Online-Shop für Kukirin E-Scooter. Kukirin und die Produktbilder sind Eigentum des jeweiligen Rechteinhabers.</p>
       </div>
       <nav class="footer-links" aria-label="Rechtliches">
         <button data-legal="impressum">Impressum</button>
@@ -119,8 +210,11 @@
         <button data-legal="versand">Versand &amp; Zahlung</button>
       </nav>
     </div>
-    <p class="copyright">© <span id="year"></span> Kukirin Shop · Alle Preise inkl. MwSt., zzgl. Versand.</p>
+    <p class="copyright">© <span id="year"></span> Kukirin Shop · Alle Preise inkl. MwSt. · Produktfotos: Kukirin</p>
   </footer>
+
+  <!-- Mobile Bottom-Bar -->
+  <a class="sticky-cta" href="#shop">Scooter ansehen</a>
 
   <!-- Warenkorb -->
   <div class="overlay" id="cartOverlay"></div>
@@ -134,13 +228,13 @@
       <div class="row"><span>Zwischensumme</span><span id="cartSubtotal">0,00 €</span></div>
       <div class="row"><span>Versand</span><span id="cartShipping">–</span></div>
       <div class="row total"><span>Gesamt</span><strong id="cartTotal">0,00 €</strong></div>
-      <p class="muted small" id="shipHint"></p>
       <button class="btn btn-primary block" id="checkoutBtn" disabled>Zur Kasse</button>
+      <p class="small muted center">🔒 Sichere Bestellung · 14 Tage Widerruf</p>
     </div>
   </aside>
 
   <!-- Dialoge -->
-  <dialog id="productDialog" class="dialog"></dialog>
+  <dialog id="productDialog" class="dialog dialog-lg"></dialog>
 
   <dialog id="checkoutDialog" class="dialog">
     <form id="checkoutForm" method="dialog">
@@ -166,6 +260,7 @@
         </label>
       </div>
       <label class="check"><input type="checkbox" required /> Ich habe die <button type="button" class="link" data-legal="agb">AGB</button> und die <button type="button" class="link" data-legal="widerruf">Widerrufsbelehrung</button> gelesen und akzeptiere sie.</label>
+      <label class="check" id="privateGroundCheck" hidden><input type="checkbox" id="privateGround" /> Mir ist bekannt, dass Scooter ohne ABE nur auf Privatgelände genutzt werden dürfen.</label>
       <div class="row total"><span>Gesamt</span><strong id="checkoutTotal"></strong></div>
       <button class="btn btn-primary block" type="submit">Kostenpflichtig bestellen</button>
     </form>

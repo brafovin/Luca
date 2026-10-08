@@ -1,19 +1,19 @@
 # Kukirin Shop
 
-Statischer Online-Shop (HTML/CSS/JS, kein Build nötig) für Kukirin E-Scooter & Zubehör.
+Statischer Online-Shop (HTML/CSS/JS, kein Build nötig) für Kukirin E-Scooter.
 
-**Starten:** `kukirin-shop/index.html` im Browser öffnen oder `python3 -m http.server` im Ordner ausführen.
+**Starten:** `index.html` im Browser öffnen oder `python3 -m http.server` im Ordner ausführen.
 
 ## Enthalten
-- Produktübersicht mit Kategorie-Filter und Sortierung
-- Produktdetail-Dialog mit technischen Daten
-- Warenkorb (bleibt per localStorage erhalten), Gratis-Versand ab 99 €
-- Checkout-Formular (Demo: Bestellung wird nur lokal gespeichert, keine Zahlung)
-- FAQ, Footer mit Platzhaltern für Impressum, Datenschutz, AGB, Widerruf
+- 9 Modelle mit Herstellerfotos (`img/`) und Herstellerdaten (`products.js`)
+- Filter (ABE / Sitz / Power / Budget), Suche, Sortierung, Hover-Bildwechsel
+- Produktdialog mit Bildgalerie, Highlights und Datenblatt
+- Scooter-Berater, Vergleichstabelle, Info zur Straßenzulassung (eKFV/ABE), FAQ
+- Warenkorb (localStorage), Checkout-Demo mit Pflichthinweis „nur Privatgelände“ für Nicht-ABE-Modelle
+- Mobil optimiert
 
 ## Vor dem Livegang
-1. **Produkte/Preise/Specs** in `products.js` mit Herstellerdaten abgleichen (aktuell Beispielwerte).
-2. **Produktfotos** statt SVG-Platzhalter einbauen (Bildfeld in `imageFor()` in `app.js`).
+1. **Bildrechte klären:** Die Fotos stammen von der Herstellerseite kukirin.it.com. Nutzung nur mit Erlaubnis des Rechteinhabers (Händlervertrag / schriftliche Freigabe) oder durch eigene Fotos ersetzen.
+2. **Preise & Daten prüfen:** In `products.js` stehen die aktuellen Preise der Herstellerseite (EU-Shop) und Herstellerangaben. Eigene Einkaufs-/Verkaufspreise eintragen; Zulassungsstatus (ABE) pro Modell beim Lieferanten bestätigen lassen.
 3. **Rechtstexte** (Impressum, Datenschutz, AGB, Widerruf) durch echte Texte ersetzen.
-4. **Zahlung & Bestellabwicklung** anbinden (z. B. Stripe/PayPal + Backend oder Umzug auf Shopify/WooCommerce).
-5. **Zulassung prüfen:** In Deutschland sind auf öffentlichen Straßen nur E-Scooter mit ABE/eKFV-Konformität erlaubt – pro Modell korrekt ausweisen.
+4. **Zahlung & Bestellabwicklung** anbinden (Stripe/PayPal + Backend oder Umzug auf Shopify/WooCommerce).
