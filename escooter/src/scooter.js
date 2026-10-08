@@ -73,7 +73,7 @@ export class Scooter {
     this.dispTex = new THREE.CanvasTexture(dcv);
     this.dispTex.colorSpace = THREE.SRGBColorSpace;
     const ctx = { T: this.tex, mats: { head: this.mHead, tail: this.mTail, led: this.mLed }, dispTex: this.dispTex };
-    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx), simson: buildSimson(ctx) };
+    this.models = { g4: buildG4(ctx), dt3: buildDT3(ctx), sonic: buildSonic(ctx), g2: buildG2(ctx), zt3: buildZT3(ctx), simson: buildSimson(ctx), schwalbe: buildSimson(ctx, { id: 'schwalbe', name: 'Simson Schwalbe KR51', variant: 'schwalbe', color: 0x2f8a56, accent: 0xf2e8c8, v: 17.0 }), sr50: buildSimson(ctx, { id: 'sr50', name: 'Simson SR50', color: 0xe8541a, accent: 0x14151a, v: 17.6 }) };
     this.wbar = true; this.oneHand = false; this.handMix = 0; this.wheelieOne = false;
     for (const m of Object.values(this.models)) {
       if (!m.noDecor) decorate(m);
@@ -108,14 +108,16 @@ export class Scooter {
   setWbar(on) { this.wbar = on; for (const m of Object.values(this.models)) m.wheelieBar.visible = on && !m.noDecor; }
   /** Simson upgrades: MTX10 engine + PZ-Tuning handlebars */
   setSimsonUpgrades(mtx, pz) {
-    const m = this.models.simson;
-    if (!m.spec0) m.spec0 = { ...m.spec };
     this.simsonUp = { mtx, pz };
-    m.mtx.visible = mtx; m.exStock.visible = !mtx;
-    m.barPZ.visible = pz; m.barStock.visible = !pz;
-    m.spec = { ...(mtx ? m.specMtx : m.spec0), aLat: pz ? 10.8 : m.spec0.aLat };
-    m.gripLocalNow = pz ? m.gripLocalPZ : m.gripLocal;
-    if (this.modelId === 'simson') this.spec = m.spec;
+    for (const m of Object.values(this.models)) {
+      if (!m.moped) continue;
+      if (!m.spec0) m.spec0 = { ...m.spec };
+      m.mtx.visible = mtx; m.exStock.visible = !mtx;
+      m.barPZ.visible = pz; m.barStock.visible = !pz;
+      m.spec = { ...(mtx ? m.specMtx : m.spec0), aLat: pz ? Math.max(10.8, mtx ? 10.8 : 0) : (mtx ? m.specMtx.aLat : m.spec0.aLat) };
+      m.gripLocalNow = pz ? m.gripLocalPZ : m.gripLocal;
+      if (this.model === m) this.spec = m.spec;
+    }
   }
   get hyperOn() { return !!this.hyper && this.modelId === 'sonic'; }
   get topKmh() { if (this.hyperOn) return HYPER_V * 3.6; const S = this.spec; return (this.vesc ? S.vVT : S.vT) * 3.6; }

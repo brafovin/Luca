@@ -747,12 +747,12 @@ export function paintModel(m, body, accent) {
    Simson S51 – East-German moped (50 cc two-stroke, 60 km/h). No VESC possible.
    Upgrades: MTX10 engine (expansion exhaust, bigger cylinder) and PZ-Tuning handlebars.
    ============================================================================ */
-export function buildSimson(ctx) {
+export function buildSimson(ctx, o = {}) {
   const { T, mats, dispTex } = ctx;
   const { add, tube, spring } = tools();
   const group = new THREE.Group();
-  const mPaint = std({ color: 0x2a62c4, roughness: 0.28, metalness: 0.45, envMapIntensity: 1.2 });
-  const mAcc = std({ color: 0xf2f2ee, roughness: 0.35, metalness: 0.3 });
+  const mPaint = std({ color: o.color ?? 0x2a62c4, roughness: 0.28, metalness: 0.45, envMapIntensity: 1.2 });
+  const mAcc = std({ color: o.accent ?? 0xf2f2ee, roughness: 0.35, metalness: 0.3 });
   const mChrome = std({ color: 0xcfd2d6, roughness: 0.16, metalness: 1, envMapIntensity: 1.6 });
   const mBlack = std({ color: 0x0e0f11, roughness: 0.6, metalness: 0.2 });
   const mAlu = std({ color: 0x9da1a6, roughness: 0.4, metalness: 0.9 });
@@ -882,17 +882,28 @@ export function buildSimson(ctx) {
   // indicators
   for (const sx of [-1, 1]) add(steer, new THREE.SphereGeometry(0.022, 8, 6), mTan, sx * 0.14, 0.9, 0.06).castShadow = false;
 
+  if (o.variant === 'schwalbe') { // KR51: enclosed body, leg shield, apron, big rounded rear cowl
+    const mBody = std({ color: o.color, roughness: 0.28, metalness: 0.45, side: THREE.DoubleSide });
+    for (const sx of [-1, 1]) {
+      add(group, new THREE.SphereGeometry(0.2, 14, 10), mBody, sx * 0.12, 0.43, -0.28).scale.set(0.5, 1.35, 2.3);   // side cowl hides the engine
+      add(group, box(0.02, 0.2, 0.55), mAcc, sx * 0.172, 0.4, -0.28);
+    }
+    add(group, box(0.26, 0.5, 0.05), mBody, 0, 0.58, 0.37).rotation.x = -0.2;                                  // leg shield / apron
+    add(group, new THREE.SphereGeometry(0.2, 12, 8), mBody, 0, 0.8, -0.55).scale.set(0.9, 0.6, 1.9);             // rear hump under the seat
+    add(group, box(0.5, 0.05, 0.3), mBody, 0, 0.3, 0.1);                                                          // floor board
+    add(group, box(0.3, 0.012, 0.42), mAcc, 0, 0.77, 0.26);
+  }
   const dummyGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); dummyGlow.rotation.x = -Math.PI / 2;
   const wheelieBar = new THREE.Group(); group.add(wheelieBar);
   return {
-    id: 'simson', name: 'Simson S51', group, steer, frontWheel, rearWheel, vescParts: [], glow: dummyGlow, glowSize: [0.1, 0.1],
-    paint: { body: [mPaint], accent: [mAcc] }, noVesc: true, noDecor: true, moped: true, riderDY: -0.2, wheelieBar,
+    id: o.id || 'simson', name: o.name || 'Simson S51', group, steer, frontWheel, rearWheel, vescParts: [], glow: dummyGlow, glowSize: [0.1, 0.1],
+    paint: { body: [mPaint], accent: [mAcc] }, noVesc: true, noDecor: true, moped: true, riderDY: o.variant === 'schwalbe' ? -0.14 : -0.2, wheelieBar,
     exhaust: { stock: new THREE.Vector3(0.2, 0.27, -0.78), mtx: new THREE.Vector3(0.24, 0.27, -1.0) }, exStock, mtx, barStock, barPZ,
     gripLocal: [new THREE.Vector3(0.375, BY + 0.075, -0.115), new THREE.Vector3(-0.375, BY + 0.075, -0.115)],
     gripLocalPZ: [new THREE.Vector3(0.485, BY - 0.025, -0.14), new THREE.Vector3(-0.485, BY - 0.025, -0.14)],
     foot: [new THREE.Vector3(0.3, 0.32, -0.05), new THREE.Vector3(-0.3, 0.32, -0.05)],
     half: HALF, wheelbase: 1.18, wheelR: R, spotPos: [0, 0.95, 0.62], dispMode: 'S51', fp: { y: 1.62, pitch: 0.28 },
-    spec: { vN: 17.6, vT: 17.6, vVN: 17.6, vVT: 17.6, aN: 1.8, aT: 1.8, aVN: 1.8, aVT: 1.8, kN: 6, kT: 6, kVN: 6, kVT: 6, drag2: 0.0012, brake: 4.4, space: 6.0, cap: 6.4, aLat: 8, mass: 118, wheelie: 0.55 },
-    specMtx: { vN: 25.0, vT: 25.0, vVN: 25.0, vVT: 25.0, aN: 3.0, aT: 3.0, aVN: 3.0, aVT: 3.0, kN: 8, kT: 8, kVN: 8, kVT: 8, drag2: 0.0012, brake: 5.2, space: 7.0, cap: 7.2, aLat: 8, mass: 118, wheelie: 0.7 },
+    spec: { vN: o.v ?? 17.6, vT: o.v ?? 17.6, vVN: o.v ?? 17.6, vVT: o.v ?? 17.6, aN: 1.8, aT: 1.8, aVN: 1.8, aVT: 1.8, kN: 6, kT: 6, kVN: 6, kVT: 6, drag2: 0.0012, brake: 4.4, space: 6.0, cap: 6.4, aLat: 8, mass: 118, wheelie: 0.55 },
+    specMtx: { vN: 42.8, vT: 42.8, vVN: 42.8, vVT: 42.8, aN: 4.6, aT: 4.6, aVN: 4.6, aVT: 4.6, kN: 14, kT: 14, kVN: 14, kVT: 14, drag2: 0.00055, brake: 6.8, space: 8.8, cap: 9.0, aLat: 8.6, mass: 118, wheelie: 0.7 },
   };
 }
