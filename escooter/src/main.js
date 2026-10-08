@@ -212,7 +212,7 @@ function readInput() {
     o.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
     o.punch = keys.has('KeyE') || keys.has('KeyJ') || (navigator.getGamepads && [...navigator.getGamepads()].some((g) => g && g.buttons[2]?.pressed));
     o.yawDelta = mouse.yawAcc; mouse.yawAcc = 0;
-    if (mouse.lock && mouse.lmb) o.fwd = true;
+    if (mouse.lock && mouse.lmb) { if (st.gun || st.knife) o.punch = true; else o.fwd = true; } // left mouse = fire / stab when armed, otherwise walk
     if (mouse.lock && mouse.rmb) o.back = true;
     return o;
   }
@@ -539,7 +539,7 @@ function toggleKnife() {
   if (st.gun) { st.gun = false; walker.setGun(false); }
   st.knife = !st.knife; walker.setKnife(st.knife);
   fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = st.knife));
-  toast(st.knife ? '🔪 Messer gezogen' : 'Messer weggesteckt', st.knife ? 'E / J = zustechen · Kinder und Eltern sind tabu · N = wegstecken' : '', 1600);
+  toast(st.knife ? '🔪 Messer gezogen' : 'Messer weggesteckt', st.knife ? 'Linke Maus / E / J = zustechen · Kinder und Eltern sind tabu · N = wegstecken' : '', 1600);
 }
 /* ---- pistol: one shot = dead */
 const gunFP = new THREE.Group();
@@ -568,7 +568,7 @@ function toggleGun() {
   st.gun = !st.gun;
   if (st.gun) { st.knife = false; walker.setKnife(false); fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = false)); }
   walker.setGun(st.gun);
-  toast(st.gun ? '🔫 Pistole gezogen' : 'Pistole weggesteckt', st.gun ? 'E / J = schießen (1 Schuss = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
+  toast(st.gun ? '🔫 Pistole gezogen' : 'Pistole weggesteckt', st.gun ? 'Linke Maus / E / J = schießen (1 Schuss = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
 }
 function resolveShot(ev) {
   audio.shot();

@@ -71,7 +71,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 
 ## Pistole 🔫
 
-* Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Pistole weg**, `E`/`J` schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.
+* Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Pistole weg**, **linke Maustaste** (oder `E`/`J`) schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.
   **Kinder und ihre Eltern sind tabu** (nicht treffbar). Auf dem Roller kannst du nicht schießen.
 * Die **Halbstarken** halten deine Waffe zunächst für **Fake** („Haha, die Waffe ist doch fake!“) und lassen sich dadurch noch schneller provozieren.
   **Knallst du einen von ihnen ab, rennen alle anderen (auch die netten) panisch weg** („Scheiße, die ist echt!“) und kommen erst nach einer Weile zur Bank zurück.
