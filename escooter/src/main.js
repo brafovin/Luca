@@ -132,6 +132,8 @@ const SHOP_MODELS = {
   dt3: { price: DT3_PRICE, key: 'Q', name: 'Dualtron Thunder 3', sound: [392, 523, 659, 784, 1046, 1568] },
   sonic: { price: SONIC_PRICE, key: 'U', name: 'Weped Sonic', sound: [330, 392, 523, 659, 784, 1046, 1568, 2093] },
   simson: { price: 800, key: '', name: 'Simson S51', sound: [196, 247, 294, 392], shop: 2 },
+  sr50: { price: 950, key: '', name: 'Simson SR50', sound: [220, 262, 330, 392], shop: 2 },
+  schwalbe: { price: 1100, key: '', name: 'Simson Schwalbe KR51', sound: [196, 262, 330, 440], shop: 2 },
 };
 const MTX_PRICE = 600, PZ_PRICE = 250, CIG_PRICE = 8;
 const st = {
@@ -140,7 +142,7 @@ const st = {
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
   wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
-  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
+  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
 };
 
 /* ------------------------------------------------------------------ quality */
@@ -644,8 +646,8 @@ function setVesc(on) {
   shopBeacon.visible = !(on && allOwned());
   $('vescBadge').classList.toggle('hidden', !(on && !scooter.model.noVesc));
 }
-const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3, simson: () => st.simson };
-const MODEL_ORDER = ['g4', 'g2', 'zt3', 'simson', 'dt3', 'sonic'];
+const OWNED = { g4: () => true, dt3: () => st.dt3, sonic: () => st.sonic, g2: () => st.g2, zt3: () => st.zt3, simson: () => st.simson, sr50: () => st.sr50, schwalbe: () => st.schwalbe };
+const MODEL_ORDER = ['g4', 'g2', 'zt3', 'simson', 'sr50', 'schwalbe', 'dt3', 'sonic'];
 const allOwned = () => false; // paint jobs are always for sale, so the shop never runs out
 const atShop = () => Math.hypot(me.x - SHOP.x, me.z - SHOP.z) < 9;
 function syncModelSelect() {
@@ -779,16 +781,19 @@ function renderShop() {
       + (st.vesc ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="vesc" ${st.money < VESC_PRICE ? 'disabled' : ''}>Kaufen · ${VESC_PRICE} €</button>`) + `</div>`;
     h += `<div class="srow"><div class="sinfo"><b>Wheelie-Bar</b><small>Stützrad hinten (an/aus mit H) – gratis dabei.</small></div><span class="sown">✓ dabei</span></div>`;
   } else if (t.id === 'moped') {
-    const own = st.simson;
-    h += `<div class="srow"><div class="sinfo"><b>Simson S51 Enduro</b><small>Der Klassiker: 50-cm³-Zweitakter, <b>60 km/h</b> · Auspuff qualmt · <b>kein VESC möglich</b> (Moped!) · Tuning am Nachbartisch · bis 85 km/h mit MTX10.</small></div>`
-      + (st.model === 'simson' ? `<span class="sown">● aktiv</span>` : own ? `<button class="buy" data-act="use" data-id="simson">Fahren</button>` : `<button class="buy" data-act="buy" data-id="simson" ${st.money < SHOP_MODELS.simson.price ? 'disabled' : ''}>Kaufen · ${SHOP_MODELS.simson.price} €</button>`) + `</div>`;
+    const mopeds = [['simson', 'Simson S51 Enduro', 'Der Klassiker: 50-cm³-Zweitakter, <b>60 km/h</b>.'], ['sr50', 'Simson SR50', 'Sportliches Roller-Moped in Orange, <b>63 km/h</b>.'], ['schwalbe', 'Simson Schwalbe KR51', 'Der Kultroller mit Verkleidung und Beinschild, <b>61 km/h</b>.']];
+    for (const [id, name, info] of mopeds) {
+      const price = SHOP_MODELS[id].price;
+      h += `<div class="srow"><div class="sinfo"><b>${name}</b><small>${info} Auspuff qualmt · <b>kein VESC</b> (Moped!) · mit MTX10 <b>150 km/h</b>.</small></div>`
+        + (st.model === id ? `<span class="sown">● aktiv</span>` : st[id] ? `<button class="buy" data-act="use" data-id="${id}">Fahren</button>` : `<button class="buy" data-act="buy" data-id="${id}" ${st.money < price ? 'disabled' : ''}>Kaufen · ${price} €</button>`) + `</div>`;
+    }
     h += `<div class="srow"><div class="sinfo"><b>Helm & Handschuhe</b><small>Gratis dabei – du trägst beides schon.</small></div><span class="sown">✓ dabei</span></div>`;
   } else if (t.id === 'tuning') {
     h += `<div class="srow"><div class="sinfo"><b>MTX10 Motor-Tuning</b><small>Großer Zylinder, Vergaser, roter Resonanzauspuff: <b>85 km/h</b> statt 60, kräftigere Beschleunigung, mehr Qualm. Für die Simson S51.</small></div>`
       + (st.mtx ? `<span class="sown">✓ eingebaut</span>` : `<button class="buy" data-act="up" data-id="mtx" ${st.money < MTX_PRICE ? 'disabled' : ''}>Kaufen · ${MTX_PRICE} €</button>`) + `</div>`;
     h += `<div class="srow"><div class="sinfo"><b>PZ-Tuning Lenker</b><small>Breiter, flacher Rennlenker mit Querstrebe und goldenen Klemmen – lenkt direkter (mehr Kurvengrip).</small></div>`
       + (st.pz ? `<span class="sown">✓ montiert</span>` : `<button class="buy" data-act="up" data-id="pz" ${st.money < PZ_PRICE ? 'disabled' : ''}>Kaufen · ${PZ_PRICE} €</button>`) + `</div>`;
-    h += st.simson ? '' : `<div class="srow"><div class="sinfo"><small>Du besitzt noch keine Simson – die Teile werden eingebaut, sobald du sie hast.</small></div></div>`;
+    h += (st.simson || st.sr50 || st.schwalbe) ? '' : `<div class="srow"><div class="sinfo"><small>Du besitzt noch keine Simson – die Teile werden eingebaut, sobald du sie hast.</small></div></div>`;
   } else if (t.id === 'kiosk') {
     h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'disabled' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
   } else if (t.id === 'scooters') {
@@ -830,7 +835,7 @@ function buyUpgrade(id) {
   earn(-price); st[id] = true; store.set(id, true);
   scooter.setSimsonUpgrades(st.mtx, st.pz);
   audio.chime([392, 523, 784]);
-  toast(id === 'mtx' ? '🔧 MTX10 eingebaut' : '🔧 PZ-Lenker montiert', id === 'mtx' ? 'Simson jetzt bis 85 km/h' : 'mehr Grip in Kurven', 2600);
+  toast(id === 'mtx' ? '🔧 MTX10 eingebaut' : '🔧 PZ-Lenker montiert', id === 'mtx' ? 'Mopeds jetzt bis 150 km/h' : 'mehr Grip in Kurven', 2600);
   renderShop();
 }
 function toggleSmoke() {
@@ -1356,7 +1361,7 @@ function tick(dt, now, render = true) {
     if (net.sendT > 1 / 15) {
       net.sendT = 0;
       const walking = st.mode === 'walk';
-      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: { g4: 0, dt3: 1, sonic: 2, g2: 3, zt3: 4, simson: 5 }[st.model] || 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
+      net.sendState({ x: me.x, z: me.z, h: me.heading, v: walking ? walker.speed : scooter.v, l: scooter.lean, m: walking ? 1 : 0, vs: st.vesc ? 1 : 0, md: { g4: 0, dt3: 1, sonic: 2, g2: 3, zt3: 4, simson: 5, sr50: 5, schwalbe: 5 }[st.model] || 0, sx: scooter.x, sz: scooter.z, sh: scooter.heading, w: scooter.wheelie });
     }
   }
   net.update(dt, performance.now());
