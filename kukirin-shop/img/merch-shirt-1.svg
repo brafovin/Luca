@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" width="900" height="900"><defs>
+<filter id="sh" x="-30%" y="-30%" width="160%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
+<linearGradient id="blk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34363f"/><stop offset="1" stop-color="#15161b"/></linearGradient>
+<linearGradient id="blk2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#15161b"/><stop offset=".5" stop-color="#2d2f38"/><stop offset="1" stop-color="#15161b"/></linearGradient>
+<linearGradient id="org" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7d40"/><stop offset="1" stop-color="#e24a0c"/></linearGradient>
+<linearGradient id="gry" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceef2"/><stop offset="1" stop-color="#b3b6c1"/></linearGradient>
+</defs><ellipse cx="450" cy="748" rx="280" ry="26" fill="#000" opacity=".28" filter="url(#sh)"/>
+<path d="M370 190 L240 238 L150 332 L236 402 L292 362 L292 722 L608 722 L608 362 L664 402 L750 332 L660 238 L530 190 Q450 262 370 190 Z" fill="url(#blk)"/>
+<path d="M370 190 Q450 262 530 190" fill="none" stroke="#454854" stroke-width="16" stroke-linecap="round"/>
+<path d="M292 362 L260 330 M608 362 L640 330" stroke="#0e0f13" stroke-width="3" opacity=".6"/>
+<path d="M300 700 H600" stroke="#0e0f13" stroke-width="3" opacity=".5"/><circle cx="450" cy="390" r="58" fill="url(#org)"/><text x="450" y="410.88" text-anchor="middle" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="900" font-size="63.800000000000004" fill="#fff">K</text><text x="450" y="505" text-anchor="middle" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="900" font-size="28" letter-spacing="5" fill="#fff" >KUKIRIN SHOP</text></svg>

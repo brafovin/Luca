@@ -247,7 +247,99 @@ const PRODUCTS = [
   },
 ];
 
-// Bilddateien: img/<id>-1.jpg … img/<id>-N.jpg
+// Scooter: Bilddateien img/<id>-1.jpg … img/<id>-N.jpg
 PRODUCTS.forEach((p) => {
+  p.cat = "scooter";
   p.gallery = Array.from({ length: p.images }, (_, i) => `img/${p.id}-${i + 1}.jpg`);
 });
+
+// ====== Taschen & Merch ======
+// ACHTUNG: Das sind Shop-eigene BEISPIEL-Artikel (Hersteller Kukirin führt weder Taschen noch Merch).
+// Preise, Maße, Materialien und die Produktgrafiken (img/*.svg) sind Platzhalter – vor Livegang durch
+// die Daten und Fotos deines Lieferanten ersetzen. Die Marke "Kukirin" nur mit Erlaubnis auf Merch drucken.
+// sizes/colors: erzeugen eine Auswahl im Produktdialog. colors[].i = Index des passenden Bildes.
+const SIZES = ["S", "M", "L", "XL", "XXL"];
+const EXTRA = [
+  {
+    id: "tasche-lenker", cat: "tasche", name: "Lenkertasche 2 L", tagline: "Handy & Schlüssel griffbereit",
+    price: 24.9, meta: ["2 Liter", "Wasserabweisend"], badge: "Beliebt", featured: true,
+    files: ["tasche-lenker-1.svg", "tasche-lenker-2.svg"],
+    desc: "Kompakte Tasche für die Lenkerstange: Platz für Smartphone, Schlüssel und Geldbeutel, immer in Reichweite. Mit Hauptfach und Vordertasche, beides mit Reißverschluss.",
+    highlights: ["Hauptfach + Vordertasche mit Reißverschluss", "Befestigung per Schnallenbändern", "Wasserabweisendes Material"],
+    specs: { "Volumen": "ca. 2 Liter", "Material": "Polyester, wasserabweisend", "Befestigung": "Schnallenbänder am Lenker", "Farbe": "Schwarz / Orange" },
+    note: "Bitte prüfe vor dem Kauf, ob die Tasche zu Lenker und Display deines Scooters passt.",
+  },
+  {
+    id: "tasche-transport", cat: "tasche", name: "Transporttasche XL", tagline: "Scooter sicher verstauen & tragen",
+    price: 59.9, meta: ["XL", "Gepolstert"],
+    files: ["tasche-transport-1.svg", "tasche-transport-2.svg"],
+    desc: "Große, gepolsterte Tasche für gefaltete Scooter: schützt vor Kratzern und Schmutz im Kofferraum, in der Bahn oder im Flur. Mit Tragegriffen und abnehmbarem Schultergurt.",
+    highlights: ["Gepolstert gegen Stöße und Kratzer", "Tragegriffe und abnehmbarer Schultergurt", "Durchgehender Reißverschluss"],
+    specs: { "Größe": "XL – für gefaltete Scooter", "Außenmaß": "ca. 110 × 30 × 40 cm", "Material": "Polyester, gepolstert", "Farbe": "Schwarz / Orange" },
+    note: "Wichtig: Miss deinen gefalteten Scooter und vergleiche die Maße, bevor du bestellst.",
+  },
+  {
+    id: "tasche-kabel", cat: "tasche", name: "Ladegerät- & Kabeltasche", tagline: "Ladegerät und Kabel geordnet",
+    price: 14.9, meta: ["Kompakt"],
+    files: ["tasche-kabel-1.svg", "tasche-kabel-2.svg"],
+    desc: "Kleine Organizer-Tasche für Ladegerät, Kabel und Kleinteile. Nichts rutscht mehr im Rucksack oder Kofferraum herum.",
+    highlights: ["Platz für Ladegerät + Kabel", "Robuster Reißverschluss", "Passt in Rucksack und Scooter-Tasche"],
+    specs: { "Maße": "ca. 25 × 12 × 10 cm", "Material": "Polyester", "Farbe": "Schwarz / Orange" },
+    note: "Lieferung ohne Ladegerät und Kabel.",
+  },
+  {
+    id: "tasche-rucksack", cat: "tasche", name: "Rucksack 20 L", tagline: "Der Alltagsbegleiter zum Scooter",
+    price: 39.9, meta: ["20 Liter", "Laptopfach"],
+    files: ["tasche-rucksack-1.svg", "tasche-rucksack-2.svg"],
+    desc: "Schlanker 20-Liter-Rucksack für Arbeit, Uni und Ausflug: gepolsterte Träger, Laptopfach und Vordertasche für alles, was schnell griffbereit sein soll.",
+    highlights: ["20 Liter Volumen", "Gepolsterte Träger und Rücken", "Laptopfach und Vordertasche"],
+    specs: { "Volumen": "20 Liter", "Laptopfach": "bis ca. 15 Zoll", "Material": "Polyester, wasserabweisend", "Farbe": "Schwarz / Orange" },
+  },
+  {
+    id: "merch-shirt", cat: "merch", name: "Logo T-Shirt", tagline: "Klassisch schwarz mit Orange-Print",
+    price: 24.9, meta: ["Baumwolle", "S–XXL"], badge: "Neu",
+    files: ["merch-shirt-1.svg", "merch-shirt-2.svg"], sizes: SIZES,
+    desc: "Das Shop-Shirt in Schwarz: vorn mit Logo, hinten mit großem „RIDE ELECTRIC“-Print in Weiß und Orange.",
+    highlights: ["Weiche Baumwolle", "Logo vorn, großer Print hinten", "Unisex-Schnitt"],
+    specs: { "Material": "100 % Baumwolle", "Farbe": "Schwarz", "Druck": "Vorn Logo, hinten „RIDE ELECTRIC“", "Schnitt": "Unisex" },
+  },
+  {
+    id: "merch-hoodie", cat: "merch", name: "Hoodie", tagline: "Warm, weich und auffällig",
+    price: 54.9, meta: ["2 Farben", "S–XXL"], featured: true,
+    files: ["merch-hoodie-1.svg", "merch-hoodie-2.svg"], sizes: SIZES,
+    colors: [{ name: "Schwarz", i: 0 }, { name: "Orange", i: 1 }],
+    desc: "Kuschliger Kapuzenpullover mit Känguru-Tasche und Kordel in Kontrastfarbe. Wahlweise in Schwarz oder Orange.",
+    highlights: ["Kapuze mit Kordel", "Große Känguru-Tasche", "In Schwarz oder Orange"],
+    specs: { "Material": "Baumwoll-Mischgewebe, angeraut", "Farben": "Schwarz, Orange", "Schnitt": "Unisex", "Logo": "Brust, gestickt" },
+  },
+  {
+    id: "merch-cap", cat: "merch", name: "Snapback Cap", tagline: "Für jedes Wetter",
+    price: 19.9, meta: ["Verstellbar"],
+    files: ["merch-cap-1.svg", "merch-cap-2.svg"],
+    desc: "Flache Kappe mit orangefarbenem Schirm und Logo-Patch. Die Größe ist über den Snapback-Verschluss einstellbar.",
+    highlights: ["Einheitsgröße, verstellbar", "Logo-Patch vorn", "Orangefarbener Schirm"],
+    specs: { "Größe": "Einheitsgröße (verstellbar)", "Material": "Baumwolle / Polyester", "Farbe": "Schwarz / Orange" },
+  },
+  {
+    id: "merch-sticker", cat: "merch", name: "Sticker-Set", tagline: "Für Helm, Laptop & Scooter",
+    price: 6.9, meta: ["4 Motive", "Wetterfest"],
+    files: ["merch-sticker-1.svg", "merch-sticker-2.svg"],
+    desc: "Vier wetterfeste Sticker mit Logo und Sprüchen: für Helm, Laptop, Trinkflasche oder den Scooter.",
+    highlights: ["4 verschiedene Motive", "Wetter- und UV-beständig", "Rückstandsfrei ablösbar"],
+    specs: { "Inhalt": "4 Sticker", "Material": "Vinylfolie, wetterfest", "Größe": "ca. 5–10 cm" },
+  },
+  {
+    id: "merch-flasche", cat: "merch", name: "Trinkflasche 750 ml", tagline: "Edelstahl, doppelwandig",
+    price: 16.9, meta: ["750 ml", "2 Farben"],
+    files: ["merch-flasche-1.svg", "merch-flasche-2.svg"],
+    colors: [{ name: "Schwarz", i: 0 }, { name: "Orange", i: 1 }],
+    desc: "Doppelwandige Edelstahlflasche für unterwegs. Hält Getränke lange kalt oder warm und passt in die meisten Getränkehalter.",
+    highlights: ["Edelstahl, doppelwandig isoliert", "Auslaufsicherer Schraubverschluss", "In Schwarz oder Orange"],
+    specs: { "Volumen": "750 ml", "Material": "Edelstahl", "Farben": "Schwarz, Orange" },
+  },
+];
+EXTRA.forEach((p) => {
+  p.tags = [];
+  p.gallery = p.files.map((f) => `img/${f}`);
+});
+PRODUCTS.push(...EXTRA);

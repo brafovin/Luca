@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kukirin Shop – E-Scooter kaufen</title>
-  <meta name="description" content="Kukirin E-Scooter online kaufen: G2 Pro ABE mit Straßenzulassung, G3 Pro, G4 und mehr. Schneller Versand, 14 Tage Widerruf, Support auf Deutsch." />
+  <title>Kukirin Shop – E-Scooter, Taschen & Merch</title>
+  <meta name="description" content="Kukirin E-Scooter online kaufen: G2 Pro ABE mit Straßenzulassung, G3 Pro, G4 und mehr – dazu Scooter-Taschen und Merch. Schneller Versand, 14 Tage Widerruf, Support auf Deutsch." />
   <meta name="theme-color" content="#0b0b0d" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <meta property="og:type" content="website" />
@@ -29,8 +29,8 @@
     <div class="wrap header-inner">
       <a class="logo" href="#top" aria-label="Kukirin Shop Startseite">KUKIRIN<span>SHOP</span></a>
       <nav class="nav" aria-label="Hauptnavigation">
-        <a href="#shop">Scooter</a>
-        <a href="#finder">Berater</a>
+        <a href="#shop" data-cat="scooter">Scooter</a>
+        <a href="#shop" data-cat="tasche">Taschen &amp; Merch</a>
         <a href="#vergleich">Vergleich</a>
         <a href="#recht">Zulassung</a>
         <a href="#faq">FAQ</a>
@@ -87,13 +87,13 @@
       <div class="section-head">
         <div>
           <p class="kicker">Sortiment</p>
-          <h2>Unsere Kukirin E-Scooter</h2>
+          <h2>Alles für dich und deinen Scooter</h2>
         </div>
         <div class="controls">
           <label class="search">
             <span class="sr-only">Suche</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="searchInput" type="search" placeholder="Modell suchen …" autocomplete="off" />
+            <input id="searchInput" type="search" placeholder="Artikel suchen …" autocomplete="off" />
           </label>
           <label class="sort">
             <span class="sr-only">Sortierung</span>
@@ -106,15 +106,47 @@
           </label>
         </div>
       </div>
-      <div class="chips" id="chips" role="group" aria-label="Filter">
-        <button class="chip active" data-tag="all">Alle</button>
+      <div class="tabs" role="tablist" aria-label="Kategorie">
+        <button class="tab active" data-cat="all">Alle</button>
+        <button class="tab" data-cat="scooter">🛴 E-Scooter</button>
+        <button class="tab" data-cat="tasche">🎒 Taschen</button>
+        <button class="tab" data-cat="merch">👕 Merch</button>
+      </div>
+      <div class="chips" id="tagChips" role="group" aria-label="Filter" hidden>
+        <button class="chip active" data-tag="all">Alle Scooter</button>
         <button class="chip" data-tag="abe">🛣️ Mit ABE (Straße)</button>
         <button class="chip" data-tag="sitz">💺 Mit Sitz</button>
         <button class="chip" data-tag="power">⚡ Dual / Power</button>
         <button class="chip" data-tag="budget">💶 Bis 500 €</button>
       </div>
       <div class="grid" id="grid" aria-live="polite"></div>
-      <p class="empty" id="empty" hidden>Kein Modell gefunden. <button class="link" id="resetFilters">Filter zurücksetzen</button></p>
+      <p class="empty" id="empty" hidden>Kein Artikel gefunden. <button class="link" id="resetFilters">Filter zurücksetzen</button></p>
+    </section>
+
+    <!-- TASCHEN & MERCH TEASER -->
+    <section class="extras wrap" aria-label="Taschen und Merch">
+      <button class="extra-card" data-cat="tasche">
+        <div class="extra-text">
+          <p class="kicker">Neu im Shop</p>
+          <h3>Scooter-Taschen</h3>
+          <p>Lenkertasche, Transporttasche, Kabeltasche und Rucksack – ab 14,90 €.</p>
+          <span class="extra-cta">Taschen ansehen →</span>
+        </div>
+        <div class="extra-imgs" aria-hidden="true">
+          <img src="img/tasche-rucksack-1.svg" alt="" loading="lazy" /><img src="img/tasche-lenker-1.svg" alt="" loading="lazy" />
+        </div>
+      </button>
+      <button class="extra-card dark" data-cat="merch">
+        <div class="extra-text">
+          <p class="kicker">Neu im Shop</p>
+          <h3>Shop-Merch</h3>
+          <p>T-Shirt, Hoodie, Cap, Sticker und Trinkflasche – ab 6,90 €.</p>
+          <span class="extra-cta">Merch ansehen →</span>
+        </div>
+        <div class="extra-imgs" aria-hidden="true">
+          <img src="img/merch-hoodie-2.svg" alt="" loading="lazy" /><img src="img/merch-shirt-1.svg" alt="" loading="lazy" />
+        </div>
+      </button>
     </section>
 
     <!-- FINDER -->
@@ -195,7 +227,9 @@
       </div>
       <nav class="f-col" aria-label="Shop">
         <h4>Shop</h4>
-        <a href="#shop">Alle Scooter</a>
+        <a href="#shop" data-cat="scooter">E-Scooter</a>
+        <a href="#shop" data-cat="tasche">Taschen</a>
+        <a href="#shop" data-cat="merch">Merch</a>
         <a href="#finder">Scooter-Berater</a>
         <a href="#vergleich">Modellvergleich</a>
         <a href="#recht">Straßenzulassung</a>

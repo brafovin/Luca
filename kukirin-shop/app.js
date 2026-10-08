@@ -1,6 +1,6 @@
 const FREE_SHIPPING_FROM = 99;
 const SHIPPING_FEE = 4.9;
-const MAX_QTY = 5;
+const MAX_QTY = 10;
 const CART_KEY = "kukirin-cart-v2";
 const ORDERS_KEY = "kukirin-orders-v1";
 
@@ -9,7 +9,7 @@ const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" 
 const eur0 = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 let cart = loadJSON(CART_KEY, {});
-let state = { tag: "all", sort: "featured", q: "" };
+let state = { cat: "all", tag: "all", sort: "featured", q: "" };
 
 function loadJSON(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -20,11 +20,23 @@ function saveJSON(key, value) {
 
 const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
 const isAbe = (p) => p.tags.includes("abe");
+const isScooter = (p) => p.cat === "scooter";
+const fmt = (p) => (Number.isInteger(p.price) ? eur0 : eur).format(p.price);
+
+// Warenkorb-Schlüssel: "id|größe|farbe" (Größe/Farbe optional)
+const cartKey = (id, size = "", color = "") => [id, size, color].join("|");
+function parseKey(key) {
+  const [id, size = "", color = ""] = key.split("|");
+  return { p: findProduct(id), size, color };
+}
+const optLabel = ({ size, color }) => [color, size && `Größe ${size}`].filter(Boolean).join(" · ");
+const hasOptions = (p) => !!(p.sizes || p.colors);
 
 // ---------- Produktliste ----------
 function visibleProducts() {
   const q = state.q.trim().toLowerCase();
   let list = PRODUCTS.filter((p) =>
+    (state.cat === "all" || p.cat === state.cat) &&
     (state.tag === "all" || p.tags.includes(state.tag)) &&
     (!q || `${p.name} ${p.tagline}`.toLowerCase().includes(q)));
   const sorters = {
@@ -37,6 +49,7 @@ function visibleProducts() {
 }
 
 function metaChips(p) {
+  if (!isScooter(p)) return p.meta.map((v) => `<span>${v}</span>`).join("");
   const c = p.cmp;
   return [c.motor, c.speed, c.range].filter((v) => v && v !== "–").slice(0, 3)
     .map((v) => `<span>${v}</span>`).join("");
@@ -50,21 +63,33 @@ function renderGrid() {
       <button class="card-img" data-open="${p.id}" aria-label="${p.name} ansehen">
         ${p.badge ? `<span class="badge ${isAbe(p) ? "abe" : ""}">${p.badge}</span>` : ""}
         <img src="${p.gallery[0]}" alt="${p.name}" width="450" height="450" ${i > 2 ? 'loading="lazy"' : ""} />
-        <img class="alt" src="${p.gallery[1]}" alt="" width="450" height="450" loading="lazy" />
+        <img class="alt" src="${p.gallery[1] || p.gallery[0]}" alt="" width="450" height="450" loading="lazy" />
       </button>
       <div class="card-body">
         <button class="card-name" data-open="${p.id}">${p.name}</button>
         <div class="card-tag">${p.tagline}</div>
         <div class="meta">${metaChips(p)}</div>
         <div class="card-foot">
-          <div class="price">${eur0.format(p.price)}</div>
-          <button class="add-btn" data-add="${p.id}">+ Hinzufügen</button>
+          <div class="price">${fmt(p)}</div>
+          ${hasOptions(p)
+            ? `<button class="add-btn" data-open="${p.id}">Auswählen</button>`
+            : `<button class="add-btn" data-add="${p.id}">+ Hinzufügen</button>`}
         </div>
       </div>
     </article>`).join("");
 }
 
+function setCat(cat) {
+  state.cat = cat;
+  state.tag = "all";
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.cat === cat));
+  $("#tagChips").hidden = cat !== "scooter";
+  document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.tag === "all"));
+  renderGrid();
+}
+
 function setTag(tag) {
+  if (state.cat !== "scooter") setCat("scooter");
   state.tag = tag;
   document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.tag === tag));
   renderGrid();
@@ -72,7 +97,7 @@ function setTag(tag) {
 
 // ---------- Vergleichstabelle ----------
 function renderCompare() {
-  const rows = [...PRODUCTS].sort((a, b) => a.price - b.price);
+  const rows = PRODUCTS.filter(isScooter).sort((a, b) => a.price - b.price);
   $("#cmpTable").innerHTML = `
     <thead><tr>
       <th>Modell</th><th>Preis</th><th>Motor</th><th>Akku</th><th>Speed</th><th>Reichweite</th><th>Reifen</th><th>Straße (ABE)</th>
@@ -88,29 +113,31 @@ function renderCompare() {
 }
 
 // ---------- Warenkorb ----------
-function addToCart(id, qty = 1) {
-  if (!findProduct(id)) return;
-  cart[id] = Math.min((cart[id] || 0) + qty, MAX_QTY);
+function addToCart(id, qty = 1, { size = "", color = "" } = {}) {
+  const p = findProduct(id);
+  if (!p) return;
+  const key = cartKey(id, size, color);
+  cart[key] = Math.min((cart[key] || 0) + qty, MAX_QTY);
   updateCart();
   const c = $("#cartCount");
   c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump");
-  toast(`${findProduct(id).name} im Warenkorb`);
+  toast(`${p.name} im Warenkorb`);
 }
 
-function changeQty(id, delta) {
-  cart[id] = Math.min((cart[id] || 0) + delta, MAX_QTY);
-  if (cart[id] <= 0) delete cart[id];
+function changeQty(key, delta) {
+  cart[key] = Math.min((cart[key] || 0) + delta, MAX_QTY);
+  if (cart[key] <= 0) delete cart[key];
   updateCart();
 }
 
 function totals() {
-  const subtotal = Object.entries(cart).reduce((s, [id, q]) => s + findProduct(id).price * q, 0);
+  const subtotal = Object.entries(cart).reduce((s, [key, q]) => s + parseKey(key).p.price * q, 0);
   const shipping = subtotal === 0 || subtotal >= FREE_SHIPPING_FROM ? 0 : SHIPPING_FEE;
   return { subtotal, shipping, total: subtotal + shipping };
 }
 
 function updateCart() {
-  for (const id of Object.keys(cart)) if (!findProduct(id)) delete cart[id]; // veraltete Einträge
+  for (const key of Object.keys(cart)) if (!parseKey(key).p) delete cart[key]; // veraltete Einträge
   saveJSON(CART_KEY, cart);
 
   const entries = Object.entries(cart);
@@ -119,30 +146,36 @@ function updateCart() {
 
   $("#cartCount").textContent = count;
   $("#cartItems").innerHTML = entries.length
-    ? entries.map(([id, q]) => {
-        const p = findProduct(id);
+    ? entries.map(([key, q]) => {
+        const o = parseKey(key), p = o.p;
         return `<div class="line">
-          <div class="thumb"><img src="${p.gallery[0]}" alt="" width="76" height="76" /></div>
+          <div class="thumb"><img src="${p.gallery[color_i(p, o.color)]}" alt="" width="76" height="76" /></div>
           <div>
             <div class="line-name">${p.name}</div>
+            ${optLabel(o) ? `<div class="line-opt">${optLabel(o)}</div>` : ""}
             <div class="qty">
-              <button data-dec="${id}" aria-label="Weniger">−</button>
+              <button data-dec="${key}" aria-label="Weniger">−</button>
               <span>${q}</span>
-              <button data-inc="${id}" aria-label="Mehr">+</button>
+              <button data-inc="${key}" aria-label="Mehr">+</button>
             </div>
           </div>
           <div>
             <div class="line-price">${eur.format(p.price * q)}</div>
-            <button class="remove" data-remove="${id}">Entfernen</button>
+            <button class="remove" data-remove="${key}">Entfernen</button>
           </div>
         </div>`;
       }).join("")
-    : `<div class="cart-empty"><p>Dein Warenkorb ist leer.</p><a class="btn btn-primary" href="#shop" data-close-cart>Scooter ansehen</a></div>`;
+    : `<div class="cart-empty"><p>Dein Warenkorb ist leer.</p><a class="btn btn-primary" href="#shop" data-close-cart>Weiter stöbern</a></div>`;
 
   $("#cartSubtotal").textContent = eur.format(t.subtotal);
   $("#cartShipping").textContent = entries.length ? (t.shipping ? eur.format(t.shipping) : "Gratis") : "–";
   $("#cartTotal").textContent = eur.format(t.total);
   $("#checkoutBtn").disabled = !entries.length;
+}
+
+// Bildindex passend zur gewählten Farbe (sonst erstes Bild)
+function color_i(p, color) {
+  return p.colors?.find((c) => c.name === color)?.i ?? 0;
 }
 
 function setCartOpen(open) {
@@ -157,34 +190,55 @@ function openProduct(id) {
   const p = findProduct(id);
   if (!p) return;
   const dlg = $("#productDialog");
+  const scooter = isScooter(p);
+  dlg.dataset.pid = id;
+  dlg.dataset.size = "";
+  dlg.dataset.color = p.colors ? p.colors[0].name : "";
   dlg.innerHTML = `
     <button class="icon-btn pd-close" data-close aria-label="Schließen">✕</button>
     <div class="pd">
       <div class="pd-gallery">
         <div class="pd-main"><img id="pdMain" src="${p.gallery[0]}" alt="${p.name}" width="900" height="900" /></div>
-        <div class="pd-thumbs">${p.gallery.map((src, i) => `
+        ${p.gallery.length > 1 ? `<div class="pd-thumbs">${p.gallery.map((src, i) => `
           <button class="${i === 0 ? "active" : ""}" data-thumb="${src}" aria-label="Bild ${i + 1}"><img src="${src}" alt="" width="62" height="62" loading="lazy" /></button>`).join("")}
-        </div>
+        </div>` : ""}
       </div>
       <div class="pd-info">
         <h3>${p.name}</h3>
         <div class="pd-tag">${p.tagline}</div>
         <div class="price">${eur.format(p.price)}</div>
-        <div class="small muted">Inkl. MwSt. · ${p.price >= FREE_SHIPPING_FROM ? "Versandkostenfrei" : "zzgl. Versand"}</div>
-        <div class="zone ${isAbe(p) ? "ok" : "warn"}" style="margin-top:14px">
+        <div class="small muted">Inkl. MwSt. · ${p.price >= FREE_SHIPPING_FROM ? "Versandkostenfrei" : `zzgl. ${eur.format(SHIPPING_FEE)} Versand (ab ${eur0.format(FREE_SHIPPING_FROM)} gratis)`}</div>
+        ${scooter ? `<div class="zone ${isAbe(p) ? "ok" : "warn"}" style="margin-top:14px">
           ${isAbe(p) ? "✓ Mit ABE – für öffentliche Straßen geeignet (max. 20 km/h, Versicherungskennzeichen nötig)" : "⚠️ Keine deutsche ABE – nur für Privatgelände"}
-        </div>
+        </div>` : ""}
         <p class="pd-desc">${p.desc}</p>
+        ${p.colors ? `<div class="opt-group" id="colorGroup"><span class="opt-label">Farbe: <strong id="colorName">${p.colors[0].name}</strong></span>
+          <div class="opts">${p.colors.map((c, k) => `<button type="button" class="swatch ${k === 0 ? "active" : ""}" data-color="${c.name}" data-ci="${c.i}" title="${c.name}" style="--sw:${c.name === "Orange" ? "#ff5f1f" : "#16171c"}" aria-label="${c.name}"></button>`).join("")}</div></div>` : ""}
+        ${p.sizes ? `<div class="opt-group" id="sizeGroup"><span class="opt-label">Größe: <strong id="sizeName">bitte wählen</strong></span>
+          <div class="opts">${p.sizes.map((z) => `<button type="button" class="opt" data-size="${z}">${z}</button>`).join("")}</div></div>` : ""}
         <ul class="ticks">${p.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
         <table class="specs">${Object.entries(p.specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>
-        <button class="btn btn-primary block" data-add="${p.id}" data-close-after>In den Warenkorb</button>
-        <p class="pd-note">Herstellerangaben („bis zu“-Werte). Reichweite hängt von Gewicht, Gelände und Fahrweise ab.</p>
+        <button class="btn btn-primary block" data-add-opt="${p.id}">In den Warenkorb</button>
+        <p class="pd-note">${p.note ? p.note : scooter ? "Herstellerangaben („bis zu“-Werte). Reichweite hängt von Gewicht, Gelände und Fahrweise ab." : "Lieferzeit 1–3 Werktage Bearbeitung. 14 Tage Widerrufsrecht."}</p>
       </div>
     </div>`;
   dlg.showModal();
   dlg.scrollTop = 0;
   document.title = `${p.name} kaufen – Kukirin Shop`;
   if (location.hash !== `#p-${id}`) history.replaceState(null, "", `#p-${id}`);
+}
+
+function addFromDialog(id) {
+  const dlg = $("#productDialog");
+  const p = findProduct(id);
+  if (p.sizes && !dlg.dataset.size) {
+    const g = $("#sizeGroup");
+    g.classList.remove("invalid"); void g.offsetWidth; g.classList.add("invalid");
+    toast("Bitte wähle eine Größe");
+    return;
+  }
+  addToCart(id, 1, { size: dlg.dataset.size, color: dlg.dataset.color });
+  dlg.close();
 }
 
 const BASE_TITLE = document.title;
@@ -242,13 +296,13 @@ function openLegal(key) {
 function openCheckout() {
   if (!Object.keys(cart).length) return;
   setCartOpen(false);
-  const needsAck = Object.keys(cart).some((id) => !isAbe(findProduct(id)));
+  const needsAck = Object.keys(cart).some((key) => { const p = parseKey(key).p; return isScooter(p) && !isAbe(p); });
   $("#privateGroundCheck").hidden = !needsAck;
   $("#privateGround").required = needsAck;
   const t = totals();
-  $("#checkoutSummary").innerHTML = Object.entries(cart).map(([id, q]) => {
-    const p = findProduct(id);
-    return `<div class="sum-line"><img src="${p.gallery[0]}" alt="" width="44" height="44" /><span>${q}× ${p.name}</span><strong>${eur.format(p.price * q)}</strong></div>`;
+  $("#checkoutSummary").innerHTML = Object.entries(cart).map(([key, q]) => {
+    const o = parseKey(key), p = o.p;
+    return `<div class="sum-line"><img src="${p.gallery[color_i(p, o.color)]}" alt="" width="44" height="44" /><span>${q}× ${p.name}${optLabel(o) ? ` <small class="muted">(${optLabel(o)})</small>` : ""}</span><strong>${eur.format(p.price * q)}</strong></div>`;
   }).join("") + `<div class="sum-line sum-ship"><span>Versand</span><strong>${t.shipping ? eur.format(t.shipping) : "Gratis"}</strong></div>`;
   $("#checkoutTotal").textContent = eur.format(t.total);
   $("#checkoutDialog").showModal();
@@ -259,7 +313,10 @@ function submitOrder(form) {
   const order = {
     nr: "KU-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString(),
-    items: Object.entries(cart).map(([id, qty]) => ({ id, name: findProduct(id).name, qty, price: findProduct(id).price })),
+    items: Object.entries(cart).map(([key, qty]) => {
+      const o = parseKey(key);
+      return { id: o.p.id, name: o.p.name + (optLabel(o) ? ` (${optLabel(o)})` : ""), qty, price: o.p.price };
+    }),
     totals: totals(),
     customer: data,
   };
@@ -289,7 +346,7 @@ function toast(msg) {
 
 // ---------- Events ----------
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("button, [data-open], [data-close-cart]");
+  const t = e.target.closest("button, [data-open], [data-close-cart], [data-cat]");
   if (!t) return;
   const d = t.dataset;
 
@@ -300,9 +357,28 @@ document.addEventListener("click", (e) => {
     const dlg = t.closest("dialog");
     if (dlg) dlg.close();
     openProduct(d.open);
-  } else if (d.thumb) {
+  } else if (d.addOpt) addFromDialog(d.addOpt);
+  else if (d.thumb) {
     $("#pdMain").src = d.thumb;
     t.parentElement.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === t));
+  } else if (d.size) {
+    $("#productDialog").dataset.size = d.size;
+    $("#sizeName").textContent = d.size;
+    $("#sizeGroup").classList.remove("invalid");
+    t.parentElement.querySelectorAll(".opt").forEach((b) => b.classList.toggle("active", b === t));
+  } else if (d.color) {
+    $("#productDialog").dataset.color = d.color;
+    $("#colorName").textContent = d.color;
+    t.parentElement.querySelectorAll(".swatch").forEach((b) => b.classList.toggle("active", b === t));
+    const src = findProduct($("#productDialog").dataset.pid).gallery[+d.ci];
+    $("#pdMain").src = src;
+    document.querySelectorAll(".pd-thumbs button").forEach((b) => b.classList.toggle("active", b.dataset.thumb === src));
+  } else if (d.cat) {
+    setCat(d.cat);
+    if (t.tagName !== "A") {
+      if (t.closest(".svc-panel") && typeof svcClose === "function") svcClose();
+      $("#shop").scrollIntoView({ behavior: "smooth" });
+    }
   } else if (d.inc) changeQty(d.inc, 1);
   else if (d.dec) changeQty(d.dec, -1);
   else if (d.remove) { delete cart[d.remove]; updateCart(); }
@@ -327,7 +403,7 @@ $("#checkoutBtn").addEventListener("click", openCheckout);
 $("#sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; renderGrid(); });
 $("#searchInput").addEventListener("input", (e) => { state.q = e.target.value; renderGrid(); });
 $("#resetFilters").addEventListener("click", () => {
-  state.q = ""; $("#searchInput").value = ""; setTag("all");
+  state.q = ""; $("#searchInput").value = ""; setCat("all");
 });
 $("#checkoutForm").addEventListener("submit", (e) => { e.preventDefault(); submitOrder(e.target); });
 

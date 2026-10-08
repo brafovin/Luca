@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" width="900" height="900"><defs>
+<filter id="sh" x="-30%" y="-30%" width="160%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
+<linearGradient id="blk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34363f"/><stop offset="1" stop-color="#15161b"/></linearGradient>
+<linearGradient id="blk2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#15161b"/><stop offset=".5" stop-color="#2d2f38"/><stop offset="1" stop-color="#15161b"/></linearGradient>
+<linearGradient id="org" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7d40"/><stop offset="1" stop-color="#e24a0c"/></linearGradient>
+<linearGradient id="gry" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceef2"/><stop offset="1" stop-color="#b3b6c1"/></linearGradient>
+</defs><ellipse cx="450" cy="735" rx="230" ry="26" fill="#000" opacity=".28" filter="url(#sh)"/>
+<path d="M410 190 C410 150 490 150 490 190" fill="none" stroke="#24262e" stroke-width="16" stroke-linecap="round"/>
+<path d="M285 330 C230 420 230 560 290 650" fill="none" stroke="#2a2c35" stroke-width="36" stroke-linecap="round"/>
+<path d="M615 330 C670 420 670 560 610 650" fill="none" stroke="#2a2c35" stroke-width="36" stroke-linecap="round"/>
+<path d="M270 330 Q270 190 450 190 Q630 190 630 330 V660 Q630 720 570 720 H330 Q270 720 270 660 Z" fill="url(#blk)"/>
+<path d="M310 320 Q450 260 590 320" fill="none" stroke="url(#org)" stroke-width="9" stroke-linecap="round"/>
+<rect x="540" y="296" width="30" height="40" rx="12" fill="url(#org)"/>
+<rect x="318" y="470" width="264" height="190" rx="46" fill="#1b1c22" stroke="#3a3c46" stroke-width="3"/>
+<path d="M342 500 H558" stroke="url(#org)" stroke-width="6" stroke-linecap="round"/><circle cx="450" cy="400" r="30" fill="url(#org)"/><text x="450" y="410.8" text-anchor="middle" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="900" font-size="33.0" fill="#fff">K</text><text x="450" y="590" text-anchor="middle" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="800" font-size="40" letter-spacing="6" fill="#8d8f9b" >20 L</text></svg>
