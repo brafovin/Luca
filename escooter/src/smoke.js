@@ -9,7 +9,7 @@ export class Smoke {
     g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.5, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
     x.fillStyle = g; x.fillRect(0, 0, 64, 64);
     const tex = new THREE.CanvasTexture(c);
-    this.P = [];
+    this.scene = scene; this.P = [];
     for (let i = 0; i < n; i++) {
       const m = new THREE.SpriteMaterial({ map: tex, color: 0xb4b8bc, transparent: true, opacity: 0, depthWrite: false, fog: true });
       const s = new THREE.Sprite(m); s.visible = false; scene.add(s);
@@ -29,7 +29,18 @@ export class Smoke {
     if (blk) { p.life = p.max = 2.4 + Math.random() * 1.6; p.r0 = 0.25; p.r1 = 1.2 + Math.random() * 0.8; p.a = 0.55; }
     p.s.position.set(x, y, z); p.s.visible = true;
   }
+  spark(x, y, z, vx, vy, vz) {
+    if (!this.S) {
+      const c = document.createElement('canvas'); c.width = c.height = 32; const x2 = c.getContext('2d'); const g = x2.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, 'rgba(255,240,200,1)'); g.addColorStop(0.4, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,120,0,0)');
+      x2.fillStyle = g; x2.fillRect(0, 0, 32, 32);
+      const tex = new THREE.CanvasTexture(c); this.S = []; this.si = 0;
+      for (let i = 0; i < 40; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false })); s.visible = false; this.scene.add(s); this.S.push({ s, life: 0, vx: 0, vy: 0, vz: 0 }); }
+    }
+    const p = this.S[this.si++ % this.S.length];
+    p.life = 0.25 + Math.random() * 0.25; p.vx = vx; p.vy = vy; p.vz = vz; p.s.position.set(x, y, z); p.s.scale.setScalar(0.07 + Math.random() * 0.06); p.s.visible = true; p.s.material.opacity = 1;
+  }
   update(dt) {
+    if (this.S) for (const p of this.S) { if (p.life <= 0) continue; p.life -= dt; if (p.life <= 0) { p.s.visible = false; continue; } p.vy -= 9 * dt; p.s.position.x += p.vx * dt; p.s.position.y = Math.max(0.02, p.s.position.y + p.vy * dt); p.s.position.z += p.vz * dt; p.s.material.opacity = Math.min(1, p.life * 5); }
     for (const p of this.P) {
       if (p.life <= 0) continue;
       p.life -= dt;

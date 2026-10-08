@@ -69,6 +69,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
   Fensterscheiben & Autolack, beleuchtete Fenster/Laternen/Lichtkegel bei Nacht, optional Bloom
   (Qualität „Hoch"), nasse Straße mit Reflexionen. Dynamische Auflösung hält die Bildrate stabil.
 
+## Shooter-Feeling & Look 🎮
+
+* **Cinematic-Nachbearbeitung** (Qualität „Mittel“ und „Hoch“, **Standard ist jetzt Hoch**; die dynamische Auflösung regelt bei schwachen Rechnern nach): Radial-Speed-Blur und Farbsäume
+  bei hohem Tempo, Schärfen, sanfte Kontrastkurve/Farbgrading (warm tagsüber), Vignette, Filmkorn, rötlicher Treffer-Effekt bei Crashs; „Hoch“ zusätzlich Bloom + Ambient Occlusion.
+* **Zu Fuß wie im Shooter:** Fadenkreuz (weitet sich beim Schießen/Laufen), **Trefferanzeige** (weißes X, rot beim Kill), **Munitionsanzeige 15/15**, **`R` = Nachladen** (1,5 s, Waffe senkt sich, Klick-Sounds),
+  Mündungslicht, **Patronenhülsen** fliegen und kullern, **Funken & Staub** bei Einschlägen, Hall beim Schuss, Waffen-Wackeln/Schwanken in der Ego-Ansicht, **Kopfwippen** beim Gehen, **Schritte**,
+  **Springen mit der Leertaste** (Landestoß).
+
 ## Autos kaputt machen 🚗💥 & Obdachlose 🍺
 
 * **Autos haben Lebenspunkte.** Treffer mit **Pistole** (3 Schuss), **Faust/Messer** (Boxen zu Fuß, ca. 10 Schläge) oder **Rammen mit dem Roller** (je schneller, desto mehr Schaden) lassen die Scheiben splittern,

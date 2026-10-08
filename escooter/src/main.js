@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { makeTextures } from './textures.js';
 import { createMaterials } from './materials.js';
 import { Sky } from './sky.js';
@@ -114,7 +115,7 @@ const store = {
   },
 };
 const cfg = {
-  quality: store.get('quality', 'med'),
+  quality: store.get('quality', 'high'),
   mode: store.get('mode', 'mission'),
   battMode: store.get('battMode2', 'off'),
   wet: false,
@@ -144,17 +145,48 @@ const st = {
   score: 0, scoreAcc: 0, odoTotal: store.get('odo', 0), best: store.get('best', 0),
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
-  wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
+  landDip: 0, hitT: 0, wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
   mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
 };
 
 /* ------------------------------------------------------------------ quality */
 const QUALITY = {
   low: { pr: 1, shadow: 0, bloom: false, ao: false, radius: 2, fogFar: 185 },
-  med: { pr: 1.5, shadow: 1024, bloom: false, ao: false, radius: 2, fogFar: 190 },
-  high: { pr: 2, shadow: 2048, bloom: true, ao: true, radius: 3, fogFar: 285 },
+  med: { pr: 1.5, shadow: 1024, bloom: false, ao: false, post: true, radius: 2, fogFar: 190 },
+  high: { pr: 2, shadow: 2048, bloom: true, ao: true, post: true, radius: 3, fogFar: 285 },
 };
-let composer = null, bloomPass = null, gtaoPass = null;
+let composer = null, bloomPass = null, gtaoPass = null, gradePass = null;
+/* cinematic final pass: radial speed blur, chromatic aberration, sharpen, soft S-curve grade, vignette, damage tint, film grain */
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, speed: { value: 0 }, hurt: { value: 0 }, res: { value: new THREE.Vector2(1, 1) }, grain: { value: 0.03 }, warm: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float time, speed, hurt, grain, warm; uniform vec2 res; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + time * 7.0) * 43758.5453); }
+    void main(){
+      vec2 c = vUv - 0.5; float r2 = dot(c, c);
+      float blur = speed * 0.07 * smoothstep(0.02, 0.2, r2);
+      float ca = (0.0008 + speed * 0.006 + hurt * 0.008) * (r2 * 4.0 + 0.2);
+      vec3 col = vec3(0.0);
+      for (int i = 0; i < 6; i++) {
+        float k = float(i) / 5.0; vec2 uv = vUv - c * blur * k;
+        col.r += texture2D(tDiffuse, uv - c * ca).r; col.g += texture2D(tDiffuse, uv).g; col.b += texture2D(tDiffuse, uv + c * ca).b;
+      }
+      col /= 6.0;
+      vec2 px = 1.0 / res;
+      vec3 n = texture2D(tDiffuse, vUv + vec2(px.x, 0.0)).rgb + texture2D(tDiffuse, vUv - vec2(px.x, 0.0)).rgb + texture2D(tDiffuse, vUv + vec2(0.0, px.y)).rgb + texture2D(tDiffuse, vUv - vec2(0.0, px.y)).rgb;
+      col += (col - n * 0.25) * 0.45 * (1.0 - speed);
+      float l = dot(col, vec3(0.299, 0.587, 0.114));
+      col = mix(vec3(l), col, 1.1);
+      col = mix(col, col * col * (3.0 - 2.0 * col), 0.38);
+      col *= mix(vec3(1.0), vec3(1.035, 1.0, 0.95), warm);
+      col += vec3(-0.004, 0.0, 0.01) * (1.0 - l);
+      col *= 1.0 - smoothstep(0.18, 0.62, r2) * 0.4;
+      col = mix(col, col * vec3(1.0, 0.3, 0.3), hurt * smoothstep(0.04, 0.4, r2));
+      col += (hash(vUv * res) - 0.5) * grain * (1.2 - l);
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
 function applyQuality(name) {
   const q = QUALITY[name] || QUALITY.med;
   cfg.quality = name;
@@ -168,7 +200,8 @@ function applyQuality(name) {
   world.radius = q.radius;
   sky.fog.far = q.fogFar; sky.fog.near = q.fogFar * 0.12;
   st.maxPR = q.pr;
-  st.bloom = q.bloom;
+  st.bloom = q.bloom; st.post = !!q.post;
+  document.getElementById('vignette').style.display = q.post ? 'none' : '';
   st.fogFar = q.fogFar;
   st.ao = q.ao;
   resize();
@@ -180,7 +213,7 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  if (st.bloom) {
+  if (st.post) {
     if (!composer) {
       const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, { type: THREE.HalfFloatType, samples: 4 });
       composer = new EffectComposer(renderer, rt);
@@ -192,7 +225,11 @@ function resize() {
       bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.42, 0.55, 1.05);
       composer.addPass(bloomPass);
       composer.addPass(new OutputPass());
+      gradePass = new ShaderPass(GradeShader);
+      composer.addPass(gradePass);
     }
+    if (bloomPass) bloomPass.enabled = !!st.bloom;
+    gradePass.uniforms.res.value.set(w * pr, h * pr);
     composer.setPixelRatio(pr);
     composer.setSize(w, h);
     if (gtaoPass) gtaoPass.enabled = !!st.ao;
@@ -247,11 +284,11 @@ window.addEventListener('keydown', (e) => {
   if (st.paused && !['KeyP', 'Escape', 'Enter', 'KeyM'].includes(e.code)) return;
   switch (e.code) {
     case 'KeyC': toggleCam(); break;
-    case 'KeyR': toggleOneHand(); break;
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
     case 'KeyH': setWbar(!cfg.wbar); break;
     case 'KeyN': toggleKnife(); break;
     case 'KeyQ': toggleGun(); break;
+    case 'KeyR': if (st.mode === 'walk' && st.gun) { walker.reload(); } else toggleOneHand(); break;
     case 'KeyZ': smokeKey(); break;
     case 'KeyY': putOut(); break;
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
@@ -568,11 +605,33 @@ function toggleGun() {
   if (st.mode !== 'walk') { toast('Pistole nur zu Fuß', 'erst absteigen (F)', 1400); return; }
   st.gun = !st.gun;
   if (st.gun) { st.knife = false; walker.setKnife(false); fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = false)); }
-  walker.setGun(st.gun);
+  walker.setGun(st.gun); audio.click(1);
   toast(st.gun ? '🔫 Pistole gezogen' : 'Pistole weggesteckt', st.gun ? 'Linke Maus / E / J = schießen (1 Schuss = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
 }
+function hitMark(kill) { st.hitT = kill ? 0.5 : 0.22; $('hitmark').classList.toggle('kill', !!kill); audio.click(2); }
+const casings = [];
+function ejectCasing(x, z, yaw) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.019, 6), new THREE.MeshStandardMaterial({ color: 0xd8a830, metalness: 0.9, roughness: 0.3 }));
+  const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  m.position.set(x + Math.sin(yaw) * 0.4 + rx * 0.2, 1.3, z + Math.cos(yaw) * 0.4 + rz * 0.2);
+  scene.add(m);
+  casings.push({ m, vx: rx * (1.4 + Math.random()), vy: 1.6 + Math.random(), vz: rz * (1.4 + Math.random()), t: 6, rv: (Math.random() - 0.5) * 20 });
+}
+function updateCasings(dt) {
+  for (let i = casings.length - 1; i >= 0; i--) {
+    const c = casings[i]; c.t -= dt; c.vy -= 9.8 * dt;
+    c.m.position.x += c.vx * dt; c.m.position.y += c.vy * dt; c.m.position.z += c.vz * dt; c.m.rotation.x += c.rv * dt; c.m.rotation.z += c.rv * dt * 0.7;
+    if (c.m.position.y < 0.04) { c.m.position.y = 0.04; c.vy *= -0.35; c.vx *= 0.5; c.vz *= 0.5; c.rv *= 0.4; if (Math.abs(c.vy) < 0.4) { c.vy = 0; c.rv = 0; } }
+    if (c.t <= 0) { scene.remove(c.m); c.m.geometry.dispose(); c.m.material.dispose(); casings.splice(i, 1); }
+  }
+}
+const muzzleLight = new THREE.PointLight(0xffb060, 0, 14, 2);
+scene.add(muzzleLight);
 function resolveShot(ev) {
   audio.shot();
+  ejectCasing(ev.x, ev.z, ev.yaw);
+  muzzleLight.position.set(ev.x + Math.sin(ev.yaw) * 0.8, 1.35, ev.z + Math.cos(ev.yaw) * 0.8); muzzleLight.intensity = 90; st.muzzleT = 0.06;
+  st.xSpread = 1;
   const eyeY = 1.36, fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
   const ox = ev.x + fx * 0.55, oz = ev.z + fz * 0.55;
   // how far does the bullet fly before it hits a wall
@@ -591,15 +650,21 @@ function resolveShot(ev) {
   if (cr && (!best || cr.t < bt)) {
     addTracer(ox, eyeY - 0.1, oz, ox + fx * cr.t, eyeY - 0.15, oz + fz * cr.t);
     smoke.emit(ox + fx * cr.t, 0.9, oz + fz * cr.t, 0, 0.6, 0, 'cig');
-    audio.thud(3); carDmg.hit(cr.target, 34, ox, oz);
+    audio.thud(3); carDmg.hit(cr.target, 34, ox, oz); hitMark(false);
+    for (let k = 0; k < 4; k++) smoke.spark(ox + fx * cr.t, 0.8 + Math.random() * 0.5, oz + fz * cr.t, -fx * 2 + (Math.random() - 0.5) * 3, 1.5 + Math.random() * 2, -fz * 2 + (Math.random() - 0.5) * 3);
     return;
   }
   const hitD = best ? bt : range;
   addTracer(ox, eyeY - 0.1, oz, ox + fx * hitD, eyeY - 0.1 - (best ? 0.0 : 0), oz + fz * hitD);
   smoke.emit(ox + fx * 0.3, eyeY - 0.1, oz + fz * 0.3, fx * 0.3, 0.1, fz * 0.3, 'cig');
   st.crashT = 0.08; $('crash').style.opacity = 0.12;
-  if (!best) return;
+  if (!best) { // bullet hit a wall / the ground: dust + sparks at the impact
+    const ix = ox + fx * hitD, iz = oz + fz * hitD;
+    if (hitD < 59) { for (let k = 0; k < 5; k++) smoke.spark(ix, 1.0 + Math.random() * 0.4, iz, -fx * 2 + (Math.random() - 0.5) * 3, 1 + Math.random() * 2, -fz * 2 + (Math.random() - 0.5) * 3); smoke.emit(ix, 1.1, iz, -fx * 0.3, 0.2, -fz * 0.3, 'cig'); }
+    return;
+  }
   const dx = best.x - ox, dz = best.z - oz, l = Math.hypot(dx, dz) || 1;
+  hitMark(true);
   const wasTeen = best.kind === 'teen';
   peds.hit(best, dx, dz, 300, { long: true, gun: true });
   blood.splash(best.x - dx / l * 0.1, 1.15, best.z - dz / l * 0.1, dx / l, dz / l, 24);
@@ -1049,8 +1114,12 @@ function updateFists() {
   gunFP.visible = showGun;
   if (showGun) {
     const r = walker.recoil || 0;
-    gunFP.position.set(0.1, -0.15 + r * 0.02, -0.34 + r * 0.1);
-    gunFP.rotation.set(0.04 + r * 0.32, 0.03, 0);
+    const rel = walker.reloadT > 0 ? Math.sin(Math.min(1, (1.5 - walker.reloadT) / 1.5) * Math.PI) : 0;
+    const mv = Math.min(1, walker.speed / 1.8) * (walker.running ? 1.6 : 1);
+    const dyaw = wrapAngle(walker.yaw - (st.lastYaw ?? walker.yaw)); st.lastYaw = walker.yaw;
+    st.swayY = damp(st.swayY || 0, clamp(-dyaw * 3.2, -0.12, 0.12), 8, 0.016);
+    gunFP.position.set(0.1 + Math.cos(walker.phase) * 0.012 * mv + st.swayY * 0.5, -0.15 + r * 0.02 - rel * 0.17 + Math.abs(Math.sin(walker.phase)) * 0.014 * mv, -0.34 + r * 0.1);
+    gunFP.rotation.set(0.04 + r * 0.32 + rel * 0.55, 0.03 - st.swayY, rel * 0.35);
     gunFlashFP.visible = walker.flashT > 0;
   }
   const on = st.mode === 'walk' && st.fp && walker.guardAmt > 0.02 && !st.dbgCam;
@@ -1102,8 +1171,10 @@ function updateCamera(dt, first) {
     mouse.lookY = clamp(mouse.lookY, -0.5, 0.5);
     if (st.fp) {
       walker.setVisible(false);
-      camera.position.set(walker.x + Math.sin(camYaw) * 0.12, walker.y + 1.64 + Math.sin(walker.phase * 2) * 0.012 * Math.min(1, walker.speed), walker.z + Math.cos(camYaw) * 0.12);
-      camera.rotation.set(-mouse.lookY, camYaw + Math.PI, 0, 'YXZ');
+      const bobA = Math.min(1, walker.speed / 1.6) * (walker.running ? 1.7 : 1);
+      const sideB = Math.cos(walker.phase) * 0.014 * bobA;
+      camera.position.set(walker.x + Math.sin(camYaw) * 0.12 + Math.cos(camYaw) * sideB, walker.y + walker.jy + 1.64 + Math.sin(walker.phase * 2) * 0.016 * bobA - st.landDip, walker.z + Math.cos(camYaw) * 0.12 - Math.sin(camYaw) * sideB);
+      camera.rotation.set(-mouse.lookY - walker.recoil * 0.035, camYaw + Math.PI, Math.sin(walker.phase) * 0.006 * bobA, 'YXZ');
     } else {
       walker.setVisible(true);
       const dist = 3.4 * zoom;
@@ -1112,7 +1183,7 @@ function updateCamera(dt, first) {
       for (let i = 0; i < 6; i++) { px = walker.x - sinY * dist * f; pz = walker.z - cosY * dist * f; if (!insideCollider(px, pz, 0.3)) break; f -= 0.17; }
       f = Math.max(f, 0.2);
       px = walker.x - sinY * dist * f; pz = walker.z - cosY * dist * f;
-      const py = Math.max(walker.y + 1.5 + dist * f * 0.18 + mouse.lookY * 2, groundHeight(px, pz) + 0.4);
+      const py = Math.max(walker.y + walker.jy + 1.5 + dist * f * 0.18 + mouse.lookY * 2, groundHeight(px, pz) + 0.4);
       camera.position.set(px, py, pz);
       camera.lookAt(walker.x + sinY * 0.6, walker.y + 1.35, walker.z + cosY * 0.6);
     }
@@ -1486,6 +1557,10 @@ function tick(dt, now, render = true) {
       walker.update(dt2, inp, world.colliders, walkDyn);
       if (walker.punchEvent) { const ev = walker.punchEvent; walker.punchEvent = null; resolvePunch(ev); }
       if (walker.shootEvent) { const ev = walker.shootEvent; walker.shootEvent = null; resolveShot(ev); }
+      if (walker.stepEvent) { walker.stepEvent = false; audio.step(walker.running); }
+      if (walker.landEvent) { walker.landEvent = false; audio.step(true); audio.thud(2); st.landDip = 0.09; }
+      if (walker.clickEvent) { walker.clickEvent = false; audio.click(0); }
+      if (walker.reloadEvent) { walker.reloadEvent = false; audio.click(1); setTimeout(() => audio.click(0), 650); setTimeout(() => audio.click(1), 1250); }
     }
     if (scooter.fellEvent) { scooter.fellEvent = false; st.score = Math.max(0, st.score - 150); toast('Sturz!', '−150 Punkte – zu schnell gegen ein Hindernis', 2200); audio.thud(14); st.crashT = 1; $('crash').style.opacity = 0.9; }
     if (scooter.wheelieEvent) {
@@ -1555,6 +1630,12 @@ function tick(dt, now, render = true) {
   }
   // day / night
   sky.setTime(cfg.hours);
+  updateCasings(dt); st.landDip = damp(st.landDip, 0, 9, dt); if (st.muzzleT > 0) { st.muzzleT -= dt; if (st.muzzleT <= 0) muzzleLight.intensity = 0; }
+  if (st.hitT > 0) st.hitT -= dt; st.xSpread = damp(st.xSpread || 0, 0, 7, dt);
+  { const xh = $('xhair'), armed = st.mode === 'walk' && (st.gun || st.knife) && st.started && !st.paused; xh.classList.toggle('hidden', !armed); if (armed) xh.style.setProperty('--sp', (6 + st.xSpread * 12 + Math.min(1, walker.speed / 1.8) * 6 + walker.reloadT * 3).toFixed(1) + 'px');
+    const hm = $('hitmark'); hm.style.opacity = st.hitT > 0 ? Math.min(1, st.hitT * 5) : 0;
+    const am = $('ammo'), showA = st.mode === 'walk' && st.gun && st.started; am.classList.toggle('hidden', !showA);
+    if (showA) { const t2 = walker.reloadT > 0 ? '⟳ lädt nach …' : `${walker.ammo} <small>/ 15</small>`; if (am._t !== t2) { am._t = t2; am.innerHTML = '🔫 ' + t2; } am.classList.toggle('low', walker.ammo <= 3 && walker.reloadT <= 0); } }
   traffic.setNight(sky.night); blood.update(dt); updateSmoke(dt); carDmg.update(dt, me.x, me.z); if (st.ramCool > 0) st.ramCool -= dt;
   { const d = ems.active ? Math.hypot(ems.x - me.x, ems.z - me.z) : 1e9; audio.sirenEms(ems.active ? clamp(1 - d / 200, 0, 1) * (ems.state === 'medics' ? 0.4 : 1) : 0); }
   birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
@@ -1600,7 +1681,15 @@ function tick(dt, now, render = true) {
   { const sp = 1 + 0.06 * Math.sin(now * 0.005); shopBeacon.userData.ring.scale.setScalar(sp); shopBeacon.userData.c1.rotation.y += dt * 0.4; const dsb = Math.hypot(me.x - SHOP.x, me.z - SHOP.z); shopBeacon.visible = !allOwned() && dsb > 14; shopBeacon2.userData.ring.scale.setScalar(sp); shopBeacon2.userData.c1.rotation.y += dt * 0.4; shopBeacon2.visible = !st.track && Math.hypot(me.x - SHOP2.x, me.z - SHOP2.z) > 14; shopBeacon.visible = shopBeacon.visible && !st.track; }
 
   if (!render) return;
-  if (composer && st.bloom) composer.render();
+  if (composer && st.post) {
+    const u = gradePass.uniforms;
+    u.time.value = (performance.now() % 100000) / 1000;
+    const sp = st.mode === 'walk' ? walker.speed * 3.6 : scooter.kmh;
+    u.speed.value = damp(u.speed.value, clamp((sp - 55) / 160, 0, 1) * 0.85, 4, 0.016);
+    u.hurt.value = clamp(st.crashT * 1.2, 0, 1);
+    u.warm.value = clamp(1 - sky.night, 0, 1) * 0.6;
+    composer.render();
+  }
   else renderer.render(scene, camera);
 }
 

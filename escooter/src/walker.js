@@ -112,7 +112,7 @@ export class WalkerModel {
     this.head.rotation.x = -0.05 - (this.dragAmt || 0) * 0.28;
     if (wave > 0) { this.arms[1].rotation.x = -2.6 + Math.sin(phase * 3) * 0.3 * wave; }
     if (gun) { // pistol drawn: right arm out in front, left hand supporting
-      const kick = gun.recoil * 0.35;
+      const kick = gun.recoil * 0.35 + (gun.reload || 0) * 0.7;
       this.arms[1].rotation.x = -1.5 + kick; this.arms[1].rotation.z = 0; this.arms[1].rotation.y = 0.05;
       this.arms[0].rotation.x = -1.35 + kick * 0.8; this.arms[0].rotation.z = -0.28; this.arms[0].rotation.y = -0.3;
       this.torso.rotation.x = 0.1; this.head.rotation.x = -0.1;
@@ -140,7 +140,7 @@ export class Walker {
     this.model.group.visible = false;
     scene.add(this.model.group);
     this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
-    this.knife = false; this.gun = false; this.recoil = 0; this.flashT = 0; this.shootEvent = null; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
+    this.jy = 0; this.jv = 0; this.landEvent = false; this.stepEvent = false; this._stepPh = 0; this.ammo = 15; this.reloadT = 0; this.reloadEvent = false; this.clickEvent = false; this.knife = false; this.gun = false; this.recoil = 0; this.flashT = 0; this.shootEvent = null; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
   }
   place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
   update(dt, inp, col, dyn) {
@@ -150,7 +150,13 @@ export class Walker {
     if (this.punchCool > 0) this.punchCool -= dt;
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 6);
     if (this.flashT > 0) this.flashT -= dt;
-    if (this.gun) { if (inp.punch && this.punchCool <= 0) { this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw }; this.recoil = 1; this.flashT = 0.07; this.punchCool = 0.42; } }
+    if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = 15; }
+    if (this.gun) {
+      if (inp.punch && this.punchCool <= 0 && this.reloadT <= 0) {
+        if (this.ammo <= 0) { this.clickEvent = true; this.punchCool = 0.35; this.reload(); }
+        else { this.ammo--; this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw }; this.recoil = 1; this.flashT = 0.07; this.punchCool = 0.2; }
+      }
+    }
     else if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide = this.knife ? 1 : this.punchSide ^ 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
     if (this.punchT < 1) {
       this.punchT = Math.min(1, this.punchT + dt / 0.3);
@@ -179,18 +185,27 @@ export class Walker {
     const gy = groundHeight(this.x, this.z);
     this.y += (gy - this.y) * Math.min(1, dt * 14);
     if (this.speed > 0.15) this.phase += dt * this.speed * (run ? 2.0 : 3.6);
+    // jumping
+    if (inp.space && this.jy <= 0.001 && this.jv <= 0 && !this.stun) { this.jv = 4.6; this.landEvent = false; }
+    if (this.jy > 0 || this.jv > 0) {
+      this.jv -= 12.5 * dt; this.jy += this.jv * dt;
+      if (this.jy <= 0) { this.jy = 0; if (this.jv < -2) this.landEvent = true; this.jv = 0; }
+    }
+    // footsteps
+    if (this.speed > 0.4 && this.jy <= 0.001) { const ph = this.phase / Math.PI; if (Math.floor(ph) !== Math.floor(this._stepPh)) this.stepEvent = true; this._stepPh = ph; }
     this.apply();
   }
+  reload() { if (this.gun && this.ammo < 15 && this.reloadT <= 0) { this.reloadT = 1.5; this.reloadEvent = true; } }
   apply() {
     const g = this.model.group;
-    g.position.set(this.x, this.y, this.z);
+    g.position.set(this.x, this.y + this.jy, this.z);
     g.rotation.y = this.yaw;
     const amp = clamp(this.speed / 1.6, 0, 1);
     const gd = Math.min(1, this.guardT * 3);
     const ext = this.punchT < 1 ? Math.sin(Math.PI * Math.min(1, this.punchT * 1.1)) : 0;
     this.punchExt = ext; this.guardAmt = gd;
     if (this.model.gunFlash) this.model.gunFlash.visible = this.flashT > 0;
-    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, !this.gun && gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null, this.gun ? { recoil: this.recoil } : null);
+    this.model.pose(this.phase, amp, this.running, this.stun > 0 ? 0.5 : 0, 0, !this.gun && gd > 0.01 ? { guard: gd, p: ext, side: this.punchSide, t: this.boxT } : null, this.gun ? { recoil: this.recoil, reload: this.reloadT > 0 ? Math.sin(Math.min(1, (1.5 - this.reloadT) / 1.5) * Math.PI) : 0 } : null);
   }
   setVisible(v) { this.model.group.visible = v; }
   setGun(on) { this.gun = on; if (this.model.gunMesh) this.model.gunMesh.visible = on; if (on) this.setKnife(false); }
