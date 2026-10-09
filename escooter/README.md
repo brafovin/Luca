@@ -230,6 +230,9 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * Treffen sie sich, gibt es eine **Schlägerei**: jeder nimmt sich einen Gegner, sie boxen sich mit Schlagbewegung, Wirkungstreffern (Flinch, Wumm-Sound, ab und zu Blut) und Sprüchen. Die unterlegene Gang geht nach und nach **K. o.**, die Sieger ziehen weiter, die Verlierer stehen nach ein paar Sekunden wieder auf und laufen hinterher.
 * Mischst du dich ein (näher als ~2,5 m), Schüsse oder Schläge gegen ein Mitglied: die Gang geht auf dich los bzw. rennt vor der Waffe weg.
 
+## Startgeld
+* Du startest jetzt mit **1.000.000 €** (bestehende Spielstände werden einmalig auf 1.000.000 € aufgestockt) – kauf alles: Roller, Mopeds, Autos, Tuning.
+
 ## Entwickeln
 
 ```
