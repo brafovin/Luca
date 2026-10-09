@@ -96,6 +96,12 @@ export function addCar(S, rnd, opts = {}) {
   const prevM = S.m ? S.m.clone() : null;
   let sq = null;
   if (opts.sport) { sq = new THREE.Matrix4().makeScale(1.05, 0.8, 1.06); S.setTransform(prevM ? prevM.clone().multiply(sq) : sq); }
+  if (!opts.noWheels) for (const sx of [-1, 1]) for (const sz of [-1, 1]) { // wheel arch lips + brake callipers
+    const wz = sz * L * 0.31, wx = sx * (hw - 0.13);
+    const arch = new THREE.TorusGeometry(0.4, 0.026, 6, 14, Math.PI); arch.rotateY(Math.PI / 2);
+    G.geo(arch, new THREE.Matrix4().makeTranslation(sx * (hw + 0.005), 0.335, wz), '#0d0e10');
+    G.box(wx + sx * 0.02, 0.335 + 0.15, wz + 0.06, 0.03, 0.09, 0.13, '#c42a2a');
+  }
   const lowH = 0.62;
   const hoodY = type >= 0.82 ? 0.9 : 0.97, noseY = type >= 0.82 ? 0.78 : 0.84;
   const body = type >= 0.82
@@ -194,8 +200,12 @@ export function addCar(S, rnd, opts = {}) {
     LB.box(sx * (hw - 0.3), 0.74, L / 2 - 0.02, 0.38, 0.12, 0.06, '#f6f4ea');
     PA.box(sx * (hw - 0.26), 0.78, -L / 2 + 0.02, 0.42, 0.14, 0.06, '#a31616');
   }
-  G.box(0, 0.48, L / 2 + 0.03, 0.5, 0.12, 0.02, '#e8e8e0');
-  G.box(0, 0.58, -L / 2 - 0.03, 0.5, 0.12, 0.02, '#e8e8e0');
+  // number plates: white, EU band, dark characters
+  for (const [pz, py, sg] of [[L / 2 + 0.03, 0.48, 1], [-L / 2 - 0.03, 0.58, -1]]) {
+    G.box(0, py, pz, 0.52, 0.12, 0.018, '#ecece6'); G.box(-0.22, py, pz + sg * 0.01, 0.05, 0.12, 0.004, '#1f3a9a');
+    for (let k = 0; k < 6; k++) G.box(-0.13 + k * 0.07 + (k > 2 ? 0.03 : 0), py, pz + sg * 0.011, 0.04, 0.07, 0.004, '#1a1a1c');
+    G.box(0, py - 0.065, pz, 0.54, 0.012, 0.02, '#2a2b2e');
+  }
   // wheel arches, door seams, handles, skirts, roof details
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) G.box(sx * (hw + 0.004), 0.52, sz * L * 0.31, 0.02, 0.5, 0.74, '#0e0f10');
