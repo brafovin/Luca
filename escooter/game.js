@@ -44895,7 +44895,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     fines: 0,
     track: false,
     mode: "ride",
-    money: store.get("money", 200),
+    money: store.get("money", 1e6),
     vesc: store.get("vesc", false),
     dt3: store.get("dt3", false),
     sonic: store.get("sonic", false),
@@ -44914,6 +44914,11 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     smokeT: 0,
     model: store.get("model", "g4")
   };
+  if (!store.get("bonus1m", false)) {
+    st.money = Math.max(st.money, 1e6);
+    store.set("money", Math.floor(st.money));
+    store.set("bonus1m", true);
+  }
   var QUALITY = {
     low: { pr: 1, shadow: 0, bloom: false, ao: false, radius: 2, fogFar: 185 },
     med: { pr: 1.5, shadow: 1024, bloom: false, ao: false, post: true, radius: 2, fogFar: 190 },

@@ -157,9 +157,11 @@ const st = {
   trafficT: 0, crashT: 0, stuckT: 0, lastOdo: 0, fpsAvg: 60, fpsT: 0, showFps: false, charging: false,
   mission: { tour: 0, n: 0, cp: null, time: 0, active: false, total: 5, last: null },
   landDip: 0, hitT: 0, wanted: 0, copCool: 0, bustT: 0, fines: 0, track: false,
-  mode: 'ride', money: store.get('money', 200), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), car_mini: store.get('car_mini', false), car_sedan: store.get('car_sedan', false), car_suv: store.get('car_suv', false), car_sport: store.get('car_sport', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
+  mode: 'ride', money: store.get('money', 1000000), vesc: store.get('vesc', false), dt3: store.get('dt3', false), sonic: store.get('sonic', false), g2: store.get('g2', false), zt3: store.get('zt3', false), simson: store.get('simson', false), sr50: store.get('sr50', false), schwalbe: store.get('schwalbe', false), car_mini: store.get('car_mini', false), car_sedan: store.get('car_sedan', false), car_suv: store.get('car_suv', false), car_sport: store.get('car_sport', false), mtx: store.get('mtx', false), pz: store.get('pz', false), cigs: store.get('cigs', 3), smokeT: 0, model: store.get('model', 'g4'),
 };
 
+// everybody starts rich: one-time top-up of existing saves to 1.000.000 €
+if (!store.get('bonus1m', false)) { st.money = Math.max(st.money, 1000000); store.set('money', Math.floor(st.money)); store.set('bonus1m', true); }
 /* ------------------------------------------------------------------ quality */
 const QUALITY = {
   low: { pr: 1, shadow: 0, bloom: false, ao: false, radius: 2, fogFar: 185 },
