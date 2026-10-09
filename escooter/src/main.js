@@ -1618,6 +1618,12 @@ peds.onShove = (p) => {
   st.crashT = 0.4; $('crash').style.opacity = 0.6;
   if (st.mode === 'walk') walker.stun = 0.9; else scooter.v *= 0.3;
 };
+peds.onBrawlHit = (x, z, bleed) => {
+  const d = Math.hypot(x - me.x, z - me.z);
+  if (d < 45) audio.thud(clamp(6 - d / 9, 1, 6));
+  if (bleed && cfg.blood && d < 40) blood.splash(x, 1.3, z, Math.random() - 0.5, Math.random() - 0.5, 6);
+  if (d < 28 && !st.warnedBrawl) { st.warnedBrawl = true; toast('👊 Gangs prügeln sich!', 'Zwei Jugend-Gangs haben sich getroffen – misch dich lieber nicht ein', 3200); }
+};
 peds.onTeenAngry = () => { if (!st.warnedTeen) { st.warnedTeen = true; toast('Halbstarke sind sauer', 'Sie kommen dir nach – fahr weg (sie sind nur zu Fuß unterwegs) oder box sie nieder', 3200); } };
 traffic.onGreet = () => { if (!st.warnedGreet || performance.now() - st.warnedGreet > 25000) { st.warnedGreet = performance.now(); toast('👋 Jugendlicher auf Simson winkt dir zu', '', 1600); } };
 peds.onSmack = (p) => {

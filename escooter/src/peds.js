@@ -5,6 +5,10 @@ import { pushOut } from './phys.js';
 import { clamp, damp } from './util.js';
 import { shopperRoute } from './stores.js';
 
+/** rival youth gangs: each wears its own colours */
+const TEAMS = [{ coat: '#c42a2a', hood: '#3a0c0c' }, { coat: '#2a5fb4', hood: '#0c1a3a' }, { coat: '#d8b020', hood: '#3a2f08' }, { coat: '#2f9a4a', hood: '#0c2f16' }, { coat: '#8a3aa8', hood: '#2a0f36' }, { coat: '#e8e8e8', hood: '#40444a' }];
+const FIGHT_SAY = ['Das ist unser Block!', 'Verpisst euch, ihr Pfeifen!', 'Eins aufs Maul gefällig?', 'Komm her, du Opfer!', 'Ihr habt hier nix verloren!', 'Gleich knallt\'s!'];
+const WIN_SAY = ['Wer ist jetzt der Chef?!', 'Haha, schwach!', 'Lasst euch hier nie wieder blicken!'];
 const SKIN = ['#e8bd9a', '#c98d62', '#8d5a3b', '#f1cfb2', '#6b4630'];
 const CLOTH = ['#2f4a7a', '#8a2f2f', '#2f6a4a', '#d6b24a', '#4a4a4f', '#c9c9c9', '#6a3f7a', '#e07a2e', '#244e5f', '#7a6a58'];
 const PANTS = ['#2a3142', '#3b3b3f', '#5a4a3a', '#1f2430', '#4a5568'];
@@ -35,12 +39,12 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 4, shoppers = 8, staff = 5) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5) {
     this.list = [];
     this.young = count;
     this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
     this.nTeens = teens; this.nGangs = gangs;
-    this.gangs = []; for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: 'x', lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g % 4 !== 3 });
+    this.gangs = []; for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: 'x', lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0 });
     teens += gangs * 3; // walking gangs are teens too (3 per gang)
     this.stores = []; this.staffSpots = []; this.onPick = null;
     this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff;
@@ -142,7 +146,7 @@ export class Pedestrians {
       if (p.has.roll) p.has.cane = false;
       if (p.has.cane && kind === 'oma') p.has.bag = false;
       this.list.push(p);
-      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'bum' ? pick(['#5a4a38', '#3e4a3a', '#4a3f52', '#6a5a44', '#44464a']) : kind === 'teen' ? pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9']) : CLOTH[i % CLOTH.length];
+      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'bum' ? pick(['#5a4a38', '#3e4a3a', '#4a3f52', '#6a5a44', '#44464a']) : kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9'])) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
@@ -150,7 +154,7 @@ export class Pedestrians {
       for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : kind === 'kid' || kind === 'pkid' ? pick(['#2a4a8a', '#3a3a3f', '#6a3f7a', '#2f6a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
       this.parts.beer.setColorAt(i, c.set('#ffffff')); this.parts.faceB.setColorAt(i, c.set('#ffffff'));
-      this.parts.hood.setColorAt(i, c.set(kind === 'teen' ? pick(['#101114', '#1d1d22', '#2a1414', '#14202c']) : '#000000'));
+      this.parts.hood.setColorAt(i, c.set(kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].hood : pick(['#101114', '#1d1d22', '#2a1414', '#14202c'])) : '#000000'));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
       for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'faceR', 'glasses', 'swing', 'cigT', 'beer', 'faceB']) this.parts[k].setColorAt(i, c.set('#ffffff'));
@@ -272,7 +276,7 @@ export class Pedestrians {
     if (p.cool > 0) p.cool -= dt;
     if (p.down > 0) { // knocked out
       p.down -= dt; if (p.stabbed) p.down = 9999;
-      if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; p.aggro = 8; p.ts = p.rowdy ? 'stress' : rest; }
+      if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; p.aggro = p.fightLoser ? 0 : 8; p.ts = p.fightLoser ? 'back' : p.rowdy ? 'stress' : rest; p.fightLoser = false; p.partner = null; }
       const lie = Math.min(1, (p.down > 11.7 ? 0.2 : 1));
       this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT, sc: 0.95, lie: 1 });
       return;
@@ -286,6 +290,23 @@ export class Pedestrians {
       if (this.colliders && Math.hypot(nx - homeX, nz - homeZ) > 1.2) { const r = pushOut(nx, nz, 0.3, this.colliders, null, p); nx = r.x; nz = r.z; }
       p.px = nx; p.pz = nz; p.walkPh = (p.walkPh || 0) + dt * 13; p.yawT = Math.atan2(ax, az);
       if (dp > 42 || p.fleeT > 24) { p.ts = 'back'; p.aggro = 0; }
+    } else if (p.ts === 'brawl') { // gang fight: walk to the partner and trade punches
+      const q = p.partner, f = G && G.fight;
+      if (!f || !q || (q.ts !== 'brawl' && q.down <= 0)) { p.ts = rest; p.partner = null; p.bfight = false; }
+      else if (dp < 2.4) { p.ts = 'stress'; p.partner = null; p.aggro = 10; p.bfight = false; this.say(p, 'Misch dich nicht ein!', 2.2); }
+      else {
+        const dx = p.bx - p.px, dz = p.bz - p.pz, d = Math.hypot(dx, dz);
+        if (d > 0.2 && !p.bfight) { p.px += (dx / d) * 2.6 * dt; p.pz += (dz / d) * 2.6 * dt; p.walkPh = (p.walkPh || 0) + dt * 11; p.yawT = Math.atan2(dx, dz); }
+        else {
+          p.bfight = true; p.yawT = Math.atan2(q.px - p.px, q.pz - p.pz);
+          if (q.down > 0) { p.say === '' && p.sayT <= 0 && this.say(p, WIN_SAY[Math.floor(Math.random() * WIN_SAY.length)], 3); }
+          else {
+            p.hitCd -= dt;
+            if (p.hitCd <= 0) { p.hitCd = 0.4 + Math.random() * 0.5; q.flinch = 0.28; if (this.onBrawlHit) this.onBrawlHit(q.px, q.pz, Math.random() < 0.3); if (p.sayT <= 0 && Math.random() < 0.18) this.say(p, FIGHT_SAY[Math.floor(Math.random() * FIGHT_SAY.length)], 2); }
+            if (p.lose && f.t > p.koAt && p.down <= 0) { p.down = 9; p.ko = true; p.hp = 0; p.fightLoser = true; p.bfight = false; }
+          }
+        }
+      }
     } else if (p.rowdy) {
       if (pl.armed && dp < 18) { // thinks the gun is a toy
         if (!p.fakeSaid) { p.fakeSaid = true; const L = ['Haha, die Waffe ist doch fake!', 'Spielzeug, Alter! Lächerlich!', 'Die traut sich eh nicht!', 'Ey, Plastikknarre!']; this.say(p, L[Math.floor(Math.random() * L.length)], 3.2); }
@@ -352,6 +373,10 @@ export class Pedestrians {
       const fl = p.ts === 'flee';
       const drag = calm && smoker ? ((T % 8) < 2 ? 1 : 0) : 0;
       o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 0.95, hunch: fl ? 0.3 : 0.12 + (menace ? 0.08 : 0), legL: fl ? sw * 1.5 : sw, legR: fl ? -sw * 1.5 : -sw, aL: fl ? -2.6 + Math.sin(T * 14) * 0.3 : -sw, aR: fl ? -2.4 - Math.sin(T * 14) * 0.3 : p.ts === 'stress' ? -2.0 + Math.sin(T * 10) * 0.3 : calm && smoker ? (drag ? -2.3 : -0.6) : sw, head: 1.0, cap: true, cig: calm && smoker, faceR: menace, hood: menace };
+      if (p.ts === 'brawl' && p.bfight) {
+        const ph = T * 7.2 + p.phase0 * 3, sA = Math.max(0, Math.sin(ph)), sB = Math.max(0, Math.sin(ph + Math.PI));
+        o.aR = -0.5 - sA * 1.7; o.aL = -0.5 - sB * 1.7; o.azL = -0.3; o.azR = 0.3; o.hunch = 0.24 + (p.flinch > 0 ? -0.35 : 0); o.legL = Math.sin(T * 5) * 0.3; o.legR = -o.legL;
+      }
       if (calm && smoker && this.smoke) {
         p.smk = (p.smk || 0) + dt * (drag ? 8 : 2.2);
         while (p.smk >= 1) { p.smk--; this.smoke.emit(p.px + Math.sin(p.yawT) * 0.12, 1.43, p.pz + Math.cos(p.yawT) * 0.12, Math.sin(p.yawT) * 0.25, 0.2, Math.cos(p.yawT) * 0.25, 'cig', drag ? 2 : 1); }
@@ -379,6 +404,8 @@ export class Pedestrians {
       const G = this.gangs[gi];
       const mem = this.list.filter((q) => q.gang === gi);
       if (!G.active) {
+        const rv = G.rival >= 0 ? this.gangs[G.rival] : null;
+        if (rv && rv.active) continue; // the rival is still out there
         for (let tries = 0; tries < 8; tries++) {
           const axis = Math.random() < 0.5 ? 'x' : 'z';
           const line = Math.round((axis === 'x' ? pz : px) / P) + Math.floor(Math.random() * 3) - 1;
@@ -389,7 +416,15 @@ export class Pedestrians {
           const lane = line * P + side * 8.4, dir = Math.random() < 0.5 ? 1 : -1;
           const x = axis === 'x' ? along : lane, z = axis === 'x' ? lane : along;
           if (Math.hypot(x - px, z - pz) < 40) continue;
-          Object.assign(G, { active: true, axis, lane, s: along, dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: axis === 'x' ? (dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (dir > 0 ? 0 : Math.PI) });
+          const sAlong = (d) => axis === 'x' ? (d > 0 ? Math.PI / 2 : -Math.PI / 2) : (d > 0 ? 0 : Math.PI);
+          if (rv) { // the rival gang walks towards them on the same pavement -> they meet and fight
+            const s2 = along + dir * (34 + Math.random() * 10), r2 = ((s2 % P) + P) % P;
+            const x2 = axis === 'x' ? s2 : lane, z2 = axis === 'x' ? lane : s2;
+            if (r2 < 14 || r2 > P - 14 || Math.hypot(x2 - px, z2 - pz) < 25) continue;
+            Object.assign(rv, { active: true, axis, lane, s: s2, dir: -dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: sAlong(-dir), fight: null, cool: 0 });
+            for (const q of this.list) if (q.gang === G.rival) { q.px = undefined; q.taken = false; q.active = true; }
+          }
+          Object.assign(G, { active: true, axis, lane, s: along, dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: sAlong(dir), fight: null, cool: 0 });
           for (const q of mem) { q.px = undefined; q.taken = false; q.active = true; }
           break;
         }
@@ -397,13 +432,50 @@ export class Pedestrians {
       }
       const lead = this.gangSlot(G, 0);
       const alive = mem.filter((q) => !q.taken);
-      if (Math.hypot(lead.x - px, lead.z - pz) > R * 1.4 || !alive.length) { G.active = false; for (const q of mem) { q.px = undefined; q.active = false; } continue; }
+      if (Math.hypot(lead.x - px, lead.z - pz) > R * 1.4 || !alive.length) {
+        for (const g2 of [G, G.rival >= 0 ? this.gangs[G.rival] : null]) { if (!g2) continue; g2.active = false; g2.fight = null; }
+        for (const q of this.list) if (q.gang === gi || q.gang === G.rival) { q.px = undefined; q.active = false; q.partner = null; q.bfight = false; }
+        continue;
+      }
+      if (G.rival > gi) { // run the rivalry of the pair once
+        const Rg = this.gangs[G.rival];
+        if (Rg.active && !G.fight) { const b = this.gangSlot(Rg, 0); if (G.cool <= 0 && Math.hypot(lead.x - b.x, lead.z - b.z) < 10) this.startFight(G, Rg); }
+        if (G.fight) this.updateFight(G, Rg, dt);
+        if (G.cool > 0) G.cool -= dt;
+      }
       // stop while someone is busy with the player (chasing / fleeing / coming back)
       G.hold = alive.some((q) => q.px !== undefined && q.down <= 0 && q.ts !== 'walk');
       const r = ((G.s % P) + P) % P;
       const inWait = G.dir > 0 ? r >= P - 7.1 && r < P - 5.9 : r > 5.9 && r <= 7.1;
       const unsafe = inWait && (G.axis === 'x' ? sig.bG || sig.bY || sig.bSoon : sig.aG || sig.aY || sig.aSoon);
       if (!G.hold && !unsafe) G.s += G.dir * G.speed * dt; else if (unsafe && !G.hold) { /* red light: wait */ G.hold = true; }
+    }
+  }
+
+  startFight(A, B) {
+    const ma = this.list.filter((q) => q.gang === this.gangs.indexOf(A) && !q.taken && q.px !== undefined && q.down <= 0);
+    const mb = this.list.filter((q) => q.gang === this.gangs.indexOf(B) && !q.taken && q.px !== undefined && q.down <= 0);
+    if (!ma.length || !mb.length) return;
+    const a0 = this.gangSlot(A, 0), b0 = this.gangSlot(B, 0), Mx = (a0.x + b0.x) / 2, Mz = (a0.z + b0.z) / 2;
+    const ax = A.axis === 'x' ? [A.dir, 0] : [0, A.dir], lat = A.axis === 'x' ? [0, 1] : [1, 0];
+    const loser = Math.random() < 0.5 ? A : B;
+    const f = { t: 0, loser };
+    A.fight = B.fight = f; A.hold = B.hold = true;
+    for (let k = 0; k < Math.min(ma.length, mb.length); k++) {
+      const p = ma[k], q = mb[k], l = (k - 1) * 1.15;
+      p.bx = Mx - ax[0] * 0.55 + lat[0] * l; p.bz = Mz - ax[1] * 0.55 + lat[1] * l;
+      q.bx = Mx + ax[0] * 0.55 + lat[0] * l; q.bz = Mz + ax[1] * 0.55 + lat[1] * l;
+      for (const [x, y] of [[p, q], [q, p]]) { x.partner = y; x.ts = 'brawl'; x.bfight = false; x.hitCd = Math.random() * 0.6; x.lose = x.gang === this.gangs.indexOf(loser); x.koAt = 5 + k * 1.7 + Math.random() * 1.5; x.fightLoser = false; }
+      this.say(p, FIGHT_SAY[Math.floor(Math.random() * FIGHT_SAY.length)], 2.4);
+    }
+  }
+  updateFight(A, B, dt) {
+    const f = A.fight; f.t += dt;
+    const brawlers = this.list.filter((q) => (q.gang === this.gangs.indexOf(A) || q.gang === this.gangs.indexOf(B)) && q.ts === 'brawl');
+    const losersUp = brawlers.some((q) => q.lose && q.down <= 0);
+    if (!brawlers.length || (!losersUp && f.t > 3) || f.t > 18) { // fight over: winners walk on, the losers lie there for a while
+      for (const q of brawlers) { if (q.down <= 0) { q.ts = 'walk'; q.partner = null; q.bfight = false; } }
+      A.fight = B.fight = null; A.cool = B.cool = 90;
     }
   }
 
@@ -598,7 +670,7 @@ export class Pedestrians {
     if (p.kind === 'teen' && opts.gun) { p.px = p.x; p.pz = p.z; }
     else if (p.kind === 'teen') {
       p.px = p.x; p.pz = p.z;
-      if (p.rowdy) { for (const q of this.list) if (q.kind === 'teen' && q.rowdy && (p.gang !== undefined ? q.gang === p.gang : q.gang === undefined && Math.floor(q.slot / 5) === Math.floor(p.slot / 5)) && (q.ts === 'sit' || q.ts === 'walk')) { q.ts = 'stress'; q.aggro = 10; } p.ts = 'stress'; this.say(p, 'Du bist tot, Alter!', 2.4); }
+      if (p.rowdy) { for (const q of this.list) if (q.kind === 'teen' && q.rowdy && (p.gang !== undefined ? q.gang === p.gang : q.gang === undefined && Math.floor(q.slot / 5) === Math.floor(p.slot / 5)) && (q.ts === 'sit' || q.ts === 'walk' || q.ts === 'brawl')) { q.ts = 'stress'; q.aggro = 10; q.partner = null; } p.ts = 'stress'; this.say(p, 'Du bist tot, Alter!', 2.4); }
       else this.say(p, 'Hey, spinnst du?!', 2);
     }
     if (p.elder) { p.anger = Math.min(100, p.anger + 30); }

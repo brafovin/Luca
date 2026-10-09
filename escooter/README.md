@@ -225,6 +225,11 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * Neu modelliert: Rückgrat-Rahmen, runder M531-Motor mit Kupplungs-/Lichtmaschinendeckeln, **nach vorn geneigter Rippenzylinder** mit Kerzenstecker und Zündkabel, Vergaser mit Ansaugschlauch, **gerundeter Tank** mit Kniepolstern, SIMSON-Schild und Zierstreifen, langes Stufen-Sitzbrett mit Biese, **Hinterrad-Federbeine** (Chrom-Dämpfer + schwarze Feder), Schwinge, Kettenkasten, Kickstarter und Schalthebel, Gummimanschetten an der Gabel.
 * **PZ-Tuning-Lenker:** auf der Querstrebe sitzt ein Lenkerpolster mit der Aufschrift **ACAB** (vorn und hinten lesbar).
 
+## Rivalisierende Jugend-Gangs 👊
+* Es gibt jetzt **sechs Gangs in eigenen Farben** (Rot, Blau, Gelb, Grün, Lila, Weiß – Jacke und Kapuze) plus eine nette Gruppe. Je zwei Gangs sind **Rivalen**: sie laufen auf demselben Gehweg aufeinander zu.
+* Treffen sie sich, gibt es eine **Schlägerei**: jeder nimmt sich einen Gegner, sie boxen sich mit Schlagbewegung, Wirkungstreffern (Flinch, Wumm-Sound, ab und zu Blut) und Sprüchen. Die unterlegene Gang geht nach und nach **K. o.**, die Sieger ziehen weiter, die Verlierer stehen nach ein paar Sekunden wieder auf und laufen hinterher.
+* Mischst du dich ein (näher als ~2,5 m), Schüsse oder Schläge gegen ein Mitglied: die Gang geht auf dich los bzw. rennt vor der Waffe weg.
+
 ## Entwickeln
 
 ```
