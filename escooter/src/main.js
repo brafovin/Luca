@@ -646,6 +646,7 @@ function updateCasings(dt) {
 const muzzleLight = new THREE.PointLight(0xffb060, 0, 14, 2);
 scene.add(muzzleLight);
 function resolveShot(ev) {
+  peds.alarm(walker.x, walker.z, 28, 'shot');
   audio.shot();
   ejectCasing(ev.x, ev.z, ev.yaw);
   muzzleLight.position.set(ev.x + Math.sin(ev.yaw) * 0.8, 1.35, ev.z + Math.cos(ev.yaw) * 0.8); muzzleLight.intensity = 90; st.muzzleT = 0.06;

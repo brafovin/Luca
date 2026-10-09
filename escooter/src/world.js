@@ -337,6 +337,7 @@ class ChunkBuilder {
       }
       // bus stop
       if (hash2(this.ci, this.cj, 31 + rot) < 0.3) this.busStop(rot);
+      this.roadDetails();
       // parked cars
       for (const side of [1, -1]) {
         for (let k = 0; k < 13; k++) {
@@ -972,7 +973,7 @@ class ChunkBuilder {
     const placed = [];
     for (let t = 0; t < 120 && placed.length < 34; t++) {
       const x = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4), z = LOT0 + 2 + rnd() * (LOT1 - LOT0 - 4);
-      if (Math.abs(x - c) < 3.8 || Math.abs(z - c) < 3.8 || Math.hypot(x - c, z - c) < 12 || (Math.abs(x - PLAY.cx) < PLAY.half + 2 && Math.abs(z - PLAY.cz) < PLAY.half + 2)) continue;
+      if (Math.abs(x - c) < 3.8 || Math.abs(z - c) < 3.8 || Math.hypot(x - c, z - c) < 12 || Math.hypot(x - 74, z - 74) < 13 || (Math.abs(x - PLAY.cx) < PLAY.half + 2 && Math.abs(z - PLAY.cz) < PLAY.half + 2)) continue;
       if (placed.some((p) => Math.hypot(p[0] - x, p[1] - z) < 6)) continue;
       placed.push([x, z]);
       this.tree(x, z, CURB);
@@ -983,6 +984,7 @@ class ChunkBuilder {
       this.bush(x, z, CURB, 0.8);
     }
     this.playground();
+    this.parkDetails(c);
     // lamps + benches along the paths
     const lampB = this.b('lampW'), pool = this.b('pool');
     for (const d of [-1, 1]) for (const horiz of [0, 1]) {
@@ -1000,6 +1002,97 @@ class ChunkBuilder {
         else { G.box(x, CURB + 0.45, z, 0.45, 0.08, 1.6, '#6a4a2c'); G.box(x + d * 0.22, CURB + 0.8, z, 0.06, 0.4, 1.6, '#6a4a2c'); this.colliders.push({ t: 0, x0: x - 0.25, x1: x + 0.25, z0: z - 0.8, z1: z + 0.8 }); }
       }
     }
+  }
+
+  /** pond with reeds + stones, grass tufts, flower beds, path edging, picnic blankets */
+  parkDetails(c) {
+    const { rnd } = this;
+    const G = this.b('generic'), F = this.b('foliage'), W = this.b('water'), M = this.b('mark');
+    // pond (irregular), stone rim, reeds, lily pads
+    const pcx = 74, pcz = 74, pr = [];
+    for (let i = 0; i < 28; i++) { const a = (i / 28) * 6.283, r = 7.2 + Math.sin(a * 2 + 1) * 1.3 + Math.sin(a * 3 + 2) * 0.8; pr.push([pcx + Math.cos(a) * r, pcz + Math.sin(a) * r * 0.82]); }
+    const bank = pr.map(([x, z]) => [pcx + (x - pcx) * 1.14, pcz + (z - pcz) * 1.14]);
+    this.b('paver2').fan(bank, CURB + 0.03, '#7a6a52', 2);        // muddy bank
+    W.fan(pr, CURB + 0.075, '#ffffff', 5);
+    for (let i = 0; i < 28; i += 1) { const [x, z] = bank[i]; if (rnd() < 0.55) blob(G, x, CURB + 0.1, z, 0.35 + rnd() * 0.35, 0.22 + rnd() * 0.15, 0.3 + rnd() * 0.3, ['#8a8d8f', '#6f7274', '#9a9c9d'][Math.floor(rnd() * 3)], rnd); }
+    for (let k = 0; k < 16; k++) { // reeds
+      const i = Math.floor(rnd() * 28), [bx, bz] = pr[i], dx = pcx - bx, dz = pcz - bz, l = Math.hypot(dx, dz) || 1;
+      for (let j = 0; j < 7; j++) { const x = bx + (dx / l) * (0.3 + rnd() * 0.9) + (rnd() - 0.5) * 0.7, z = bz + (dz / l) * (0.3 + rnd() * 0.9) + (rnd() - 0.5) * 0.7, h = 0.9 + rnd() * 0.9; F.tri([x - 0.03, CURB, z], [x + 0.03, CURB, z], [x + (rnd() - 0.5) * 0.25, CURB + h, z + (rnd() - 0.5) * 0.25], ['#6b8f3c', '#7a9a44', '#5a7a30'][j % 3]); G.box(x, CURB + h - 0.05, z, 0.05, 0.16, 0.05, '#5a3a22'); }
+    }
+    for (let k = 0; k < 9; k++) { const a = rnd() * 6.283, d = 1 + rnd() * 4.5, x = pcx + Math.cos(a) * d, z = pcz + Math.sin(a) * d * 0.8, r = 0.28 + rnd() * 0.2; const ring = []; for (let q = 0; q < 8; q++) ring.push([x + Math.cos(q * 0.785) * r, z + Math.sin(q * 0.785) * r]); F.fan(ring, CURB + 0.1, '#3f7a3a', 1); }
+    this.circ(pcx, pcz, 7.4);
+    // bench + ducks' little pier at the pond
+    G.box(pcx - 9.5, CURB + 0.45, pcz, 0.45, 0.08, 1.6, '#6a4a2c'); G.box(pcx - 9.72, CURB + 0.8, pcz, 0.06, 0.4, 1.6, '#6a4a2c'); this.colliders.push({ t: 0, x0: pcx - 9.75, x1: pcx - 9.25, z0: pcz - 0.8, z1: pcz + 0.8 });
+    // grass tufts everywhere on the lawn
+    for (let k = 0; k < 180; k++) {
+      const x = LOT0 + 1 + rnd() * (LOT1 - LOT0 - 2), z = LOT0 + 1 + rnd() * (LOT1 - LOT0 - 2);
+      if (Math.abs(x - c) < 2.4 || Math.abs(z - c) < 2.4 || Math.hypot(x - c, z - c) < 9.5 || Math.hypot(x - pcx, z - pcz) < 8.5 || (Math.abs(x - PLAY.cx) < PLAY.half + 0.5 && Math.abs(z - PLAY.cz) < PLAY.half + 0.5)) continue;
+      const col = ['#5a8a34', '#6a9a3a', '#4a7a2c', '#7aa040'][Math.floor(rnd() * 4)];
+      for (let b = 0; b < 5; b++) { const a = (b / 5) * 6.283 + rnd(), h = 0.22 + rnd() * 0.22, ox = Math.cos(a) * 0.06, oz = Math.sin(a) * 0.06; F.tri([x + ox - 0.02, CURB, z + oz], [x + ox + 0.02, CURB, z + oz], [x + ox + Math.cos(a) * 0.14, CURB + h, z + oz + Math.sin(a) * 0.14], col); F.tri([x + ox + 0.02, CURB, z + oz], [x + ox - 0.02, CURB, z + oz], [x + ox + Math.cos(a) * 0.14, CURB + h, z + oz + Math.sin(a) * 0.14], col); }
+    }
+    // wild flower patches
+    const fl = [['#f5d90a', '#ffffff'], ['#e8485a', '#f5d90a'], ['#c44a9a', '#ffffff'], ['#6a8af0', '#ffffff'], ['#f08a30', '#f5d90a']];
+    for (let k = 0; k < 16; k++) {
+      const x = LOT0 + 3 + rnd() * (LOT1 - LOT0 - 6), z = LOT0 + 3 + rnd() * (LOT1 - LOT0 - 6);
+      if (Math.abs(x - c) < 3 || Math.abs(z - c) < 3 || Math.hypot(x - c, z - c) < 10.5 || Math.hypot(x - pcx, z - pcz) < 9.5 || (Math.abs(x - PLAY.cx) < PLAY.half + 1 && Math.abs(z - PLAY.cz) < PLAY.half + 1)) continue;
+      const pal = fl[Math.floor(rnd() * fl.length)];
+      for (let j = 0; j < 14; j++) { const fx = x + (rnd() - 0.5) * 2.2, fz = z + (rnd() - 0.5) * 2.2, h = 0.18 + rnd() * 0.16; F.box(fx, CURB + h / 2, fz, 0.012, h, 0.012, '#4a7a2c'); F.box(fx, CURB + h + 0.02, fz, 0.07, 0.04, 0.07, pal[j % 2]); }
+    }
+    // low stone edging along the two main paths + gravel patches
+    for (const d of [-1, 1]) {
+      G.box(c + d * 1.9, CURB + 0.05, 50, 0.1, 0.1, LOT1 - LOT0, '#a9a69c'); G.box(50, CURB + 0.05, c + d * 1.9, LOT1 - LOT0, 0.1, 0.1, '#a9a69c');
+    }
+    // picnic blankets
+    for (let k = 0; k < 3; k++) {
+      const x = LOT0 + 6 + rnd() * 20 + (k % 2) * 40, z = LOT1 - 8 - rnd() * 14;
+      if (Math.hypot(x - pcx, z - pcz) < 11) continue;
+      const cols = [['#d42020', '#f2f2f0'], ['#2a62c4', '#f2f2f0'], ['#2a8a46', '#f5d90a']][k];
+      for (let a = 0; a < 5; a++) for (let b = 0; b < 4; b++) M.plane(x + a * 0.34, z + b * 0.34, x + a * 0.34 + 0.34, z + b * 0.34 + 0.34, CURB + 0.02, cols[(a + b) % 2]);
+      G.box(x + 0.5, CURB + 0.1, z + 0.5, 0.35, 0.2, 0.28, '#8a6a3a');
+    }
+  }
+
+  /** worn asphalt: manholes, drains, patches, cracks, skid marks, oil stains (x-road frame) */
+  roadDetails() {
+    const { rnd } = this;
+    const M = this.b('mark'), G = this.b('generic');
+    const ell = (x, z, rx, rz, col, y = 0.004) => { const r = []; for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; r.push([x + Math.cos(a) * rx, z + Math.sin(a) * rz]); } M.fan(r, y, col, 1); };
+    // manholes (dark discs with a ring + cross pattern)
+    for (const s of [27, 61, 84]) {
+      if (rnd() < 0.35) continue;
+      const z = (rnd() < 0.5 ? -1 : 1) * (1.2 + rnd() * 0.9);
+      ell(s, z, 0.46, 0.46, '#232427', 0.005); ell(s, z, 0.38, 0.38, '#191a1c', 0.006);
+      for (let k = -2; k <= 2; k++) { M.plane(s - 0.34, z + k * 0.12 - 0.012, s + 0.34, z + k * 0.12 + 0.012, 0.007, '#2e3033'); }
+    }
+    // curb drains
+    for (const s of [18, 43, 68, 92]) for (const side of [-1, 1]) {
+      if (rnd() < 0.3) continue;
+      const z = side * 5.45;
+      M.plane(s - 0.32, z - 0.17, s + 0.32, z + 0.17, 0.005, '#17181a');
+      for (let k = 0; k < 5; k++) M.plane(s - 0.28 + k * 0.14, z - 0.15, s - 0.28 + k * 0.14 + 0.04, z + 0.15, 0.006, '#34373b');
+    }
+    // repaired patches (slightly different tone) + longitudinal trench scars
+    for (let k = 0; k < 4; k++) {
+      const x = 16 + rnd() * 66, z = (rnd() - 0.5) * 8, w = 1.4 + rnd() * 3.2, d = 0.8 + rnd() * 1.4, t = 0.2 + rnd() * 0.18;
+      M.plane(x, z, x + w, z + d, 0.003, [t * 0.8, t * 0.82, t * 0.88]);
+      M.plane(x - 0.03, z - 0.03, x + w + 0.03, z, 0.0035, '#1a1b1d'); M.plane(x - 0.03, z + d, x + w + 0.03, z + d + 0.03, 0.0035, '#1a1b1d');
+    }
+    // cracks: random walks
+    for (let k = 0; k < 7; k++) {
+      let x = 14 + rnd() * 72, z = (rnd() - 0.5) * 9, a = rnd() * 6.283;
+      for (let j = 0; j < 7; j++) {
+        const l = 0.35 + rnd() * 0.6, nx = x + Math.cos(a) * l, nz = z + Math.sin(a) * l, w = 0.014 + rnd() * 0.012;
+        const px = -Math.sin(a) * w, pz = Math.cos(a) * w;
+        M.quad([x - px, 0.0045, z - pz], [x + px, 0.0045, z + pz], [nx + px, 0.0045, nz + pz], [nx - px, 0.0045, nz - pz], '#141517');
+        x = nx; z = nz; a += (rnd() - 0.5) * 1.1;
+      }
+    }
+    // skid marks before the stop lines + oil stains in the parking lane
+    for (const side of [-1, 1]) if (rnd() < 0.4) {
+      const s0 = side < 0 ? 12 + rnd() * 8 : 88 - rnd() * 8, dir = side < 0 ? 1 : -1, z0 = (rnd() < 0.5 ? -1 : 1) * 1.75;
+      for (const o of [-0.7, 0.7]) for (let j = 0; j < 9; j++) { const x1 = s0 + dir * j * 0.9, x2 = x1 + dir * 0.9, zz1 = z0 + o + j * 0.03, zz2 = z0 + o + (j + 1) * 0.03; M.quad([x1, 0.0042, zz1 - 0.06], [x2, 0.0042, zz2 - 0.06], [x2, 0.0042, zz2 + 0.06], [x1, 0.0042, zz1 + 0.06], '#1d1e20'); }
+    }
+    for (let k = 0; k < 3; k++) if (rnd() < 0.7) { const x = 20 + rnd() * 60, z = (rnd() < 0.5 ? -1 : 1) * (4.3 + rnd() * 0.5); ell(x, z, 0.45 + rnd() * 0.3, 0.3 + rnd() * 0.2, '#1c1d20'); ell(x + 0.1, z + 0.05, 0.22, 0.15, '#2a2a30', 0.0045); }
   }
 
   /** children's playground: rubber floor, fence, swings, slide, sandbox, seesaw, benches */

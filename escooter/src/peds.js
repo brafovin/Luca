@@ -60,6 +60,8 @@ export class Pedestrians {
       scene.add(m);
       return m;
     };
+    const roundHand = () => { const g = new THREE.SphereGeometry(0.052, 10, 8); g.scale(0.95, 1.3, 0.8); g.translate(0, -0.6, 0); return g; };
+    const roundShoe = () => { const g = new THREE.CapsuleGeometry(0.055, 0.1, 4, 10); g.rotateX(Math.PI / 2); g.scale(1, 0.75, 1); g.translate(0, -0.805, 0.065); return g; };
     const roundLimb = (r, h, sz) => { const g = new THREE.CapsuleGeometry(r, h - 2 * r, 5, 12); g.scale(1, 1, sz); g.translate(0, -h / 2, 0); return g; };
     const box = (w, h, d, pivotTop) => { const g = new THREE.BoxGeometry(w, h, d); if (pivotTop) g.translate(0, -h / 2, 0); return g; };
     const rollGeo = mergedGeo((B) => {
@@ -117,6 +119,9 @@ export class Pedestrians {
         B.box(0, 1.0, -0.5, 0.5, 0.04, 0.04, '#d42020'); for (const sx of [-1, 1]) B.box(sx * 0.25, 0.9, -0.47, 0.03, 0.3, 0.03, '#d42020');
         B.box(-0.1, 0.4, 0.1, 0.2, 0.2, 0.2, '#e8c020'); B.box(0.12, 0.38, -0.1, 0.18, 0.16, 0.22, '#d4301e'); B.box(0.0, 0.42, 0.25, 0.12, 0.24, 0.12, '#2f6aa6'); B.box(-0.12, 0.38, -0.25, 0.2, 0.14, 0.14, '#a8703a');
       }), true),
+      neck: mk(new THREE.CylinderGeometry(0.046, 0.056, 0.11, 8)),
+      handL: mk(roundHand()), handR: mk(roundHand()),
+      shoeL: mk(roundShoe()), shoeR: mk(roundShoe()),
       gun: mk(mergedGeo((B) => { B.box(0, -0.7, 0.02, 0.03, 0.17, 0.045, '#1b1c1f'); B.box(0, -0.78, 0.02, 0.014, 0.05, 0.02, '#2a2b2f'); B.box(0, -0.62, -0.035, 0.028, 0.06, 0.04, '#141517'); B.box(0, -0.6, 0.0, 0.05, 0.05, 0.05, '#3a2f28'); }), true),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
       cigT: mk(mergedGeo((B) => {
@@ -152,6 +157,8 @@ export class Pedestrians {
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
+      this.parts.neck.setColorAt(i, c.set(skin)); this.parts.handL.setColorAt(i, c.set(skin)); this.parts.handR.setColorAt(i, c.set(skin));
+      { const sh = kind === 'kid' || kind === 'pkid' ? pick(['#e8e8e8', '#ff4f4f', '#2fb0ff']) : kind === 'oma' ? pick(['#3a2f2a', '#6a5a4a']) : pick(['#1a1a1d', '#2a2a2e', '#e8e8e8', '#3a2a1a', '#1c2a4a']); this.parts.shoeL.setColorAt(i, c.set(sh)); this.parts.shoeR.setColorAt(i, c.set(sh)); }
       p.has.glasses = elder ? Math.random() < 0.5 : Math.random() < 0.12;
       for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : kind === 'kid' || kind === 'pkid' ? pick(['#2a4a8a', '#3a3a3f', '#6a3f7a', '#2f6a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
@@ -228,8 +235,11 @@ export class Pedestrians {
     P_.beer.setMatrixAt(i, this._zero); P_.faceB.setMatrixAt(i, this._zero);
     if (o.hood) place(P_.hood, h, 0, 0.73, 0.0, 0, hs); else P_.hood.setMatrixAt(i, this._zero);
     if (p.has.glasses) place(P_.glasses, h, 0, 0.71, 0.02, 0, hs); else P_.glasses.setMatrixAt(i, this._zero);
-    place(P_.legL, 0, 0.09, 0, 0, o.legL || 0); place(P_.legR, 0, -0.09, 0, 0, o.legR || 0);
+    place(P_.legL, 0, 0.09, 0, 0, o.legL || 0, 1, o.lzL || 0); place(P_.legR, 0, -0.09, 0, 0, o.legR || 0, 1, o.lzR || 0);
+    place(P_.shoeL, 0, 0.09, 0, 0, o.legL || 0, 1, o.lzL || 0); place(P_.shoeR, 0, -0.09, 0, 0, o.legR || 0, 1, o.lzR || 0);
     place(P_.armL, h, 0.24, 0.54, 0, o.aL || 0, 1, o.azL || 0); place(P_.armR, h, -0.24, 0.54, 0, o.aR || 0, 1, o.azR || 0);
+    place(P_.handL, h, 0.24, 0.54, 0, o.aL || 0, 1, o.azL || 0); place(P_.handR, h, -0.24, 0.54, 0, o.aR || 0, 1, o.azR || 0);
+    place(P_.neck, h, 0, 0.625, 0.015);
     if (p.has.hair && !o.hood) place(P_.hair, h, 0, 0.735, 0.008, 0, hs); else P_.hair.setMatrixAt(i, this._zero);
     if (o.cap && p.has.cap && !o.hood) place(P_.cap, h, 0, 0.82, 0.03, 0, hs); else P_.cap.setMatrixAt(i, this._zero);
     if (o.cig) place(P_.cigT, h, 0, 0.71, 0.02, 0, hs); else P_.cigT.setMatrixAt(i, this._zero);
@@ -280,8 +290,7 @@ export class Pedestrians {
     if (p.down > 0) { // knocked out
       p.down -= dt; if (p.stabbed) p.down = 9999;
       if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; p.aggro = p.fightLoser ? 0 : 8; p.ts = p.fightLoser ? 'back' : p.rowdy ? 'stress' : rest; p.fightLoser = false; p.partner = null; }
-      const lie = Math.min(1, (p.down > 11.7 ? 0.2 : 1));
-      this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT, sc: 0.95, lie: 1 });
+      this.drawFigure(i, p, this.limp(p, dt, { x: p.px, z: p.pz, yaw: p.yawT, sc: 0.95 }));
       return;
     }
     // ---- behaviour
@@ -482,12 +491,38 @@ export class Pedestrians {
     }
   }
 
+  /** pose of a body on the ground: falls over (ease + tiny bounce), then lies completely limp, a little different every time */
+  limp(p, dt, base) {
+    p.deadT = (p.deadT || 0) + dt;
+    if (p.deadSeed === undefined) p.deadSeed = Math.random();
+    const r = p.deadSeed, f = (k) => (r * (k * 7.13 + 3.1)) % 1;
+    const kk = Math.min(1, p.deadT / 0.55);
+    const fall = 1 - Math.pow(1 - kk, 3) + (kk < 1 ? Math.sin(kk * Math.PI) * 0.07 : 0);
+    const side = r < 0.62 ? 1 : -1; // on the back / face down
+    const wide = 0.15 + f(1) * 0.5;
+    return { x: base.x, y: 0.12 + fall * 0.2, z: base.z, yaw: base.yaw + (f(2) - 0.5) * 0.9 * kk, sc: base.sc || 1, lie: side * fall, hunch: (f(3) - 0.5) * 0.12 * kk,
+      legL: (0.05 + f(4) * 0.5) * kk, legR: (-0.05 - f(5) * 0.45) * kk, lzL: (0.08 + wide * 0.35) * kk, lzR: (-0.08 - wide * 0.3 - f(6) * 0.15) * kk,
+      aL: (f(7) - 0.5) * 1.2 * kk, aR: (f(8) - 0.5) * 1.2 * kk, azL: (0.4 + wide) * kk, azR: (-0.4 - wide * 0.9 - f(9) * 0.3) * kk, head: 1, cap: true };
+  }
+  /** a gunshot / a killing: everybody nearby panics and runs away */
+  alarm(x, z, radius, what) {
+    for (const q of this.list) {
+      if (!q.active || q.down > 0 || q.kind === 'crew' || q.kind === 'staff' || q.kind === 'shopper' || q.chase > 0) continue;
+      if (q.kind === 'teen' || q.kind === 'kid' || q.kind === 'pkid' || q.kind === 'ppar') continue;
+      const d = Math.hypot(q.x - x, q.z - z);
+      if (d > radius || d < 0.5) continue;
+      if (q.panic > 0 && what === 'shot') continue;
+      q.panic = 7 + Math.random() * 5; q.panicX = x; q.panicZ = z;
+      if (q.sayT <= 0 || what === 'death') this.say(q, what === 'death' ? ['Oh Gott, er ist tot!', 'Mord! Ruft die Polizei!', 'Hilfe, hilfe!'][Math.floor(Math.random() * 3)] : ['Waffe! Weg hier!', 'Er hat geschossen!', 'Rennt!'][Math.floor(Math.random() * 3)], 3);
+    }
+  }
+
   /** common knock-out handling of store people; true while lying down */
   downBranch(i, p, dt) {
     if (p.down <= 0) return false;
     p.down -= dt; if (p.stabbed) p.down = 9999;
     if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 60; }
-    this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT || 0, sc: 1, lie: 1 });
+    this.drawFigure(i, p, this.limp(p, dt, { x: p.px, z: p.pz, yaw: p.yawT || 0, sc: 1 }));
     this.dyn.push({ x: p.px, z: p.pz, r: 0.3, vx: 0, vz: 0, ped: p });
     p.x = p.px; p.z = p.pz;
     return true;
@@ -608,6 +643,7 @@ export class Pedestrians {
         aim = true;
         if (p.cd <= 0) {
           p.cd = 0.9 + Math.random() * 0.8; p.flash = 0.09;
+          this.alarm(p.px, p.pz, 24, 'shot');
           const hitIt = Math.random() < 0.72;
           if (hitIt) this.hit(q, dx / d, dz / d, 100, { gun: true, long: true });
           if (this.onCrewShot) this.onCrewShot(p, q.x, q.z, hitIt);
@@ -755,7 +791,7 @@ export class Pedestrians {
     }
     if (p.elder) { p.anger = Math.min(100, p.anger + 30); }
     else { const say = ['Aua!', 'Hey, spinnst du?!', 'Lass das!', 'Hilfe!']; this.say(p, say[Math.floor(Math.random() * say.length)], 1.6); }
-    if (p.hp <= 0) { p.down = opts.long ? 9999 : 12; p.ko = true; p.chase = 0; p.say = ''; if (opts.long) p.stabbed = true; return 'ko'; }
+    if (p.hp <= 0) { p.down = opts.long ? 9999 : 12; p.ko = true; p.chase = 0; p.say = ''; if (opts.long) { p.stabbed = true; this.alarm(p.x, p.z, 38, 'death'); } return 'ko'; }
     return 'hit';
   }
 
@@ -770,6 +806,7 @@ export class Pedestrians {
     const P_ = this.parts;
     for (let i = 0; i < this.count; i++) {
       const p = this.list[i];
+      if (p.down <= 0 && p.deadT) { p.deadT = 0; p.deadSeed = undefined; }
       if (p.kind === 'kid' || p.kind === 'pkid' || p.kind === 'ppar') { this.updateSpecial(i, p, dt, t, px, pz, R); continue; }
       if (p.kind === 'teen') { this.updateTeen(i, p, dt, t, player); continue; }
       if (p.kind === 'shopper') { this.updateShopper(i, p, dt, t, player); continue; }
@@ -809,6 +846,11 @@ export class Pedestrians {
       if (p.down > 0) { p.down -= dt; moving = false; if (p.stabbed) p.down = 9999; if (p.down <= 0 && p.ko) { p.ko = false; p.hp = 55; p.anger = p.elder ? 70 : p.anger; p.cool = 4; } }
       if (p.flinch > 0) p.flinch -= dt;
       if (p.hitT > 0) { p.hitT -= dt; if (p.hitT <= 0) p.hitStreak = 0; }
+      if (p.down > 0) { // lying on the ground, limp
+        this.drawFigure(i, p, this.limp(p, dt, { x, z, yaw, sc: p.elder ? 0.93 : 1 }));
+        this.dyn.push({ x, z, r: 0.32, vx: 0, vz: 0, ped: p });
+        continue;
+      } else if (p.deadT) { p.deadT = 0; p.deadSeed = undefined; }
       if (running && moving) {
         // 10 km/h sprint straight at the player
         const dx = px - x, dz = pz - z, d = Math.hypot(dx, dz) || 1;
@@ -833,14 +875,22 @@ export class Pedestrians {
         // normal sidewalk walking
         if (p.smackCool > 0) p.smackCool -= dt;
         const r = ((p.s % P) + P) % P;
-        const inWait = p.dir > 0 ? r >= P - 7.1 && r < P - 5.9 : r > 5.9 && r <= 7.1;
+        const panicking = p.panic > 0 && p.chase <= 0;
+        if (panicking) { // gunshot / killing nearby: run away along the pavement
+          p.panic -= dt;
+          const away = p.axis === 'x' ? Math.sign(p.x - p.panicX) : Math.sign(p.z - p.panicZ); if (away) p.dir = away;
+          p.s += p.dir * 3.8 * dt; p.phase += dt * 13; moving = true;
+          if (p.sayT <= 0 && Math.random() < dt * 0.5) this.say(p, ['Hilfe!', 'Weg hier!', 'Ruft die Polizei!', 'Aaah!'][Math.floor(Math.random() * 4)], 1.8);
+        }
+        p.panicNow = panicking;
+        const inWait = !panicking && (p.dir > 0 ? r >= P - 7.1 && r < P - 5.9 : r > 5.9 && r <= 7.1);
         if (inWait) {
           const unsafe = p.axis === 'x' ? sig.bG || sig.bY || sig.bSoon : sig.aG || sig.aY || sig.aSoon;
           if (unsafe) moving = false;
         }
         if (p.mood >= 2 && p.cool <= 0) moving = false; // stands and scolds
         if (p.cool > 0 && p.chase <= 0 && p.mood === 1 && p.cool > 0) moving = moving && p.cool < 2.5;
-        if (moving) { p.s += p.dir * p.speed * dt; p.phase += dt * p.speed * (p.elder ? 4.4 : 5.2); }
+        if (moving && !panicking) { p.s += p.dir * p.speed * dt; p.phase += dt * p.speed * (p.elder ? 4.4 : 5.2); }
         x = p.axis === 'x' ? p.s : p.lane; z = p.axis === 'x' ? p.lane : p.s;
         p.x = x; p.z = z;
         const ty = p.axis === 'x' ? (p.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (p.dir > 0 ? 0 : Math.PI);
@@ -855,7 +905,8 @@ export class Pedestrians {
       // ---- pose
       const bum = p.kind === 'bum';
       const sc = p.elder ? 0.93 : 1;
-      const sw = (moving || running) ? Math.sin(p.phase) * (running ? 0.95 : p.elder ? 0.32 : 0.55) : 0;
+      const pan = !!p.panicNow && p.panic > 0;
+      const sw = (moving || running) ? Math.sin(p.phase) * (running || pan ? 0.95 : p.elder ? 0.32 : 0.55) : 0;
       const hunch = (p.elder ? (running ? 0.18 : 0.3) : 0) - (p.flinch > 0 ? 0.5 * Math.sin(Math.min(1, p.flinch / 0.3) * Math.PI) : 0);
       const lie = p.down > 0 ? Math.min(1, p.down * 3) : 0;
       b.makeRotationY(yaw);
@@ -879,6 +930,7 @@ export class Pedestrians {
       else if (p.has.cane && !running) aR = -0.55 + sw * 0.1;
       if (angry) aR = -2.5 + Math.sin(t * 15 + i) * 0.35;
       if (running) { aR = -2.4 + Math.sin(p.phase) * 0.45; aL = -Math.sin(p.phase) * 1.1; }
+      if (pan) { aR = -2.0 + Math.sin(p.phase * 1.3) * 0.7; aL = -2.2 - Math.sin(p.phase * 1.1) * 0.6; }
       let drinkPh = 0;
       if (bum && !running && !angry) { const cyc = (t * 0.1 + p.phase * 0.17) % 1; drinkPh = cyc < 0.26 ? Math.sin(Math.min(1, cyc / 0.26) * Math.PI) : 0; aR = (0.2 + Math.sin(t * 0.9 + i) * 0.1) * (1 - drinkPh) + (-2.5) * drinkPh; aL = -sw * 0.6; }
       place(P_.torso, hunch, 0, 0.28, 0);
@@ -890,8 +942,11 @@ export class Pedestrians {
       if (p.has.glasses) place(P_.glasses, hunch, 0, 0.71, hz); else P_.glasses.setMatrixAt(i, this._zero);
       place(P_.legL, 0, 0.09, 0, 0, sw);
       place(P_.legR, 0, -0.09, 0, 0, -sw);
+      place(P_.shoeL, 0, 0.09, 0, 0, sw); place(P_.shoeR, 0, -0.09, 0, 0, -sw);
       place(P_.armL, hunch, 0.24, 0.54, 0, aL);
       place(P_.armR, hunch, -0.24, 0.54, 0, aR);
+      place(P_.handL, hunch, 0.24, 0.54, 0, aL); place(P_.handR, hunch, -0.24, 0.54, 0, aR);
+      place(P_.neck, hunch, 0, 0.625, hz * 0.75);
       if (p.has.hair) place(P_.hair, hunch, 0, 0.735, (p.elder ? 0.05 : 0.02) - 0.012);
       if (p.has.cap) place(P_.cap, hunch, 0, 0.82, p.elder ? 0.06 : 0.03);
       if (p.has.cane && !running) ground(P_.cane, -0.3, 0.2, 0.05);
