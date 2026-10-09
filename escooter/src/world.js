@@ -1012,14 +1012,14 @@ class ChunkBuilder {
     const pcx = 74, pcz = 74, pr = [];
     for (let i = 0; i < 28; i++) { const a = (i / 28) * 6.283, r = 7.2 + Math.sin(a * 2 + 1) * 1.3 + Math.sin(a * 3 + 2) * 0.8; pr.push([pcx + Math.cos(a) * r, pcz + Math.sin(a) * r * 0.82]); }
     const bank = pr.map(([x, z]) => [pcx + (x - pcx) * 1.14, pcz + (z - pcz) * 1.14]);
-    this.b('paver2').fan(bank, CURB + 0.03, '#7a6a52', 2);        // muddy bank
-    W.fan(pr, CURB + 0.075, '#ffffff', 5);
+    this.b('plain').fan(bank, CURB + 0.14, '#6f6048', 2);        // muddy bank
+    W.fan(pr, CURB + 0.19, '#ffffff', 5);
     for (let i = 0; i < 28; i += 1) { const [x, z] = bank[i]; if (rnd() < 0.55) blob(G, x, CURB + 0.1, z, 0.35 + rnd() * 0.35, 0.22 + rnd() * 0.15, 0.3 + rnd() * 0.3, ['#8a8d8f', '#6f7274', '#9a9c9d'][Math.floor(rnd() * 3)], rnd); }
     for (let k = 0; k < 16; k++) { // reeds
       const i = Math.floor(rnd() * 28), [bx, bz] = pr[i], dx = pcx - bx, dz = pcz - bz, l = Math.hypot(dx, dz) || 1;
       for (let j = 0; j < 7; j++) { const x = bx + (dx / l) * (0.3 + rnd() * 0.9) + (rnd() - 0.5) * 0.7, z = bz + (dz / l) * (0.3 + rnd() * 0.9) + (rnd() - 0.5) * 0.7, h = 0.9 + rnd() * 0.9; F.tri([x - 0.03, CURB, z], [x + 0.03, CURB, z], [x + (rnd() - 0.5) * 0.25, CURB + h, z + (rnd() - 0.5) * 0.25], ['#6b8f3c', '#7a9a44', '#5a7a30'][j % 3]); G.box(x, CURB + h - 0.05, z, 0.05, 0.16, 0.05, '#5a3a22'); }
     }
-    for (let k = 0; k < 9; k++) { const a = rnd() * 6.283, d = 1 + rnd() * 4.5, x = pcx + Math.cos(a) * d, z = pcz + Math.sin(a) * d * 0.8, r = 0.28 + rnd() * 0.2; const ring = []; for (let q = 0; q < 8; q++) ring.push([x + Math.cos(q * 0.785) * r, z + Math.sin(q * 0.785) * r]); F.fan(ring, CURB + 0.1, '#3f7a3a', 1); }
+    for (let k = 0; k < 9; k++) { const a = rnd() * 6.283, d = 1 + rnd() * 4.5, x = pcx + Math.cos(a) * d, z = pcz + Math.sin(a) * d * 0.8, r = 0.28 + rnd() * 0.2; const ring = []; for (let q = 0; q < 8; q++) ring.push([x + Math.cos(q * 0.785) * r, z + Math.sin(q * 0.785) * r]); F.fan(ring, CURB + 0.21, '#3f7a3a', 1); }
     this.circ(pcx, pcz, 7.4);
     // bench + ducks' little pier at the pond
     G.box(pcx - 9.5, CURB + 0.45, pcz, 0.45, 0.08, 1.6, '#6a4a2c'); G.box(pcx - 9.72, CURB + 0.8, pcz, 0.06, 0.4, 1.6, '#6a4a2c'); this.colliders.push({ t: 0, x0: pcx - 9.75, x1: pcx - 9.25, z0: pcz - 0.8, z1: pcz + 0.8 });

@@ -238,6 +238,14 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **`H` ruft deine Jugendlichen:** je Druck erscheinen 3 grüne Gang-Mitglieder neben dir (bis zu 6; nochmal `H` bei voller Gang ruft alle zu dir). Sie folgen dir (auch wenn du fährst), und **nur sie und du haben Waffen**: sie schießen auf Rivalen-Gangs, die dich bedrohen, aggressive Halbstarke und wütende Rentner/Obdachlose. Sie sind unverwundbar und lassen sich nicht abschießen.
 * Die grüne Gang auf den Gehwegen ist deine Verbündete (grüßt dich, nimmt dich nicht ins Visier) und prügelt sich mit ihrem Rivalen (Gelb). Die Wheelie-Bar liegt jetzt auf `U`.
 
+## Realismus-Update 🎯
+* **Leichen liegen schlaff am Boden:** Wer erschossen oder erstochen wird, kippt um (kurzes Nachfedern) und liegt dann völlig regungslos – mal auf dem Rücken, mal auf dem Bauch, Arme und Beine jedes Mal anders verdreht. Auch K.-o.-Geschlagene liegen so.
+* **Menschen:** Hände, Schuhe und Hals ergänzt (alle NPCs), dazu die runderen Körper.
+* **Schlauere Passanten:** Bei Schüssen (28 m) und besonders bei Morden/Messerangriffen (38 m) geraten Passanten in Panik, rennen den Gehweg entlang von der Gefahr weg und rufen um Hilfe (auch wenn die Ampel rot ist).
+* **Straßen:** Gullydeckel, Rinnstein-Abläufe, geflickte Asphaltstellen, Risse, Bremsspuren und Ölflecken.
+* **Parks:** Teich mit Steinen, Schilf und Seerosen, Gras-Büschel, Wildblumen-Beete, Steinkanten an den Wegen, Picknickdecken.
+* **Autos:** Radlauf-Kanten, rote Bremssättel, Nummernschilder mit EU-Feld und Buchstaben.
+
 ## Entwickeln
 
 ```
