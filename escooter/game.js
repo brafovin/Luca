@@ -36727,6 +36727,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   }
 
   // src/walker.js
+  var MAG = 40;
   var matCache = /* @__PURE__ */ new Map();
   function mat(color, o = {}) {
     const k = color + JSON.stringify(o);
@@ -36947,11 +36948,16 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
           gn.position.set(0, -0.07, 0);
           gn.visible = false;
           hg.add(gn);
-          mk2(new BoxGeometry(0.034, 0.2, 0.05), mat(1447706, { metalness: 0.8, roughness: 0.3 }), gn).position.set(0, -0.1, 0.02);
-          mk2(new BoxGeometry(0.03, 0.07, 0.04), mat(2763567, { roughness: 0.6 }), gn).position.set(0, 0, -0.035);
-          mk2(new BoxGeometry(0.02, 0.14, 0.012), mat(9277590, { metalness: 0.9, roughness: 0.25 }), gn).position.set(0, -0.12, 0.048);
+          const mGun = mat(1447706, { metalness: 0.8, roughness: 0.3 }), mGun2 = mat(2763567, { roughness: 0.55, metalness: 0.4 }), mSteel = mat(9277590, { metalness: 0.9, roughness: 0.25 });
+          mk2(new BoxGeometry(0.05, 0.27, 0.058), mGun, gn).position.set(0, -0.13, 0.015);
+          mk2(new BoxGeometry(0.052, 0.2, 0.014), mGun2, gn).position.set(0, -0.12, 0.05);
+          mk2(new CylinderGeometry(0.012, 0.012, 0.09, 10), mSteel, gn).position.set(0, -0.31, 0.015);
+          mk2(new BoxGeometry(0.03, 0.05, 0.05), mGun2, gn).position.set(0, -0.04, -0.045);
+          mk2(new BoxGeometry(0.03, 0.04, 0.2), mGun, gn).position.set(0, -0.045, -0.15);
+          mk2(new BoxGeometry(0.01, 0.1, 0.012), mSteel, gn).position.set(0, 0.06, 0.03);
+          mk2(new BoxGeometry(0.01, 0.02, 0.012), mSteel, gn).position.set(0, -0.27, 0.058);
           const fl = new Mesh(new ConeGeometry(0.05, 0.16, 8), new MeshBasicMaterial({ color: 16760896, toneMapped: false }));
-          fl.position.set(0, -0.28, 0.02);
+          fl.position.set(0, -0.4, 0.015);
           fl.rotation.x = Math.PI;
           fl.visible = false;
           gn.add(fl);
@@ -37058,7 +37064,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       this.landEvent = false;
       this.stepEvent = false;
       this._stepPh = 0;
-      this.ammo = 15;
+      this.ammo = MAG;
+      this.burst = 0;
       this.reloadT = 0;
       this.reloadEvent = false;
       this.clickEvent = false;
@@ -37095,8 +37102,9 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       if (this.flashT > 0) this.flashT -= dt;
       if (this.reloadT > 0) {
         this.reloadT -= dt;
-        if (this.reloadT <= 0) this.ammo = 15;
+        if (this.reloadT <= 0) this.ammo = MAG;
       }
+      if (this.burst > 0) this.burst = Math.max(0, this.burst - dt * 1.6);
       if (this.gun) {
         if (inp.punch && this.punchCool <= 0 && this.reloadT <= 0) {
           if (this.ammo <= 0) {
@@ -37105,10 +37113,11 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
             this.reload();
           } else {
             this.ammo--;
-            this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw };
-            this.recoil = 1;
-            this.flashT = 0.07;
-            this.punchCool = 0.2;
+            this.burst = Math.min(1, this.burst + 0.07);
+            this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw + (Math.random() - 0.5) * (0.012 + 0.055 * this.burst) };
+            this.recoil = Math.min(1.25, this.recoil + 0.5);
+            this.flashT = 0.045;
+            this.punchCool = 0.075;
           }
         }
       } else if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) {
@@ -37185,8 +37194,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       this.apply();
     }
     reload() {
-      if (this.gun && this.ammo < 15 && this.reloadT <= 0) {
-        this.reloadT = 1.5;
+      if (this.gun && this.ammo < MAG && this.reloadT <= 0) {
+        this.reloadT = 1.6;
         this.reloadEvent = true;
       }
     }
@@ -40704,9 +40713,38 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       o.start(t);
       o.stop(t + 0.08);
     }
-    shot(vol = 1) {
+    shot(vol = 1, smg = false) {
       if (!this.ctx) return;
       const c = this.ctx, t = c.currentTime;
+      if (smg) {
+        const n2 = c.createBufferSource();
+        n2.buffer = this.noiseBuf;
+        const f2 = c.createBiquadFilter();
+        f2.type = "bandpass";
+        f2.frequency.setValueAtTime(2600, t);
+        f2.frequency.exponentialRampToValueAtTime(500, t + 0.08);
+        f2.Q.value = 0.7;
+        const g2 = c.createGain();
+        g2.gain.setValueAtTime(0.5 * vol, t);
+        g2.gain.exponentialRampToValueAtTime(1e-3, t + 0.11);
+        n2.connect(f2);
+        f2.connect(g2);
+        g2.connect(this.master);
+        n2.start(t, Math.random() * 1.2);
+        n2.stop(t + 0.12);
+        const o2 = c.createOscillator();
+        o2.type = "square";
+        o2.frequency.setValueAtTime(190, t);
+        o2.frequency.exponentialRampToValueAtTime(70, t + 0.06);
+        const og2 = c.createGain();
+        og2.gain.setValueAtTime(0.16 * vol, t);
+        og2.gain.exponentialRampToValueAtTime(1e-3, t + 0.07);
+        o2.connect(og2);
+        og2.connect(this.master);
+        o2.start(t);
+        o2.stop(t + 0.08);
+        return;
+      }
       const n = c.createBufferSource();
       n.buffer = this.noiseBuf;
       const f = c.createBiquadFilter();
@@ -41166,9 +41204,10 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         shoeL: mk2(roundShoe()),
         shoeR: mk2(roundShoe()),
         gun: mk2(mergedGeo((B) => {
-          B.box(0, -0.7, 0.02, 0.03, 0.17, 0.045, "#1b1c1f");
-          B.box(0, -0.78, 0.02, 0.014, 0.05, 0.02, "#2a2b2f");
-          B.box(0, -0.62, -0.035, 0.028, 0.06, 0.04, "#141517");
+          B.box(0, -0.72, 0.02, 0.045, 0.24, 0.055, "#1b1c1f");
+          B.box(0, -0.86, 0.02, 0.016, 0.07, 0.02, "#8d9096");
+          B.box(0, -0.64, -0.04, 0.03, 0.06, 0.045, "#141517");
+          B.box(0, -0.65, -0.12, 0.026, 0.04, 0.17, "#101113");
           B.box(0, -0.6, 0, 0.05, 0.05, 0.05, "#3a2f28");
         }), true),
         cane: mk2(caneGeo, true),
@@ -42175,10 +42214,11 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         } else {
           aim = true;
           if (p.cd <= 0) {
-            p.cd = 0.9 + Math.random() * 0.8;
-            p.flash = 0.09;
+            p.burstN = (p.burstN || 0) + 1;
+            p.cd = p.burstN % 5 === 0 ? 0.9 + Math.random() * 0.9 : 0.09;
+            p.flash = 0.05;
             this.alarm(p.px, p.pz, 24, "shot");
-            const hitIt = Math.random() < 0.72;
+            const hitIt = Math.random() < 0.4;
             if (hitIt) this.hit(q, dx / d, dz / d, 100, { gun: true, long: true });
             if (this.onCrewShot) this.onCrewShot(p, q.x, q.z, hitIt);
             if (p.sayT <= 0 && Math.random() < 0.35) this.say(p, ["F\xFCr den Boss!", "Weg mit dem!", "Gr\xFCne Gang!", "Nimm das!"][Math.floor(Math.random() * 4)], 1.8);
@@ -46105,24 +46145,31 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   var gunFlashFP = new Mesh(new ConeGeometry(0.05, 0.22, 8), new MeshBasicMaterial({ color: 16760896, toneMapped: false, fog: false }));
   {
     const dark = new MeshStandardMaterial({ color: 1447706, metalness: 0.8, roughness: 0.3 }), grip = new MeshStandardMaterial({ color: 2763567, roughness: 0.6 });
-    const slide = new Mesh(new BoxGeometry(0.045, 0.05, 0.28), dark);
-    slide.position.set(0, 0, -0.1);
-    const barrel = new Mesh(new CylinderGeometry(0.011, 0.011, 0.06, 8), dark);
+    const slide = new Mesh(new BoxGeometry(0.06, 0.062, 0.3), dark);
+    slide.position.set(0, 0, -0.09);
+    const cover = new Mesh(new BoxGeometry(0.058, 0.012, 0.22), grip);
+    cover.position.set(0, 0.036, -0.1);
+    const barrel = new Mesh(new CylinderGeometry(0.0115, 0.0115, 0.1, 10), new MeshStandardMaterial({ color: 9277590, metalness: 0.9, roughness: 0.25 }));
     barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, -4e-3, -0.27);
-    const gr = new Mesh(new BoxGeometry(0.04, 0.12, 0.05), grip);
-    gr.position.set(0, -0.085, 0.01);
-    gr.rotation.x = 0.2;
-    const sight = new Mesh(new BoxGeometry(8e-3, 0.012, 0.012), new MeshBasicMaterial({ color: 16777215 }));
-    sight.position.set(0, 0.03, -0.2);
+    barrel.position.set(0, -4e-3, -0.29);
+    const gr = new Mesh(new BoxGeometry(0.036, 0.1, 0.05), grip);
+    gr.position.set(0, -0.08, 0.04);
+    gr.rotation.x = 0.12;
+    const mag = new Mesh(new BoxGeometry(0.03, 0.2, 0.042), dark);
+    mag.position.set(0, -0.14, 0.04);
+    mag.rotation.x = 0.1;
+    const stock = new Mesh(new BoxGeometry(0.012, 0.012, 0.16), new MeshStandardMaterial({ color: 9277590, metalness: 0.9, roughness: 0.25 }));
+    stock.position.set(0, 0.028, 0.14);
+    const sight = new Mesh(new BoxGeometry(8e-3, 0.016, 0.012), new MeshBasicMaterial({ color: 16777215 }));
+    sight.position.set(0, 0.048, -0.22);
     const hand = new Mesh(new BoxGeometry(0.07, 0.07, 0.11), new MeshStandardMaterial({ color: 1316119, roughness: 0.7 }));
-    hand.position.set(0, -0.1, 0.03);
+    hand.position.set(0, -0.1, 0.05);
     const arm = new Mesh(new BoxGeometry(0.09, 0.09, 0.5), new MeshStandardMaterial({ color: 2896184, roughness: 0.8 }));
-    arm.position.set(0.03, -0.12, 0.3);
+    arm.position.set(0.03, -0.12, 0.32);
     gunFlashFP.rotation.x = -Math.PI / 2;
-    gunFlashFP.position.set(0, 0, -0.42);
+    gunFlashFP.position.set(0, 0, -0.43);
     gunFlashFP.visible = false;
-    gunFP.add(slide, barrel, gr, sight, hand, arm, gunFlashFP);
+    gunFP.add(slide, cover, barrel, gr, mag, stock, sight, hand, arm, gunFlashFP);
     gunFP.visible = false;
     camera.add(gunFP);
   }
@@ -46137,7 +46184,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   }
   function toggleGun() {
     if (st.mode !== "walk") {
-      toast("Pistole nur zu Fu\xDF", "erst absteigen (F)", 1400);
+      toast("Uzi nur zu Fu\xDF", "erst absteigen (F)", 1400);
       return;
     }
     st.gun = !st.gun;
@@ -46148,7 +46195,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     }
     walker.setGun(st.gun);
     audio.click(1);
-    toast(st.gun ? "\u{1F52B} Pistole gezogen" : "Pistole weggesteckt", st.gun ? "Linke Maus / E / J = schie\xDFen (1 Schuss = tot) \xB7 Kinder und Eltern sind tabu \xB7 Q = wegstecken" : "", 2200);
+    toast(st.gun ? "\u{1F52B} Uzi gezogen" : "Uzi weggesteckt", st.gun ? "Linke Maus / E / J GEHALTEN = Dauerfeuer, 40 Schuss (1 Treffer = tot) \xB7 Kinder und Eltern sind tabu \xB7 Q = wegstecken" : "", 2200);
   }
   function hitMark(kill) {
     st.hitT = kill ? 0.5 : 0.22;
@@ -46196,11 +46243,11 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   scene.add(muzzleLight);
   function resolveShot(ev) {
     peds.alarm(walker.x, walker.z, 28, "shot");
-    audio.shot();
+    audio.shot(1, true);
     ejectCasing(ev.x, ev.z, ev.yaw);
     muzzleLight.position.set(ev.x + Math.sin(ev.yaw) * 0.8, 1.35, ev.z + Math.cos(ev.yaw) * 0.8);
     muzzleLight.intensity = 90;
-    st.muzzleT = 0.06;
+    st.muzzleT = 0.04;
     st.xSpread = 1;
     const eyeY = 1.36, fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
     const ox = ev.x + fx * 0.55, oz = ev.z + fz * 0.55;
@@ -47932,7 +47979,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       const am = $("ammo"), showA = st.mode === "walk" && st.gun && st.started;
       am.classList.toggle("hidden", !showA);
       if (showA) {
-        const t2 = walker.reloadT > 0 ? "\u27F3 l\xE4dt nach \u2026" : `${walker.ammo} <small>/ 15</small>`;
+        const t2 = walker.reloadT > 0 ? "\u27F3 l\xE4dt nach \u2026" : `${walker.ammo} <small>/ ${MAG}</small>`;
         if (am._t !== t2) {
           am._t = t2;
           am.innerHTML = "\u{1F52B} " + t2;

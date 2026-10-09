@@ -122,7 +122,7 @@ export class Pedestrians {
       neck: mk(new THREE.CylinderGeometry(0.046, 0.056, 0.11, 8)),
       handL: mk(roundHand()), handR: mk(roundHand()),
       shoeL: mk(roundShoe()), shoeR: mk(roundShoe()),
-      gun: mk(mergedGeo((B) => { B.box(0, -0.7, 0.02, 0.03, 0.17, 0.045, '#1b1c1f'); B.box(0, -0.78, 0.02, 0.014, 0.05, 0.02, '#2a2b2f'); B.box(0, -0.62, -0.035, 0.028, 0.06, 0.04, '#141517'); B.box(0, -0.6, 0.0, 0.05, 0.05, 0.05, '#3a2f28'); }), true),
+      gun: mk(mergedGeo((B) => { B.box(0, -0.72, 0.02, 0.045, 0.24, 0.055, '#1b1c1f'); B.box(0, -0.86, 0.02, 0.016, 0.07, 0.02, '#8d9096'); B.box(0, -0.64, -0.04, 0.03, 0.06, 0.045, '#141517'); B.box(0, -0.65, -0.12, 0.026, 0.04, 0.17, '#101113'); B.box(0, -0.6, 0.0, 0.05, 0.05, 0.05, '#3a2f28'); }), true),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
       cigT: mk(mergedGeo((B) => {
         const cz = (r, l, z, col) => B.geo(new THREE.CylinderGeometry(r, r, l, 10).rotateX(Math.PI / 2), new THREE.Matrix4().makeTranslation(0.022, -0.052, z), col);
@@ -642,9 +642,10 @@ export class Pedestrians {
       else {
         aim = true;
         if (p.cd <= 0) {
-          p.cd = 0.9 + Math.random() * 0.8; p.flash = 0.09;
+          p.burstN = (p.burstN || 0) + 1;
+          p.cd = p.burstN % 5 === 0 ? 0.9 + Math.random() * 0.9 : 0.09; p.flash = 0.05; // short full-auto bursts
           this.alarm(p.px, p.pz, 24, 'shot');
-          const hitIt = Math.random() < 0.72;
+          const hitIt = Math.random() < 0.4;
           if (hitIt) this.hit(q, dx / d, dz / d, 100, { gun: true, long: true });
           if (this.onCrewShot) this.onCrewShot(p, q.x, q.z, hitIt);
           if (p.sayT <= 0 && Math.random() < 0.35) this.say(p, ['Für den Boss!', 'Weg mit dem!', 'Grüne Gang!', 'Nimm das!'][Math.floor(Math.random() * 4)], 1.8);

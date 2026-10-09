@@ -112,9 +112,19 @@ export class GameAudio {
     const g = c.createGain(); g.gain.setValueAtTime(kind === 2 ? 0.05 : 0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + (kind === 2 ? 0.06 : 0.07));
     o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.08);
   }
-  shot(vol = 1) {
+  shot(vol = 1, smg = false) {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
+    if (smg) { // short, dry full-auto crack (cheap enough for 13 shots / s)
+      const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(500, t + 0.08); f.Q.value = 0.7;
+      const g = c.createGain(); g.gain.setValueAtTime(0.5 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+      n.connect(f); f.connect(g); g.connect(this.master); n.start(t, Math.random() * 1.2); n.stop(t + 0.12);
+      const o = c.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.06);
+      const og = c.createGain(); og.gain.setValueAtTime(0.16 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+      o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.08);
+      return;
+    }
     const n = c.createBufferSource(); n.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
     const g = c.createGain(); g.gain.setValueAtTime(0.7 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);

@@ -4,6 +4,7 @@ import { pushOut } from './phys.js';
 import { clamp, damp, wrapAngle } from './util.js';
 import { buildVape } from './vape.js';
 
+export const MAG = 40; // Uzi magazine
 const matCache = new Map();
 function mat(color, o = {}) {
   const k = color + JSON.stringify(o);
@@ -92,10 +93,15 @@ export class WalkerModel {
         this.knifeMesh = kn;
         // pistol (barrel along the arm; the grip points to local -z so it hangs down when the arm is raised)
         const gn = new THREE.Group(); gn.position.set(0, -0.07, 0.0); gn.visible = false; hg.add(gn);
-        mk(new THREE.BoxGeometry(0.034, 0.2, 0.05), mat(0x16171a, { metalness: 0.8, roughness: 0.3 }), gn).position.set(0, -0.1, 0.02);
-        mk(new THREE.BoxGeometry(0.03, 0.07, 0.04), mat(0x2a2b2f, { roughness: 0.6 }), gn).position.set(0, 0.0, -0.035);
-        mk(new THREE.BoxGeometry(0.02, 0.14, 0.012), mat(0x8d9096, { metalness: 0.9, roughness: 0.25 }), gn).position.set(0, -0.12, 0.048);
-        const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), new THREE.MeshBasicMaterial({ color: 0xffc040, toneMapped: false })); fl.position.set(0, -0.28, 0.02); fl.rotation.x = Math.PI; fl.visible = false; gn.add(fl);
+        const mGun = mat(0x16171a, { metalness: 0.8, roughness: 0.3 }), mGun2 = mat(0x2a2b2f, { roughness: 0.55, metalness: 0.4 }), mSteel = mat(0x8d9096, { metalness: 0.9, roughness: 0.25 });
+        mk(new THREE.BoxGeometry(0.05, 0.27, 0.058), mGun, gn).position.set(0, -0.13, 0.015);              // boxy receiver
+        mk(new THREE.BoxGeometry(0.052, 0.2, 0.014), mGun2, gn).position.set(0, -0.12, 0.05);             // top cover
+        mk(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 10), mSteel, gn).position.set(0, -0.31, 0.015); // barrel
+        mk(new THREE.BoxGeometry(0.03, 0.05, 0.05), mGun2, gn).position.set(0, -0.04, -0.045);            // pistol grip
+        mk(new THREE.BoxGeometry(0.03, 0.04, 0.2), mGun, gn).position.set(0, -0.045, -0.15);              // long magazine (through the grip)
+        mk(new THREE.BoxGeometry(0.01, 0.1, 0.012), mSteel, gn).position.set(0, 0.06, 0.03);              // folded wire stock
+        mk(new THREE.BoxGeometry(0.01, 0.02, 0.012), mSteel, gn).position.set(0, -0.27, 0.058);           // front sight
+        const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), new THREE.MeshBasicMaterial({ color: 0xffc040, toneMapped: false })); fl.position.set(0, -0.4, 0.015); fl.rotation.x = Math.PI; fl.visible = false; gn.add(fl);
         this.gunMesh = gn; this.gunFlash = fl;
       }
       const palm = mk(new THREE.BoxGeometry(0.08, 0.075, 0.034), mat(0x3a2f28), hg); palm.position.y = -0.03;
@@ -154,7 +160,7 @@ export class Walker {
     this.model.group.visible = false;
     scene.add(this.model.group);
     this.x = 0; this.z = 0; this.yaw = 0; this.speed = 0; this.vx = 0; this.vz = 0; this.y = 0; this.phase = 0; this.stun = 0; this.running = false;
-    this.jy = 0; this.jv = 0; this.landEvent = false; this.stepEvent = false; this._stepPh = 0; this.ammo = 15; this.reloadT = 0; this.reloadEvent = false; this.clickEvent = false; this.knife = false; this.gun = false; this.recoil = 0; this.flashT = 0; this.shootEvent = null; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
+    this.jy = 0; this.jv = 0; this.landEvent = false; this.stepEvent = false; this._stepPh = 0; this.ammo = MAG; this.burst = 0; this.reloadT = 0; this.reloadEvent = false; this.clickEvent = false; this.knife = false; this.gun = false; this.recoil = 0; this.flashT = 0; this.shootEvent = null; this.punchT = 1; this.punchSide = 0; this.punchCool = 0; this.guardT = 0; this.punchEvent = null; this.punched = true; this.boxT = 0;
   }
   place(x, z, yaw) { this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.vx = this.vz = 0; this.y = groundHeight(x, z); this.stun = 0; }
   update(dt, inp, col, dyn) {
@@ -164,11 +170,12 @@ export class Walker {
     if (this.punchCool > 0) this.punchCool -= dt;
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 6);
     if (this.flashT > 0) this.flashT -= dt;
-    if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = 15; }
+    if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = MAG; }
+    if (this.burst > 0) this.burst = Math.max(0, this.burst - dt * 1.6);
     if (this.gun) {
       if (inp.punch && this.punchCool <= 0 && this.reloadT <= 0) {
         if (this.ammo <= 0) { this.clickEvent = true; this.punchCool = 0.35; this.reload(); }
-        else { this.ammo--; this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw }; this.recoil = 1; this.flashT = 0.07; this.punchCool = 0.2; }
+        else { this.ammo--; this.burst = Math.min(1, this.burst + 0.07); this.shootEvent = { x: this.x, z: this.z, yaw: this.yaw + (Math.random() - 0.5) * (0.012 + 0.055 * this.burst) }; this.recoil = Math.min(1.25, this.recoil + 0.5); this.flashT = 0.045; this.punchCool = 0.075; }
       }
     }
     else if (inp.punch && this.punchCool <= 0 && this.punchT >= 1) { this.punchT = 0; this.punchSide = this.knife ? 1 : this.punchSide ^ 1; this.punchCool = 0.36; this.punched = false; this.guardT = 1.6; }
@@ -209,7 +216,7 @@ export class Walker {
     if (this.speed > 0.4 && this.jy <= 0.001) { const ph = this.phase / Math.PI; if (Math.floor(ph) !== Math.floor(this._stepPh)) this.stepEvent = true; this._stepPh = ph; }
     this.apply();
   }
-  reload() { if (this.gun && this.ammo < 15 && this.reloadT <= 0) { this.reloadT = 1.5; this.reloadEvent = true; } }
+  reload() { if (this.gun && this.ammo < MAG && this.reloadT <= 0) { this.reloadT = 1.6; this.reloadEvent = true; } }
   apply() {
     const g = this.model.group;
     g.position.set(this.x, this.y + this.jy, this.z);

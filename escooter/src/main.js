@@ -14,7 +14,7 @@ import { makeTextures } from './textures.js';
 import { createMaterials } from './materials.js';
 import { Sky } from './sky.js';
 import { World, P, blockType, groundHeight, hasStation, SHOP, SHOP_TABLES, SHOP_IN, inShop, PLAY, SHOP2, SHOP2_IN, SHOP2_TABLES, inShop2 } from './world.js';
-import { Walker } from './walker.js';
+import { Walker, MAG } from './walker.js';
 import { Net } from './net.js';
 import { Scooter } from './scooter.js';
 import { GameAudio } from './audio.js';
@@ -597,19 +597,22 @@ function toggleKnife() {
   fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = st.knife));
   toast(st.knife ? '🔪 Messer gezogen' : 'Messer weggesteckt', st.knife ? 'Linke Maus / E / J = zustechen · Kinder und Eltern sind tabu · N = wegstecken' : '', 1600);
 }
-/* ---- pistol: one shot = dead */
+/* ---- Uzi: full auto, 40 rounds, one hit = dead */
 const gunFP = new THREE.Group();
 const gunFlashFP = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 8), new THREE.MeshBasicMaterial({ color: 0xffc040, toneMapped: false, fog: false }));
 {
   const dark = new THREE.MeshStandardMaterial({ color: 0x16171a, metalness: 0.8, roughness: 0.3 }), grip = new THREE.MeshStandardMaterial({ color: 0x2a2b2f, roughness: 0.6 });
-  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.05, 0.28), dark); slide.position.set(0, 0, -0.1);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.06, 8), dark); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, -0.004, -0.27);
-  const gr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), grip); gr.position.set(0, -0.085, 0.01); gr.rotation.x = 0.2;
-  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.012, 0.012), new THREE.MeshBasicMaterial({ color: 0xffffff })); sight.position.set(0, 0.03, -0.2);
-  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.11), new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.7 })); hand.position.set(0.0, -0.1, 0.03);
-  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.8 })); arm.position.set(0.03, -0.12, 0.3);
-  gunFlashFP.rotation.x = -Math.PI / 2; gunFlashFP.position.set(0, 0, -0.42); gunFlashFP.visible = false;
-  gunFP.add(slide, barrel, gr, sight, hand, arm, gunFlashFP);
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.062, 0.3), dark); slide.position.set(0, 0, -0.09);              // boxy Uzi receiver
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.012, 0.22), grip); cover.position.set(0, 0.036, -0.1);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.0115, 0.0115, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x8d9096, metalness: 0.9, roughness: 0.25 })); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, -0.004, -0.29);
+  const gr = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.1, 0.05), grip); gr.position.set(0, -0.08, 0.04); gr.rotation.x = 0.12;
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.042), dark); mag.position.set(0, -0.14, 0.04); mag.rotation.x = 0.1;
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.16), new THREE.MeshStandardMaterial({ color: 0x8d9096, metalness: 0.9, roughness: 0.25 })); stock.position.set(0, 0.028, 0.14);
+  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.016, 0.012), new THREE.MeshBasicMaterial({ color: 0xffffff })); sight.position.set(0, 0.048, -0.22);
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.11), new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.7 })); hand.position.set(0.0, -0.1, 0.05);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.8 })); arm.position.set(0.03, -0.12, 0.32);
+  gunFlashFP.rotation.x = -Math.PI / 2; gunFlashFP.position.set(0, 0, -0.43); gunFlashFP.visible = false;
+  gunFP.add(slide, cover, barrel, gr, mag, stock, sight, hand, arm, gunFlashFP);
   gunFP.visible = false; camera.add(gunFP);
 }
 const tracers = [];
@@ -620,11 +623,11 @@ function addTracer(x0, y0, z0, x1, y1, z1) {
   tracers.push({ m, t: 0.09 });
 }
 function toggleGun() {
-  if (st.mode !== 'walk') { toast('Pistole nur zu Fuß', 'erst absteigen (F)', 1400); return; }
+  if (st.mode !== 'walk') { toast('Uzi nur zu Fuß', 'erst absteigen (F)', 1400); return; }
   st.gun = !st.gun;
   if (st.gun) { st.knife = false; walker.setKnife(false); fists.children.forEach((f) => f.userData.blade && (f.userData.blade.visible = false)); }
   walker.setGun(st.gun); audio.click(1);
-  toast(st.gun ? '🔫 Pistole gezogen' : 'Pistole weggesteckt', st.gun ? 'Linke Maus / E / J = schießen (1 Schuss = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
+  toast(st.gun ? '🔫 Uzi gezogen' : 'Uzi weggesteckt', st.gun ? 'Linke Maus / E / J GEHALTEN = Dauerfeuer, 40 Schuss (1 Treffer = tot) · Kinder und Eltern sind tabu · Q = wegstecken' : '', 2200);
 }
 function hitMark(kill) { st.hitT = kill ? 0.5 : 0.22; $('hitmark').classList.toggle('kill', !!kill); audio.click(2); }
 const casings = [];
@@ -647,9 +650,9 @@ const muzzleLight = new THREE.PointLight(0xffb060, 0, 14, 2);
 scene.add(muzzleLight);
 function resolveShot(ev) {
   peds.alarm(walker.x, walker.z, 28, 'shot');
-  audio.shot();
+  audio.shot(1, true);
   ejectCasing(ev.x, ev.z, ev.yaw);
-  muzzleLight.position.set(ev.x + Math.sin(ev.yaw) * 0.8, 1.35, ev.z + Math.cos(ev.yaw) * 0.8); muzzleLight.intensity = 90; st.muzzleT = 0.06;
+  muzzleLight.position.set(ev.x + Math.sin(ev.yaw) * 0.8, 1.35, ev.z + Math.cos(ev.yaw) * 0.8); muzzleLight.intensity = 90; st.muzzleT = 0.04;
   st.xSpread = 1;
   const eyeY = 1.36, fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw);
   const ox = ev.x + fx * 0.55, oz = ev.z + fz * 0.55;
@@ -1812,7 +1815,7 @@ function tick(dt, now, render = true) {
   { const xh = $('xhair'), armed = st.mode === 'walk' && (st.gun || st.knife) && st.started && !st.paused; xh.classList.toggle('hidden', !armed); if (armed) xh.style.setProperty('--sp', (6 + st.xSpread * 12 + Math.min(1, walker.speed / 1.8) * 6 + walker.reloadT * 3).toFixed(1) + 'px');
     const hm = $('hitmark'); hm.style.opacity = st.hitT > 0 ? Math.min(1, st.hitT * 5) : 0;
     const am = $('ammo'), showA = st.mode === 'walk' && st.gun && st.started; am.classList.toggle('hidden', !showA);
-    if (showA) { const t2 = walker.reloadT > 0 ? '⟳ lädt nach …' : `${walker.ammo} <small>/ 15</small>`; if (am._t !== t2) { am._t = t2; am.innerHTML = '🔫 ' + t2; } am.classList.toggle('low', walker.ammo <= 3 && walker.reloadT <= 0); } }
+    if (showA) { const t2 = walker.reloadT > 0 ? '⟳ lädt nach …' : `${walker.ammo} <small>/ ${MAG}</small>`; if (am._t !== t2) { am._t = t2; am.innerHTML = '🔫 ' + t2; } am.classList.toggle('low', walker.ammo <= 3 && walker.reloadT <= 0); } }
   traffic.setNight(sky.night); blood.update(dt); updateSmoke(dt); carDmg.update(dt, me.x, me.z); if (st.ramCool > 0) st.ramCool -= dt;
   { const d = ems.active ? Math.hypot(ems.x - me.x, ems.z - me.z) : 1e9; audio.sirenEms(ems.active ? clamp(1 - d / 200, 0, 1) * (ems.state === 'medics' ? 0.4 : 1) : 0); }
   birds.update(dt, me.x, me.z, sky.night > 0.55 || cfg.weather === 'rain' || st.paused);
