@@ -45401,7 +45401,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     }
   };
   var cfg = {
-    quality: store.get("quality", "high"),
+    quality: store.get("quality", "p420"),
     mode: store.get("mode", "mission"),
     battMode: store.get("battMode2", "off"),
     wet: false,
@@ -45477,12 +45477,22 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     smokeT: 0,
     model: store.get("model", "g4")
   };
+  if (!store0("q420", false)) {
+    try {
+      localStorage.setItem("g4_quality", JSON.stringify("p420"));
+      localStorage.setItem("g4_q420", "true");
+    } catch (e) {
+    }
+    cfg.quality = "p420";
+  }
   if (!store.get("bonus1m", false)) {
     st.money = Math.max(st.money, 1e6);
     store.set("money", Math.floor(st.money));
     store.set("bonus1m", true);
   }
   var QUALITY = {
+    p420: { pr: 1, fixedH: 420, shadow: 1024, bloom: false, ao: false, post: true, radius: 2, fogFar: 190 },
+    // fixed 420p internal resolution (upscaled to the window)
     low: { pr: 1, shadow: 0, bloom: false, ao: false, radius: 2, fogFar: 185 },
     med: { pr: 1.5, shadow: 1024, bloom: false, ao: false, post: true, radius: 2, fogFar: 190 },
     high: { pr: 2, shadow: 2048, bloom: true, ao: true, post: true, radius: 3, fogFar: 285 }
@@ -45546,7 +45556,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   }
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
-    const pr = Math.min(window.devicePixelRatio || 1, st.maxPR || 1.5) * st.resScale;
+    const fixedH = (QUALITY[cfg.quality] || {}).fixedH;
+    const pr = fixedH ? fixedH / h : Math.min(window.devicePixelRatio || 1, st.maxPR || 1.5) * st.resScale;
     renderer.setPixelRatio(pr);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
@@ -47765,7 +47776,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   function tick(dt, now, render = true) {
     st.fpsT += dt;
     st.fpsAvg = lerp2(st.fpsAvg, 1 / Math.max(dt, 1e-3), 0.05);
-    if (st.fpsT > 2.5 && !st.paused) {
+    if (st.fpsT > 2.5 && !st.paused && !(QUALITY[cfg.quality] || {}).fixedH) {
       st.fpsT = 0;
       if (st.fpsAvg < 38 && st.resScale > 0.55) {
         st.resScale = Math.max(0.55, st.resScale - 0.1);
