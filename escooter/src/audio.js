@@ -112,15 +112,15 @@ export class GameAudio {
     const g = c.createGain(); g.gain.setValueAtTime(kind === 2 ? 0.05 : 0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + (kind === 2 ? 0.06 : 0.07));
     o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.08);
   }
-  shot() {
+  shot(vol = 1) {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;
     const n = c.createBufferSource(); n.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
-    const g = c.createGain(); g.gain.setValueAtTime(0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    const g = c.createGain(); g.gain.setValueAtTime(0.7 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     n.connect(f); f.connect(g); g.connect(this.master); g.connect(this._reverb()); n.start(t); n.stop(t + 0.32);
     const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
-    const og = c.createGain(); og.gain.setValueAtTime(0.6, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    const og = c.createGain(); og.gain.setValueAtTime(0.6 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
     o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.28);
   }
   door() { // soft hiss + motor of an automatic glass door
