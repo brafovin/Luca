@@ -87,9 +87,9 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Obdachlose** (3 in der Stadt): zerlumpte Kleidung, Mütze, grauer Bart, rote Nase, **trinken Bier** (Flasche in der Hand, setzen sie an, Prost!), torkeln über die Gehwege, pöbeln und schnorren („Haste mal ’nen Euro?“).
   Kommst du ihnen nah, werden sie **sehr schnell sauer**, rennen dir hinterher und hauen dir die Flasche über (−25 €). Man kann sie boxen/erschießen wie andere Passanten.
 
-## Pistole 🔫
+## Uzi 🔫 (Vollautomatik)
 
-* Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Pistole weg**, **linke Maustaste** (oder `E`/`J`) schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.
+* Zu Fuß (`F` zum Absteigen): **`Q` zieht/steckt die Uzi weg** (40 Schuss, Dauerfeuer ~13 Schuss/s bei gehaltener Maustaste, Streuung wächst bei Dauerfeuer, Nachladen mit `R`), **linke Maustaste** (oder `E`/`J`) schießt (Mündungsfeuer, Knall, Leuchtspur; Ego-Ansicht mit Pistole im Bild). **Ein Treffer = tot** (Blut, Krankenwagen kommt, −300 Punkte). Wände fangen Kugeln ab.
   **Kinder und ihre Eltern sind tabu** (nicht treffbar). Auf dem Roller kannst du nicht schießen.
 * Die **Halbstarken** halten deine Waffe zunächst für **Fake** („Haha, die Waffe ist doch fake!“) und lassen sich dadurch noch schneller provozieren.
   **Knallst du einen von ihnen ab, rennen alle anderen (auch die netten) panisch weg** („Scheiße, die ist echt!“) und kommen erst nach einer Weile zur Bank zurück.
