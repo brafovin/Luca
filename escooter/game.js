@@ -40689,6 +40689,9 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   };
 
   // src/peds.js
+  var TEAMS = [{ coat: "#c42a2a", hood: "#3a0c0c" }, { coat: "#2a5fb4", hood: "#0c1a3a" }, { coat: "#d8b020", hood: "#3a2f08" }, { coat: "#2f9a4a", hood: "#0c2f16" }, { coat: "#8a3aa8", hood: "#2a0f36" }, { coat: "#e8e8e8", hood: "#40444a" }];
+  var FIGHT_SAY = ["Das ist unser Block!", "Verpisst euch, ihr Pfeifen!", "Eins aufs Maul gef\xE4llig?", "Komm her, du Opfer!", "Ihr habt hier nix verloren!", "Gleich knallt's!"];
+  var WIN_SAY = ["Wer ist jetzt der Chef?!", "Haha, schwach!", "Lasst euch hier nie wieder blicken!"];
   var SKIN = ["#e8bd9a", "#c98d62", "#8d5a3b", "#f1cfb2", "#6b4630"];
   var CLOTH = ["#2f4a7a", "#8a2f2f", "#2f6a4a", "#d6b24a", "#4a4a4f", "#c9c9c9", "#6a3f7a", "#e07a2e", "#244e5f", "#7a6a58"];
   var PANTS = ["#2a3142", "#3b3b3f", "#5a4a3a", "#1f2430", "#4a5568"];
@@ -40722,7 +40725,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     return b.build();
   }
   var Pedestrians = class {
-    constructor(scene2, M2, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 4, shoppers = 8, staff = 5) {
+    constructor(scene2, M2, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5) {
       this.list = [];
       this.young = count;
       this.nElders = elders;
@@ -40732,7 +40735,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       this.nTeens = teens;
       this.nGangs = gangs;
       this.gangs = [];
-      for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: "x", lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g % 4 !== 3 });
+      for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: "x", lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0 });
       teens += gangs * 3;
       this.stores = [];
       this.staffSpots = [];
@@ -40970,7 +40973,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         if (p.has.roll) p.has.cane = false;
         if (p.has.cane && kind === "oma") p.has.bag = false;
         this.list.push(p);
-        const coat = kind === "oma" ? pick(OMA_COAT) : kind === "opa" ? pick(OPA_COAT) : kind === "kid" || kind === "pkid" ? pick(["#ff4f4f", "#ffb020", "#2fb0ff", "#7ad04a", "#c85bff", "#ff7ab8", "#ffe14a"]) : kind === "bum" ? pick(["#5a4a38", "#3e4a3a", "#4a3f52", "#6a5a44", "#44464a"]) : kind === "teen" ? pick(p.rowdy ? ["#17181b", "#2b2d33", "#5a1a1a", "#1a2a4a", "#3a3a3f"] : ["#e8d020", "#2fb0ff", "#ff7ab8", "#7ad04a", "#e07a2e", "#c9c9c9"]) : CLOTH[i % CLOTH.length];
+        const coat = kind === "oma" ? pick(OMA_COAT) : kind === "opa" ? pick(OPA_COAT) : kind === "kid" || kind === "pkid" ? pick(["#ff4f4f", "#ffb020", "#2fb0ff", "#7ad04a", "#c85bff", "#ff7ab8", "#ffe14a"]) : kind === "bum" ? pick(["#5a4a38", "#3e4a3a", "#4a3f52", "#6a5a44", "#44464a"]) : kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ["#17181b", "#2b2d33", "#5a1a1a", "#1a2a4a", "#3a3a3f"] : ["#e8d020", "#2fb0ff", "#ff7ab8", "#7ad04a", "#e07a2e", "#c9c9c9"]) : CLOTH[i % CLOTH.length];
         this.parts.torso.setColorAt(i, c.set(coat));
         const skin = pick(SKIN);
         this.parts.head.setColorAt(i, c.set(skin));
@@ -40980,7 +40983,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         for (const k of ["armL", "armR"]) this.parts[k].setColorAt(i, c.set(coat));
         this.parts.beer.setColorAt(i, c.set("#ffffff"));
         this.parts.faceB.setColorAt(i, c.set("#ffffff"));
-        this.parts.hood.setColorAt(i, c.set(kind === "teen" ? pick(["#101114", "#1d1d22", "#2a1414", "#14202c"]) : "#000000"));
+        this.parts.hood.setColorAt(i, c.set(kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].hood : pick(["#101114", "#1d1d22", "#2a1414", "#14202c"]) : "#000000"));
         this.parts.hair.setColorAt(i, c.set(kind === "oma" ? pick(OMA_HAIR) : kind === "opa" ? "#d8d8d8" : pick(HAIR)));
         this.parts.cap.setColorAt(i, c.set(pick(["#6a6a60", "#4a4a50", "#7a6a50"])));
         for (const k of ["cane", "bag", "roll", "face", "faceA", "faceR", "glasses", "swing", "cigT", "beer", "faceB"]) this.parts[k].setColorAt(i, c.set("#ffffff"));
@@ -41197,8 +41200,10 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         if (p.down <= 0 && p.ko) {
           p.ko = false;
           p.hp = 60;
-          p.aggro = 8;
-          p.ts = p.rowdy ? "stress" : rest;
+          p.aggro = p.fightLoser ? 0 : 8;
+          p.ts = p.fightLoser ? "back" : p.rowdy ? "stress" : rest;
+          p.fightLoser = false;
+          p.partner = null;
         }
         const lie = Math.min(1, p.down > 11.7 ? 0.2 : 1);
         this.drawFigure(i, p, { x: p.px, y: 0.3, z: p.pz, yaw: p.yawT, sc: 0.95, lie: 1 });
@@ -41221,6 +41226,48 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         if (dp > 42 || p.fleeT > 24) {
           p.ts = "back";
           p.aggro = 0;
+        }
+      } else if (p.ts === "brawl") {
+        const q = p.partner, f = G2 && G2.fight;
+        if (!f || !q || q.ts !== "brawl" && q.down <= 0) {
+          p.ts = rest;
+          p.partner = null;
+          p.bfight = false;
+        } else if (dp < 2.4) {
+          p.ts = "stress";
+          p.partner = null;
+          p.aggro = 10;
+          p.bfight = false;
+          this.say(p, "Misch dich nicht ein!", 2.2);
+        } else {
+          const dx = p.bx - p.px, dz = p.bz - p.pz, d = Math.hypot(dx, dz);
+          if (d > 0.2 && !p.bfight) {
+            p.px += dx / d * 2.6 * dt;
+            p.pz += dz / d * 2.6 * dt;
+            p.walkPh = (p.walkPh || 0) + dt * 11;
+            p.yawT = Math.atan2(dx, dz);
+          } else {
+            p.bfight = true;
+            p.yawT = Math.atan2(q.px - p.px, q.pz - p.pz);
+            if (q.down > 0) {
+              p.say === "" && p.sayT <= 0 && this.say(p, WIN_SAY[Math.floor(Math.random() * WIN_SAY.length)], 3);
+            } else {
+              p.hitCd -= dt;
+              if (p.hitCd <= 0) {
+                p.hitCd = 0.4 + Math.random() * 0.5;
+                q.flinch = 0.28;
+                if (this.onBrawlHit) this.onBrawlHit(q.px, q.pz, Math.random() < 0.3);
+                if (p.sayT <= 0 && Math.random() < 0.18) this.say(p, FIGHT_SAY[Math.floor(Math.random() * FIGHT_SAY.length)], 2);
+              }
+              if (p.lose && f.t > p.koAt && p.down <= 0) {
+                p.down = 9;
+                p.ko = true;
+                p.hp = 0;
+                p.fightLoser = true;
+                p.bfight = false;
+              }
+            }
+          }
         }
       } else if (p.rowdy) {
         if (pl.armed && dp < 18) {
@@ -41360,6 +41407,16 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         const fl = p.ts === "flee";
         const drag = calm && smoker ? T % 8 < 2 ? 1 : 0 : 0;
         o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 0.95, hunch: fl ? 0.3 : 0.12 + (menace ? 0.08 : 0), legL: fl ? sw * 1.5 : sw, legR: fl ? -sw * 1.5 : -sw, aL: fl ? -2.6 + Math.sin(T * 14) * 0.3 : -sw, aR: fl ? -2.4 - Math.sin(T * 14) * 0.3 : p.ts === "stress" ? -2 + Math.sin(T * 10) * 0.3 : calm && smoker ? drag ? -2.3 : -0.6 : sw, head: 1, cap: true, cig: calm && smoker, faceR: menace, hood: menace };
+        if (p.ts === "brawl" && p.bfight) {
+          const ph = T * 7.2 + p.phase0 * 3, sA = Math.max(0, Math.sin(ph)), sB = Math.max(0, Math.sin(ph + Math.PI));
+          o.aR = -0.5 - sA * 1.7;
+          o.aL = -0.5 - sB * 1.7;
+          o.azL = -0.3;
+          o.azR = 0.3;
+          o.hunch = 0.24 + (p.flinch > 0 ? -0.35 : 0);
+          o.legL = Math.sin(T * 5) * 0.3;
+          o.legR = -o.legL;
+        }
         if (calm && smoker && this.smoke) {
           p.smk = (p.smk || 0) + dt * (drag ? 8 : 2.2);
           while (p.smk >= 1) {
@@ -41395,6 +41452,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         const G2 = this.gangs[gi];
         const mem = this.list.filter((q) => q.gang === gi);
         if (!G2.active) {
+          const rv = G2.rival >= 0 ? this.gangs[G2.rival] : null;
+          if (rv && rv.active) continue;
           for (let tries = 0; tries < 8; tries++) {
             const axis = Math.random() < 0.5 ? "x" : "z";
             const line = Math.round((axis === "x" ? pz2 : px2) / P2) + Math.floor(Math.random() * 3) - 1;
@@ -41405,7 +41464,19 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
             const lane = line * P2 + side * 8.4, dir = Math.random() < 0.5 ? 1 : -1;
             const x = axis === "x" ? along : lane, z = axis === "x" ? lane : along;
             if (Math.hypot(x - px2, z - pz2) < 40) continue;
-            Object.assign(G2, { active: true, axis, lane, s: along, dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: axis === "x" ? dir > 0 ? Math.PI / 2 : -Math.PI / 2 : dir > 0 ? 0 : Math.PI });
+            const sAlong = (d) => axis === "x" ? d > 0 ? Math.PI / 2 : -Math.PI / 2 : d > 0 ? 0 : Math.PI;
+            if (rv) {
+              const s2 = along + dir * (34 + Math.random() * 10), r22 = (s2 % P2 + P2) % P2;
+              const x2 = axis === "x" ? s2 : lane, z2 = axis === "x" ? lane : s2;
+              if (r22 < 14 || r22 > P2 - 14 || Math.hypot(x2 - px2, z2 - pz2) < 25) continue;
+              Object.assign(rv, { active: true, axis, lane, s: s2, dir: -dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: sAlong(-dir), fight: null, cool: 0 });
+              for (const q of this.list) if (q.gang === G2.rival) {
+                q.px = void 0;
+                q.taken = false;
+                q.active = true;
+              }
+            }
+            Object.assign(G2, { active: true, axis, lane, s: along, dir, hold: false, wait: false, speed: 1.1 + Math.random() * 0.25, yaw: sAlong(dir), fight: null, cool: 0 });
             for (const q of mem) {
               q.px = void 0;
               q.taken = false;
@@ -41418,12 +41489,27 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         const lead = this.gangSlot(G2, 0);
         const alive = mem.filter((q) => !q.taken);
         if (Math.hypot(lead.x - px2, lead.z - pz2) > R * 1.4 || !alive.length) {
-          G2.active = false;
-          for (const q of mem) {
+          for (const g2 of [G2, G2.rival >= 0 ? this.gangs[G2.rival] : null]) {
+            if (!g2) continue;
+            g2.active = false;
+            g2.fight = null;
+          }
+          for (const q of this.list) if (q.gang === gi || q.gang === G2.rival) {
             q.px = void 0;
             q.active = false;
+            q.partner = null;
+            q.bfight = false;
           }
           continue;
+        }
+        if (G2.rival > gi) {
+          const Rg = this.gangs[G2.rival];
+          if (Rg.active && !G2.fight) {
+            const b = this.gangSlot(Rg, 0);
+            if (G2.cool <= 0 && Math.hypot(lead.x - b.x, lead.z - b.z) < 10) this.startFight(G2, Rg);
+          }
+          if (G2.fight) this.updateFight(G2, Rg, dt);
+          if (G2.cool > 0) G2.cool -= dt;
         }
         G2.hold = alive.some((q) => q.px !== void 0 && q.down <= 0 && q.ts !== "walk");
         const r = (G2.s % P2 + P2) % P2;
@@ -41433,6 +41519,51 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         else if (unsafe && !G2.hold) {
           G2.hold = true;
         }
+      }
+    }
+    startFight(A, B) {
+      const ma = this.list.filter((q) => q.gang === this.gangs.indexOf(A) && !q.taken && q.px !== void 0 && q.down <= 0);
+      const mb = this.list.filter((q) => q.gang === this.gangs.indexOf(B) && !q.taken && q.px !== void 0 && q.down <= 0);
+      if (!ma.length || !mb.length) return;
+      const a0 = this.gangSlot(A, 0), b0 = this.gangSlot(B, 0), Mx = (a0.x + b0.x) / 2, Mz = (a0.z + b0.z) / 2;
+      const ax = A.axis === "x" ? [A.dir, 0] : [0, A.dir], lat = A.axis === "x" ? [0, 1] : [1, 0];
+      const loser = Math.random() < 0.5 ? A : B;
+      const f = { t: 0, loser };
+      A.fight = B.fight = f;
+      A.hold = B.hold = true;
+      for (let k = 0; k < Math.min(ma.length, mb.length); k++) {
+        const p = ma[k], q = mb[k], l = (k - 1) * 1.15;
+        p.bx = Mx - ax[0] * 0.55 + lat[0] * l;
+        p.bz = Mz - ax[1] * 0.55 + lat[1] * l;
+        q.bx = Mx + ax[0] * 0.55 + lat[0] * l;
+        q.bz = Mz + ax[1] * 0.55 + lat[1] * l;
+        for (const [x, y] of [[p, q], [q, p]]) {
+          x.partner = y;
+          x.ts = "brawl";
+          x.bfight = false;
+          x.hitCd = Math.random() * 0.6;
+          x.lose = x.gang === this.gangs.indexOf(loser);
+          x.koAt = 5 + k * 1.7 + Math.random() * 1.5;
+          x.fightLoser = false;
+        }
+        this.say(p, FIGHT_SAY[Math.floor(Math.random() * FIGHT_SAY.length)], 2.4);
+      }
+    }
+    updateFight(A, B, dt) {
+      const f = A.fight;
+      f.t += dt;
+      const brawlers = this.list.filter((q) => (q.gang === this.gangs.indexOf(A) || q.gang === this.gangs.indexOf(B)) && q.ts === "brawl");
+      const losersUp = brawlers.some((q) => q.lose && q.down <= 0);
+      if (!brawlers.length || !losersUp && f.t > 3 || f.t > 18) {
+        for (const q of brawlers) {
+          if (q.down <= 0) {
+            q.ts = "walk";
+            q.partner = null;
+            q.bfight = false;
+          }
+        }
+        A.fight = B.fight = null;
+        A.cool = B.cool = 90;
       }
     }
     /** common knock-out handling of store people; true while lying down */
@@ -41836,9 +41967,10 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         p.px = p.x;
         p.pz = p.z;
         if (p.rowdy) {
-          for (const q of this.list) if (q.kind === "teen" && q.rowdy && (p.gang !== void 0 ? q.gang === p.gang : q.gang === void 0 && Math.floor(q.slot / 5) === Math.floor(p.slot / 5)) && (q.ts === "sit" || q.ts === "walk")) {
+          for (const q of this.list) if (q.kind === "teen" && q.rowdy && (p.gang !== void 0 ? q.gang === p.gang : q.gang === void 0 && Math.floor(q.slot / 5) === Math.floor(p.slot / 5)) && (q.ts === "sit" || q.ts === "walk" || q.ts === "brawl")) {
             q.ts = "stress";
             q.aggro = 10;
+            q.partner = null;
           }
           p.ts = "stress";
           this.say(p, "Du bist tot, Alter!", 2.4);
@@ -46978,6 +47110,15 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     $("crash").style.opacity = 0.6;
     if (st.mode === "walk") walker.stun = 0.9;
     else scooter.v *= 0.3;
+  };
+  peds.onBrawlHit = (x, z, bleed) => {
+    const d = Math.hypot(x - me.x, z - me.z);
+    if (d < 45) audio.thud(clamp2(6 - d / 9, 1, 6));
+    if (bleed && cfg.blood && d < 40) blood.splash(x, 1.3, z, Math.random() - 0.5, Math.random() - 0.5, 6);
+    if (d < 28 && !st.warnedBrawl) {
+      st.warnedBrawl = true;
+      toast("\u{1F44A} Gangs pr\xFCgeln sich!", "Zwei Jugend-Gangs haben sich getroffen \u2013 misch dich lieber nicht ein", 3200);
+    }
   };
   peds.onTeenAngry = () => {
     if (!st.warnedTeen) {
