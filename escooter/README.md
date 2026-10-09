@@ -221,6 +221,10 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Hupe statt Klingel** bei Autos (Zweiklang), Mopeds (nasal) und E-Rollern (elektrisch): `B` halten = durchhupen.
 * **Vape** 💨: `G` = ziehen, dicke Wolke, LED glüht; zu Fuß, auf dem Roller und in der Ich-Perspektive.
 
+## Simson näher am Original 🛵
+* Neu modelliert: Rückgrat-Rahmen, runder M531-Motor mit Kupplungs-/Lichtmaschinendeckeln, **nach vorn geneigter Rippenzylinder** mit Kerzenstecker und Zündkabel, Vergaser mit Ansaugschlauch, **gerundeter Tank** mit Kniepolstern, SIMSON-Schild und Zierstreifen, langes Stufen-Sitzbrett mit Biese, **Hinterrad-Federbeine** (Chrom-Dämpfer + schwarze Feder), Schwinge, Kettenkasten, Kickstarter und Schalthebel, Gummimanschetten an der Gabel.
+* **PZ-Tuning-Lenker:** auf der Querstrebe sitzt ein Lenkerpolster mit der Aufschrift **ACAB** (vorn und hinten lesbar).
+
 ## Entwickeln
 
 ```
