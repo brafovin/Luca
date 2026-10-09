@@ -779,26 +779,70 @@ export function buildSimson(ctx, o = {}) {
   const rearWheel = makeWheel(); rearWheel.position.set(0, R, -HALF); group.add(rearWheel);
 
   /* ---- frame, engine, tank, seat */
-  const spine = tube(group, [[0, 0.5, 0.42], [0, 0.56, 0.15], [0, 0.55, -0.15], [0, 0.5, -0.45]], 0.026, mFrame);
-  tube(group, [[0.0, 0.5, 0.4], [0, 0.34, 0.25], [0, 0.26, 0.0], [0, 0.34, -0.3], [0, 0.46, -0.5]], 0.022, mFrame);
-  add(group, box(0.3, 0.3, 0.34), mAlu, 0, 0.34, 0.0);                                 // crankcase
-  add(group, box(0.32, 0.2, 0.16), mAlu, 0, 0.3, -0.18);                               // gearbox
-  for (const sx of [-1, 1]) { add(group, new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16), mAlu, sx * 0.17, 0.33, -0.01).rotateZ(Math.PI / 2); add(group, new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), mChrome, sx * 0.19, 0.33, -0.01).rotateZ(Math.PI / 2); }
-  const cyl = new THREE.Group(); cyl.position.set(0, 0.42, 0.12); cyl.rotation.x = -0.75; group.add(cyl); // cylinder with cooling fins, pointing forward/up
-  add(cyl, new THREE.CylinderGeometry(0.05, 0.055, 0.14, 12), mAlu, 0, 0.1, 0);
-  for (let i = 0; i < 8; i++) add(cyl, new THREE.CylinderGeometry(0.085, 0.085, 0.008, 14), mAlu, 0, 0.04 + i * 0.016, 0);
-  add(cyl, new THREE.CylinderGeometry(0.06, 0.07, 0.05, 12), mBlack, 0, 0.19, 0);       // head
-  add(cyl, new THREE.CylinderGeometry(0.012, 0.012, 0.05, 6), mChrome, 0.0, 0.23, 0);   // spark plug
-  add(group, box(0.1, 0.1, 0.16), mAlu, 0, 0.52, 0.0);                                  // air filter
-  add(group, box(0.06, 0.06, 0.07), mChrome, 0, 0.42, -0.05);                           // carb
-  add(group, box(0.24, 0.18, 0.5), mPaint, 0, 0.67, 0.13).scale.set(1, 1, 1);           // tank
-  add(group, new THREE.SphereGeometry(0.12, 12, 8), mPaint, 0, 0.7, 0.13).scale.set(1, 0.78, 2.2);
-  add(group, new THREE.CylinderGeometry(0.035, 0.035, 0.02, 12), mChrome, 0, 0.775, 0.1); // fuel cap
-  add(group, box(0.25, 0.01, 0.4), mAcc, 0, 0.737, 0.13);                               // tank stripe
-  for (const sx of [-1, 1]) { add(group, box(0.02, 0.18, 0.3), mPaint, sx * 0.14, 0.42, -0.28); add(group, box(0.012, 0.1, 0.1), mAcc, sx * 0.152, 0.43, -0.28); } // side covers
-  add(group, box(0.26, 0.09, 0.78), mSeat, 0, 0.78, -0.33);                              // long seat
-  add(group, box(0.26, 0.04, 0.2), mSeat, 0, 0.83, -0.58).rotation.x = 0.2;
-  add(group, box(0.24, 0.015, 0.76), mFrame, 0, 0.732, -0.33);
+  const mSpringB = std({ color: 0x16171a, roughness: 0.5, metalness: 0.6 });
+  const mRubberP = std({ color: 0x101012, roughness: 0.9 });
+  const mBody2 = std({ color: o.color ?? 0x2a62c4, roughness: 0.28, metalness: 0.5, envMapIntensity: 1.3 });
+  // pressed-steel backbone frame, rear subframe, engine cradle
+  tube(group, [[0, 0.9, 0.5], [0, 0.72, 0.34], [0, 0.55, 0.12], [0, 0.5, -0.12], [0, 0.55, -0.4]], 0.033, mFrame);
+  for (const sx of [-1, 1]) {
+    tube(group, [[sx * 0.06, 0.52, -0.1], [sx * 0.1, 0.66, -0.4], [sx * 0.1, 0.74, -0.74]], 0.018, mFrame);
+    tube(group, [[sx * 0.06, 0.5, 0.36], [sx * 0.1, 0.3, 0.24], [sx * 0.1, 0.24, 0.0], [sx * 0.09, 0.27, -0.3]], 0.016, mFrame);
+    tube(group, [[sx * 0.12, 0.28, -0.2], [sx * 0.12, 0.27, -0.42], [sx * 0.1, R, -HALF]], 0.017, mFrame);                      // swing arm
+  }
+  // engine M531: rounded crankcase + gearbox, clutch / alternator covers
+  add(group, new THREE.SphereGeometry(0.16, 18, 14), mAlu, 0, 0.33, 0.02).scale.set(1.0, 0.95, 1.05);
+  add(group, new THREE.SphereGeometry(0.12, 16, 12), mAlu, 0, 0.3, -0.17).scale.set(1.15, 0.9, 1.3);
+  for (const sx of [-1, 1]) {
+    add(group, new THREE.CylinderGeometry(0.085, 0.085, 0.035, 22), mAlu, sx * 0.165, 0.33, 0.0).rotation.z = Math.PI / 2;
+    add(group, new THREE.CylinderGeometry(0.05, 0.05, 0.012, 18), mFrame, sx * 0.19, 0.33, 0.0).rotation.z = Math.PI / 2;
+    add(group, new THREE.CylinderGeometry(0.02, 0.02, 0.05, 8), mChrome, sx * 0.2, 0.33, 0).rotation.z = Math.PI / 2;
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * 6.283; add(group, new THREE.CylinderGeometry(0.006, 0.006, 0.01, 6), mChrome, sx * 0.188, 0.33 + Math.cos(a) * 0.068, Math.sin(a) * 0.068).rotation.z = Math.PI / 2; }
+  }
+  // finned cylinder pointing forward/up (like the real S51), head with plug
+  const cyl = new THREE.Group(); cyl.position.set(0, 0.4, 0.07); cyl.rotation.x = 0.95; group.add(cyl);
+  add(cyl, new THREE.CylinderGeometry(0.052, 0.058, 0.12, 14), mAlu, 0, 0.07, 0);
+  for (let i = 0; i < 9; i++) add(cyl, new THREE.CylinderGeometry(0.088, 0.088, 0.007, 20), mAlu, 0, 0.06 + i * 0.016, 0);
+  add(cyl, new THREE.CylinderGeometry(0.066, 0.075, 0.05, 14), mBlack, 0, 0.215, 0);
+  for (let i = 0; i < 3; i++) add(cyl, new THREE.CylinderGeometry(0.076, 0.076, 0.006, 16), mAlu, 0, 0.19 + i * 0.017, 0);
+  add(cyl, new THREE.CylinderGeometry(0.011, 0.011, 0.045, 8), mChrome, 0.0, 0.265, 0);
+  add(cyl, new THREE.CylinderGeometry(0.016, 0.014, 0.03, 8), mRubberP, 0.0, 0.3, 0);       // plug cap
+  tube(group, [[0.0, 0.62, 0.35], [0.05, 0.7, 0.24], [0.07, 0.69, 0.02]], 0.0045, mCable);   // ignition cable
+  // carburettor, intake hose and air filter box
+  add(group, cylX(0.026, 0.1, 12), mChrome, 0, 0.42, -0.08).rotation.set(Math.PI / 2 * 0, 0, 0);
+  add(group, new THREE.CylinderGeometry(0.03, 0.03, 0.08, 10), mChrome, 0, 0.46, -0.1).rotation.x = 0;
+  tube(group, [[0, 0.46, -0.13], [0, 0.5, -0.22], [0, 0.56, -0.3]], 0.024, mRubberP);
+  add(group, box(0.2, 0.13, 0.26), mFrame, 0, 0.6, -0.34).scale.set(1, 1, 1);                 // air box under the seat
+  const _t0 = group.children.length;
+  // fuel tank: rounded, with knee pads, filler cap, badge and stripe
+  const tank = add(group, new THREE.CapsuleGeometry(0.108, 0.36, 8, 20), mPaint, 0, 0.745, 0.17); tank.rotation.x = Math.PI / 2; tank.scale.set(1.08, 1, 0.78);
+  const tankR = add(group, new THREE.SphereGeometry(0.1, 14, 10), mPaint, 0, 0.74, -0.1); tankR.scale.set(1.0, 0.7, 1.2);
+  for (const sx of [-1, 1]) {
+    add(group, new THREE.SphereGeometry(0.06, 12, 8), mRubberP, sx * 0.118, 0.735, 0.1).scale.set(0.28, 1.1, 2.3); // knee pad
+    add(group, box(0.004, 0.012, 0.42), mAcc, sx * 0.115, 0.79, 0.17);                         // side stripe
+  }
+  add(group, new THREE.CylinderGeometry(0.036, 0.04, 0.022, 16), mChrome, 0, 0.82, 0.12);
+  add(group, new THREE.CylinderGeometry(0.02, 0.02, 0.012, 12), mFrame, 0, 0.834, 0.12);
+  const badgeTex = textCanvas(128, 40, (x, w, h) => { x.fillStyle = '#0d1d3a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#d8dde2'; x.lineWidth = 3; x.strokeRect(2, 2, w - 4, h - 4); x.fillStyle = '#f2f2f0'; x.font = '900 24px Arial Black, Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('SIMSON', w / 2, h / 2 + 1); });
+  for (const sx of [-1, 1]) { const bd = add(group, new THREE.PlaneGeometry(0.15, 0.047), std({ map: badgeTex, roughness: 0.4, metalness: 0.4 }), sx * 0.1185, 0.76, 0.24); bd.rotation.y = sx * Math.PI / 2; bd.scale.set(1, 1, 1); bd.castShadow = false; }
+  if (o.variant === 'schwalbe') for (let k = _t0; k < group.children.length; k++) group.children[k].visible = false; // the KR51 hides its tank in the body
+  // long stepped seat with piping
+  const seat = add(group, new THREE.CapsuleGeometry(0.1, 0.56, 8, 18), mSeat, 0, 0.8, -0.36); seat.rotation.x = Math.PI / 2 + 0.05; seat.scale.set(1.18, 1, 0.38);
+  add(group, new THREE.SphereGeometry(0.11, 14, 10), mSeat, 0, 0.83, -0.66).scale.set(1.0, 0.5, 1.0);
+  add(group, box(0.22, 0.012, 0.74), mFrame, 0, 0.752, -0.36);
+  for (const sx of [-1, 1]) add(group, new THREE.CylinderGeometry(0.004, 0.004, 0.64, 6), mAcc, sx * 0.118, 0.8, -0.36).rotation.x = Math.PI / 2;
+  // rear shock absorbers (chrome damper + black coil)
+  for (const sx of [-1, 1]) {
+    const lo = new THREE.Vector3(sx * 0.15, 0.34, -0.58), hi = new THREE.Vector3(sx * 0.12, 0.67, -0.38), d = hi.clone().sub(lo), Ls = d.length();
+    const sg = new THREE.Group(); sg.position.copy(lo); sg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()); group.add(sg);
+    add(sg, new THREE.CylinderGeometry(0.01, 0.01, Ls, 8), mChrome, 0, Ls / 2, 0);
+    add(sg, new THREE.CylinderGeometry(0.02, 0.02, Ls * 0.3, 10), mFrame, 0, Ls * 0.15, 0);
+    spring(sg, mSpringB, 0, Ls * 0.2, 0, 0.032, Ls * 0.68, 9, 0.0048);
+    add(sg, new THREE.SphereGeometry(0.017, 8, 6), mChrome, 0, Ls, 0); add(sg, new THREE.SphereGeometry(0.017, 8, 6), mChrome, 0, 0, 0);
+  }
+  // chain guard (left) with the chain run, kick starter (right), gear shift lever (left)
+  add(group, box(0.03, 0.085, 0.58), mFrame, -0.145, 0.29, -0.32);
+  tube(group, [[0.2, 0.3, -0.12], [0.34, 0.2, -0.26], [0.34, 0.14, -0.3]], 0.01, mChrome); add(group, box(0.05, 0.03, 0.05), mRubberP, 0.34, 0.14, -0.31);
+  tube(group, [[-0.2, 0.34, -0.08], [-0.3, 0.3, 0.1]], 0.008, mChrome); add(group, box(0.05, 0.02, 0.04), mRubberP, -0.3, 0.3, 0.11);
   // rear fender, grab rail, tail light, plate
   const rf = new THREE.CylinderGeometry(0.19, 0.19, 0.12, 20, 1, true, Math.PI * 0.25, Math.PI * 0.9); rf.rotateZ(Math.PI / 2);
   add(group, rf, std({ color: 0x2a62c4, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }), 0, R + 0.02, -HALF);
@@ -821,7 +865,7 @@ export function buildSimson(ctx, o = {}) {
   // MTX10 upgrade: big finned cylinder, red expansion chamber, performance carb + reed box
   const mtx = new THREE.Group(); mtx.visible = false; group.add(mtx);
   const mRed = std({ color: 0xc42020, roughness: 0.3, metalness: 0.6 });
-  const c2 = new THREE.Group(); c2.position.set(0, 0.42, 0.12); c2.rotation.x = -0.75; mtx.add(c2);
+  const c2 = new THREE.Group(); c2.position.set(0, 0.4, 0.07); c2.rotation.x = 0.95; mtx.add(c2);
   add(c2, new THREE.CylinderGeometry(0.07, 0.075, 0.18, 14), mHot, 0, 0.1, 0);
   for (let i = 0; i < 11; i++) add(c2, new THREE.CylinderGeometry(0.105, 0.105, 0.007, 16), mHot, 0, 0.03 + i * 0.016, 0);
   add(c2, new THREE.CylinderGeometry(0.075, 0.085, 0.05, 14), mRed, 0, 0.21, 0);
@@ -842,7 +886,8 @@ export function buildSimson(ctx, o = {}) {
   for (const sx of [-1, 1]) {
     add(steer, new THREE.CylinderGeometry(0.014, 0.014, 0.62, 10), mChrome, sx * 0.08, 0.36, 0);
     add(steer, new THREE.CylinderGeometry(0.022, 0.022, 0.26, 10), mFrame, sx * 0.08, 0.2, 0);
-    const bo = add(steer, new THREE.CylinderGeometry(0.03, 0.025, 0.13, 10), mBlack, sx * 0.08, 0.5, 0);
+    const bo = add(steer, new THREE.CylinderGeometry(0.032, 0.026, 0.27, 12), mBlack, sx * 0.08, 0.5, 0);
+    for (let k = 0; k < 6; k++) add(steer, new THREE.TorusGeometry(0.03 - k * 0.0008, 0.0035, 6, 14), mBlack, sx * 0.08, 0.38 + k * 0.044, 0).rotation.x = Math.PI / 2;
   }
   add(steer, box(0.22, 0.04, 0.06), mFrame, 0, 0.66, 0);
   const ffm = new THREE.CylinderGeometry(0.19, 0.19, 0.11, 20, 1, true, -Math.PI * 0.1, Math.PI * 0.7); ffm.rotateZ(Math.PI / 2);
@@ -876,6 +921,15 @@ export function buildSimson(ctx, o = {}) {
     add(barPZ, new THREE.CylinderGeometry(0.02, 0.02, 0.04, 10), mGold, sx * 0.16, BY + 0.02, -0.005).rotation.z = Math.PI / 2;
   }
   tube(barPZ, [[-0.3, BY + 0.03, -0.03], [0, BY + 0.14, -0.02], [0.3, BY + 0.03, -0.03]], 0.008, mGold); // cross brace
+  // handlebar pad ("Lenkerpolster") on the cross brace, lettered ACAB on both sides
+  const padTex = textCanvas(256, 80, (x, w, h) => {
+    x.fillStyle = '#0d0e10'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#d42020'; x.lineWidth = 5; x.strokeRect(5, 5, w - 10, h - 10);
+    x.fillStyle = '#ffffff'; x.font = '900 60px Arial Black, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('ACAB', w / 2, h / 2 + 3);
+  });
+  const pad = add(barPZ, new THREE.CapsuleGeometry(0.05, 0.3, 8, 16), std({ color: 0x0d0e10, roughness: 0.85 }), 0, BY + 0.125, -0.025); pad.rotation.z = Math.PI / 2; pad.scale.set(1, 1, 0.62);
+  const padMat = std({ map: padTex, roughness: 0.75 });
+  for (const sz of [-1, 1]) { const tx = add(barPZ, new THREE.PlaneGeometry(0.28, 0.0875), padMat, 0, BY + 0.125, -0.025 + sz * 0.0315); if (sz < 0) tx.rotation.y = Math.PI; tx.castShadow = false; }
   for (const sx of [-1, 1]) tube(steer, [[sx * 0.3, BY + 0.01, 0.08], [sx * 0.15, 0.9, 0.0], [sx * 0.09, 0.7, 0.02], [sx * 0.09, 0.3, 0.04]], 0.004, mCable);
   // mirror on the left
   add(steer, new THREE.CylinderGeometry(0.004, 0.004, 0.2, 6), mChrome, -0.3, BY + 0.14, -0.05);
