@@ -190,6 +190,33 @@ export class GameAudio {
     this.sirenO.frequency.setTargetAtTime(Math.floor(t * 1.6) % 2 ? 960 : 720, t, 0.04);
     this.sirenG.gain.setTargetAtTime(Math.max(0, level) * 0.07, t, 0.15);
   }
+  /** horn (hold B): car = two-tone, moped = nasal beep, e-scooter = electric buzzer */
+  hornStart(kind) {
+    if (!this.ctx || this.hornO) return;
+    const c = this.ctx, t = c.currentTime;
+    const freqs = kind === 'car' ? [392, 494] : kind === 'moped' ? [500, 528] : [760, 1140];
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = kind === 'car' ? 1700 : 2600;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(kind === 'car' ? 0.16 : 0.1, t + 0.03);
+    const os = freqs.map((fr) => { const o = c.createOscillator(); o.type = kind === 'scooter' ? 'square' : 'sawtooth'; o.frequency.value = fr; o.connect(f); o.start(t); return o; });
+    f.connect(g); g.connect(this.master);
+    this.hornO = { os, g };
+  }
+  hornStop() {
+    if (!this.hornO) return;
+    const { os, g } = this.hornO, t = this.ctx.currentTime;
+    g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.03);
+    for (const o of os) o.stop(t + 0.18);
+    this.hornO = null;
+  }
+  honk(kind, dur = 0.3) { this.hornStart(kind); setTimeout(() => this.hornStop(), dur * 1000); }
+  vape() { // coil crackle while drawing
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(2200, t + 1.0); f.Q.value = 2;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.09, t + 0.2); g.gain.linearRampToValueAtTime(0.05, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t, Math.random()); n.stop(t + 1.2);
+  }
   bell() {
     if (!this.ctx) return;
     const c = this.ctx, t = c.currentTime;

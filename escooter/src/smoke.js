@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /** Soft smoke puffs (exhaust, cigarette) as a pool of billboard sprites. */
 export class Smoke {
-  constructor(scene, n = 90) {
+  constructor(scene, n = 240) {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const x = c.getContext('2d');
     const g = x.createRadialGradient(32, 32, 2, 32, 32, 30);
@@ -20,12 +20,13 @@ export class Smoke {
   /** kind: 'exhaust' (blue-grey, thick) | 'cig' (thin, light) */
   emit(x, y, z, vx, vy, vz, kind = 'exhaust', amount = 1) {
     const p = this.P[this.i++ % this.P.length];
-    const cig = kind === 'cig', blk = kind === 'black';
+    const cig = kind === 'cig', blk = kind === 'black', vp = kind === 'vape';
     p.life = p.max = cig ? 1.8 + Math.random() * 1.4 : 0.9 + Math.random() * 0.8 + amount * 0.4;
     p.vx = vx + (Math.random() - 0.5) * (cig ? 0.15 : 0.5); p.vy = vy + (cig ? 0.25 : 0.2) * Math.random(); p.vz = vz + (Math.random() - 0.5) * (cig ? 0.15 : 0.5);
     p.r0 = cig ? 0.035 : 0.12; p.r1 = cig ? (0.25 + Math.random() * 0.15) * (amount > 1 ? 2.4 : 1) : 0.5 + amount * 0.5 + Math.random() * 0.25;
     p.a = cig ? (amount > 1 ? 0.38 : 0.5) : 0.42 + amount * 0.4;
     p.s.material.color.setHex(blk ? 0x2a2a2d : cig ? 0xe4e6e8 : amount > 0.55 ? 0x8f949a : 0xaeb6bd);
+    if (vp) { p.life = p.max = 2.4 + Math.random() * 1.8; p.r0 = 0.06; p.r1 = 0.55 + Math.random() * 0.5; p.a = 0.62; p.s.material.color.setHex(0xf6f8fa); p.vy = vy + 0.1 + Math.random() * 0.2; }
     if (blk) { p.life = p.max = 2.4 + Math.random() * 1.6; p.r0 = 0.25; p.r1 = 1.2 + Math.random() * 0.8; p.a = 0.55; }
     p.s.position.set(x, y, z); p.s.visible = true;
   }

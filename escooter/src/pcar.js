@@ -15,6 +15,38 @@ export const CAR_IDS = Object.keys(CARS);
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
+/** analog speedometer (dial + needle + digital readout) drawn into a canvas texture */
+function makeGauge(maxKmh) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const c = cv.getContext('2d');
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const major = maxKmh > 400 ? 100 : maxKmh > 150 ? 40 : 20, minor = major / 2;
+  const top = Math.ceil((maxKmh * 1.05) / major) * major;
+  const ang = (v) => ((135 + (270 * Math.min(v, top)) / top) * Math.PI) / 180;
+  const draw = (kmh) => {
+    c.clearRect(0, 0, 256, 256);
+    const g = c.createRadialGradient(128, 128, 20, 128, 128, 126); g.addColorStop(0, '#15181d'); g.addColorStop(1, '#050608');
+    c.fillStyle = g; c.beginPath(); c.arc(128, 128, 124, 0, 7); c.fill();
+    c.strokeStyle = '#8a929c'; c.lineWidth = 5; c.beginPath(); c.arc(128, 128, 122, 0, 7); c.stroke();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let v = 0; v <= top + 0.1; v += minor) {
+      const a = ang(v), big = Math.abs((v / major) % 1) < 1e-6, red = v > maxKmh * 0.92;
+      c.strokeStyle = red ? '#ff4a3a' : '#e8eef4'; c.lineWidth = big ? 4 : 2;
+      c.beginPath(); c.moveTo(128 + Math.cos(a) * (big ? 96 : 104), 128 + Math.sin(a) * (big ? 96 : 104)); c.lineTo(128 + Math.cos(a) * 116, 128 + Math.sin(a) * 116); c.stroke();
+      if (big) { c.fillStyle = red ? '#ff7a6a' : '#cfe6f2'; c.font = '700 20px Arial, sans-serif'; c.fillText(String(v), 128 + Math.cos(a) * 76, 128 + Math.sin(a) * 76); }
+    }
+    c.fillStyle = '#35e6ff'; c.font = '800 42px Arial Narrow, Arial, sans-serif'; c.fillText(String(Math.round(kmh)), 128, 178);
+    c.fillStyle = '#9db7c4'; c.font = '600 16px Arial, sans-serif'; c.fillText('km/h', 128, 205);
+    const a = ang(kmh);
+    c.strokeStyle = '#ff3b2a'; c.lineWidth = 5; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(128 - Math.cos(a) * 14, 128 - Math.sin(a) * 14); c.lineTo(128 + Math.cos(a) * 100, 128 + Math.sin(a) * 100); c.stroke();
+    c.fillStyle = '#d8dde2'; c.beginPath(); c.arc(128, 128, 9, 0, 7); c.fill();
+    tex.needsUpdate = true;
+  };
+  draw(0);
+  return { tex, draw };
+}
+
 /** Builds a playable car model compatible with the Scooter model contract. ctx.M = world materials */
 export function buildCarModel(ctx, c) {
   const M = ctx.M;
@@ -53,6 +85,12 @@ export function buildCarModel(ctx, c) {
   for (const [k, b] of Object.entries(DB.b)) { if (b.empty) continue; const m = new THREE.Mesh(b.build(), M.generic); m.castShadow = true; driver.add(m); }
   driver.visible = false;
   group.add(driver);
+  // speedometer on the dash, right behind the steering wheel (visible in first person)
+  const gauge = makeGauge(c.kmh);
+  const gx = 0.4 * (sport ? 1.05 : 1);
+  const gmesh = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.25), new THREE.MeshBasicMaterial({ map: gauge.tex, toneMapped: false }));
+  gmesh.position.set(gx, 1.06 * sc, prof[3][0] - 0.68 * (sport ? 1.06 : 1)); gmesh.rotation.set(-0.35, Math.PI, 0);
+  group.add(gmesh);
   const dummyGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
   const v = c.kmh / 3.6;
   const wb = Lw * 0.62;
@@ -65,9 +103,10 @@ export function buildCarModel(ctx, c) {
     exhaust: { stock: V3(sport ? 0.32 : exX, 0.37 * sc, -dim.L / 2 - 0.12), pipes: sport ? [V3(0.42, 0.34, -dim.L / 2 - 0.12), V3(0.22, 0.34, -dim.L / 2 - 0.12), V3(-0.22, 0.34, -dim.L / 2 - 0.12), V3(-0.42, 0.34, -dim.L / 2 - 0.12)] : [V3(exX, 0.37, -dim.L / 2 - 0.12)] },
     gripLocal: [V3(0.3, 1, 0), V3(-0.3, 1, 0)], foot: [V3(0.2, 0.2, 0), V3(-0.2, 0.2, 0)],
     half: wb / 2, wheelbase: wb, wheelR: 0.335, spotPos: [0, 0.7, dim.L / 2], dispMode: 'AUTO',
-    fp: { y: 1.22 * (sport ? 0.8 : 1), x: 0.4 * (sport ? 1.05 : 1) * 1, z: zD - 0.05, pitch: 0.0 },
+    fp: { y: 1.34 * (sport ? 0.8 : 1), x: 0.4 * (sport ? 1.05 : 1) * 1, z: zD - 0.22, pitch: -0.02 }, fovAdd: 24,
     colR: Ww * 0.5 + 0.04, colOffs: [dim.L * 0.3, 0, -dim.L * 0.3], camMul: 1.9 + (dim.H > 1.6 ? 0.3 : 0), dismountOff: Ww / 2 + 0.9, mountR: 4.6,
     dims: { L: dim.L, W: dim.W, H: dim.H, type: c.type, sport },
-    spec, update(sc2) { for (const w of wheels) { w.spin.rotation.x = sc2.wheelAng; if (w.front) w.pivot.rotation.y = sc2.delta * 0.9; } },
+    spec, gaugeT: 0,
+    update(sc2) { for (const w of wheels) { w.spin.rotation.x = sc2.wheelAng; if (w.front) w.pivot.rotation.y = sc2.delta * 0.9; } const now = performance.now(); if (now - this.gaugeT > 60) { this.gaugeT = now; gauge.draw(sc2.kmh); } },
   };
 }

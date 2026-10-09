@@ -3,6 +3,7 @@ import { BatchSet } from './batch.js';
 import { clamp, damp, lerp, wrapAngle } from './util.js';
 import { groundHeight } from './world.js';
 import { CARS, buildCarModel } from './pcar.js';
+import { buildVape } from './vape.js';
 import { buildG4, buildDT3, buildSonic, buildG2, buildZT3, buildSimson, decorate, paintModel } from './models.js';
 
 const WHEELBASE = 1.16;
@@ -207,6 +208,7 @@ export class Scooter {
       const tip = new THREE.Object3D(); tip.position.z = 0.118; cg.add(tip);
       this.cig = cg; this.cigTip = tip; this.cigEmber = emMat; this.cigEmberMesh = ember;
     }
+    { const v = buildVape(1); v.group.position.set(0, -0.052, 0.098); v.group.rotation.x = 0.12; headG.add(v.group); this.vape = v.group; this.vapeLed = v.led; this.vapeTip = v.tip; }
     for (const m of head) headG.add(m);
     headG.scale.setScalar(K);
     this.rParts.head = head;
@@ -721,7 +723,7 @@ export class Scooter {
     this.frontWheel.rotation.x = this.wheelAng;
     this.rearWheel.rotation.x = this.wheelAng;
     const mdl = this.model;
-    if (mdl.car) { this.rider.visible = false; mdl.driver.visible = !this.parked; mdl.update(this); }
+    if (mdl.car) { this.rider.visible = false; mdl.driver.visible = !this.parked && !this.firstPerson; mdl.update(this); }
   }
 
   /* ------------------------------------------------------------ lights + display */
