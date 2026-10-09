@@ -36602,7 +36602,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   }
   var WalkerModel = class {
     constructor(o = {}) {
-      const jacket = o.jacket || 5660779, pants = o.pants || 1645345, helmetCol = o.helmet || 15921904, pack = o.pack === void 0 ? null : o.pack;
+      const jacket = o.jacket || 2787910, pants = o.pants || 1382171, helmetCol = o.helmet || 1513757, pack = o.pack === void 0 ? null : o.pack;
       this.group = new Group();
       const g = this.group;
       g.scale.setScalar(1.15);
@@ -36691,7 +36691,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       cheeks.scale.set(1, 0.8, 0.95);
       const slit = mk2(new BoxGeometry(0.118, 0.034, 0.03), mat(13146232), this.head);
       slit.position.set(0, 0.185, 0.085);
-      const lens = mk2(new BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 16747050, { roughness: 0.06, metalness: 0.95 }), this.head);
+      const lens = mk2(new BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 3800938, { roughness: 0.06, metalness: 0.95, emissive: 1014314, emissiveIntensity: 0.9 }), this.head);
       lens.position.set(0, 0.275, 0.112);
       lens.rotation.x = -0.75;
       const frame2 = mk2(new BoxGeometry(0.172, 0.07, 0.036), mat(2896184), this.head);
@@ -36712,12 +36712,80 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       const peak = mk2(new BoxGeometry(0.16, 0.012, 0.07), mat(helmetCol, { roughness: 0.22 }), this.head);
       peak.position.set(0, 0.255, 0.125);
       peak.rotation.x = -0.18;
+      {
+        const teeth = mat(15658730, { roughness: 0.5 }), gap = mat(328965);
+        mk2(new BoxGeometry(0.09, 0.03, 0.01), gap, this.head).position.set(0, 0.075, 0.1);
+        for (let k = -3; k <= 3; k++) mk2(new BoxGeometry(0.0105, 0.026, 0.012), teeth, this.head).position.set(k * 0.0125, 0.075, 0.103);
+        mk2(new BoxGeometry(0.1, 4e-3, 0.012), gap, this.head).position.set(0, 0.075, 0.104);
+        const hs = mk2(new BoxGeometry(0.026, 0.012, 0.25), mat(3800938, { emissive: 1014314, emissiveIntensity: 0.7 }), this.head);
+        hs.position.set(0, 0.318, -0.01);
+        hs.rotation.x = 0;
+        const mChain = mat(12106946, { metalness: 1, roughness: 0.25 });
+        for (let k = 0; k < 14; k++) {
+          const a = k / 14 * Math.PI * 2;
+          const lk = mk2(new TorusGeometry(0.018, 58e-4, 6, 10), mChain, this.torso);
+          lk.position.set(Math.cos(a) * 0.185, 0.07 + Math.sin(a) * 0.01, Math.sin(a) * 0.125);
+          lk.rotation.set(k % 2 ? 0 : Math.PI / 2, a, 0);
+        }
+        for (let k = 0; k < 9; k++) {
+          const a = Math.PI * 0.15 + k / 8 * Math.PI * 0.7;
+          const lk = mk2(new TorusGeometry(0.016, 55e-4, 6, 10), mChain, this.torso);
+          lk.position.set(Math.cos(a) * 0.13, 0.45 - Math.sin(a) * 0.1, 0.105 + Math.sin(a) * 0.02);
+          lk.rotation.set(k % 2 ? 0 : Math.PI / 2, 0, 0);
+        }
+        const skullTex = (() => {
+          const c = document.createElement("canvas");
+          c.width = c.height = 128;
+          const x = c.getContext("2d");
+          x.fillStyle = "#0c1a10";
+          x.fillRect(0, 0, 128, 128);
+          x.strokeStyle = "#39ff6a";
+          x.lineWidth = 5;
+          x.strokeRect(4, 4, 120, 120);
+          x.fillStyle = "#eef4ee";
+          x.beginPath();
+          x.arc(64, 54, 30, 0, 7);
+          x.fill();
+          x.fillRect(46, 70, 36, 22);
+          x.fillStyle = "#0c1a10";
+          x.beginPath();
+          x.arc(52, 54, 8, 0, 7);
+          x.arc(76, 54, 8, 0, 7);
+          x.fill();
+          x.beginPath();
+          x.moveTo(64, 62);
+          x.lineTo(59, 72);
+          x.lineTo(69, 72);
+          x.fill();
+          for (let k = 0; k < 4; k++) x.fillRect(52 + k * 7, 80, 2, 10);
+          x.fillStyle = "#39ff6a";
+          x.font = "900 17px Arial Black, Arial";
+          x.textAlign = "center";
+          x.fillText("GREEN", 64, 116);
+          const t = new CanvasTexture(c);
+          t.colorSpace = SRGBColorSpace;
+          return t;
+        })();
+        const patch = mk2(new PlaneGeometry(0.2, 0.2), new MeshStandardMaterial({ map: skullTex, roughness: 0.7 }), this.torso);
+        patch.position.set(0, 0.3, -0.115);
+        patch.rotation.y = Math.PI;
+        patch.castShadow = false;
+      }
       this.arms = [];
       for (const sx of [1, -1]) {
         const piv = new Group();
         piv.position.set(sx * 0.21, 0.5, 0);
         this.torso.add(piv);
         mk2(new SphereGeometry(0.066, 8, 6), mat(jacket), piv);
+        {
+          const mSp = mat(12106946, { metalness: 1, roughness: 0.25 });
+          for (let k = 0; k < 4; k++) {
+            const a = k / 4 * Math.PI * 2;
+            const sp = mk2(new ConeGeometry(0.014, 0.065, 6), mSp, piv);
+            sp.position.set(Math.cos(a) * 0.035 * (k % 2 ? 1 : 0.5) + sx * 0.02, 0.07, Math.sin(a) * 0.035);
+            sp.rotation.z = -sx * 0.25;
+          }
+        }
         const arm = mk2(new CapsuleGeometry(0.05, 0.46, 4, 8), mat(jacket), piv);
         arm.position.y = -0.3;
         const band = mk2(new CylinderGeometry(0.057, 0.057, 0.04, 10), mat(14673384, { metalness: 0.3 }), piv);
@@ -38512,18 +38580,18 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       tilt.add(rider);
       this.rider = rider;
       const std2 = (o) => new MeshStandardMaterial(o);
-      const mJacket = std2({ color: 4871520, roughness: 0.8 });
+      const mJacket = std2({ color: 2787910, roughness: 0.8 });
       const mJacketDark = std2({ color: 2896184, roughness: 0.85 });
       const mReflect = std2({ color: 14673384, roughness: 0.35, metalness: 0.3, emissive: 3159608, emissiveIntensity: 0.4 });
       const mPants = std2({ color: 1645345, roughness: 0.85 });
       const mShoe = std2({ color: 15329769, roughness: 0.6 });
       const mSole = std2({ color: 2763309, roughness: 0.9 });
       const mGlove = std2({ color: 1316119, roughness: 0.7 });
-      const mHelmet = std2({ color: 15921904, roughness: 0.22, metalness: 0.25 });
+      const mHelmet = std2({ color: 1513757, roughness: 0.22, metalness: 0.25 });
       const mBal = std2({ color: 789518, roughness: 0.97 });
       const mSkin = std2({ color: 13146232, roughness: 0.8 });
-      const mLens = std2({ color: 16747050, roughness: 0.06, metalness: 0.95, envMapIntensity: 1.6 });
-      const mAccent = std2({ color: 16742938, roughness: 0.6 });
+      const mLens = std2({ color: 3800938, roughness: 0.06, metalness: 0.95, envMapIntensity: 1.6, emissive: 1014314, emissiveIntensity: 0.9 });
+      const mAccent = std2({ color: 3800938, roughness: 0.5, emissive: 1014314, emissiveIntensity: 0.7 });
       const mk2 = (geo, mat2, parent = rider) => {
         const m = new Mesh(geo, mat2);
         m.castShadow = true;
@@ -38623,6 +38691,16 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         const bw = mk2(new BoxGeometry(0.05, 9e-3, 0.012), mBrowC);
         bw.userData.pos = [sx * 0.038, 0.029, 0.1], bw.rotation.z = sx * -0.12;
         head.push(bw);
+      }
+      {
+        const gap = mk2(new BoxGeometry(0.09, 0.03, 0.01), std2({ color: 328965 }));
+        gap.userData.pos = [0, -0.045, 0.097];
+        head.push(gap);
+        for (let k = -3; k <= 3; k++) {
+          const th = mk2(new BoxGeometry(0.0105, 0.026, 0.012), std2({ color: 15658730, roughness: 0.5 }));
+          th.userData.pos = [k * 0.0125, -0.045, 0.1];
+          head.push(th);
+        }
       }
       const nose = mk2(new SphereGeometry(0.02, 8, 6), mBal);
       nose.userData.pos = [0, -0.012, 0.1];
@@ -38851,6 +38929,50 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       bodyPart(new TorusGeometry(0.1, 0.034, 8, 18), mJacketDark, [0, 0.215, -0.03], [1.1, 1, 0.9]).rotation.x = Math.PI / 2;
       bodyPart(new BoxGeometry(0.09, 0.05, 0.05), mJacket, [0, 0.215, -0.1]);
       bodyPart(new BoxGeometry(0.02, 0.026, 0.012), mZip, [0, -0.2, 0.105]);
+      {
+        const mSp = std2({ color: 12106946, metalness: 1, roughness: 0.25 });
+        for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) bodyPart(new ConeGeometry(0.016, 0.07, 6), mSp, [sx * (0.13 + k * 0.03), 0.275 - k * 0.02, -0.01 + (k - 1) * 0.03]).rotation.z = -sx * (0.5 + k * 0.2);
+        const skull = (() => {
+          const c = document.createElement("canvas");
+          c.width = c.height = 128;
+          const x = c.getContext("2d");
+          x.fillStyle = "#0c1a10";
+          x.fillRect(0, 0, 128, 128);
+          x.strokeStyle = "#39ff6a";
+          x.lineWidth = 5;
+          x.strokeRect(4, 4, 120, 120);
+          x.fillStyle = "#eef4ee";
+          x.beginPath();
+          x.arc(64, 54, 30, 0, 7);
+          x.fill();
+          x.fillRect(46, 70, 36, 22);
+          x.fillStyle = "#0c1a10";
+          x.beginPath();
+          x.arc(52, 54, 8, 0, 7);
+          x.arc(76, 54, 8, 0, 7);
+          x.fill();
+          x.beginPath();
+          x.moveTo(64, 62);
+          x.lineTo(59, 72);
+          x.lineTo(69, 72);
+          x.fill();
+          for (let k = 0; k < 4; k++) x.fillRect(52 + k * 7, 80, 2, 10);
+          x.fillStyle = "#39ff6a";
+          x.font = "900 17px Arial Black, Arial";
+          x.textAlign = "center";
+          x.fillText("GREEN", 64, 116);
+          const t = new CanvasTexture(c);
+          t.colorSpace = SRGBColorSpace;
+          return t;
+        })();
+        const bp = bodyPart(new PlaneGeometry(0.22, 0.22), std2({ map: skull, roughness: 0.7 }), [0, 0.03, -0.108]);
+        bp.rotation.y = Math.PI;
+        bp.castShadow = false;
+        for (let k = 0; k < 11; k++) {
+          const a = Math.PI * 0.1 + k / 10 * Math.PI * 0.8;
+          bodyPart(new TorusGeometry(0.016, 55e-4, 6, 10), std2({ color: 12106946, metalness: 1, roughness: 0.25 }), [Math.cos(a) * 0.13, 0.2 - Math.sin(a) * 0.12, 0.1]).rotation.x = k % 2 ? 0 : Math.PI / 2;
+        }
+      }
       this.torsoDetail = detail;
       this.pelvis = mk2(new SphereGeometry(0.135, 14, 10), mPants);
       this.pelvis.scale.set(1.15 * K, 0.85 * K, 0.95 * K);
@@ -40445,7 +40567,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       o.start(t);
       o.stop(t + 0.08);
     }
-    shot() {
+    shot(vol = 1) {
       if (!this.ctx) return;
       const c = this.ctx, t = c.currentTime;
       const n = c.createBufferSource();
@@ -40455,7 +40577,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       f.frequency.setValueAtTime(5e3, t);
       f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
       const g = c.createGain();
-      g.gain.setValueAtTime(0.7, t);
+      g.gain.setValueAtTime(0.7 * vol, t);
       g.gain.exponentialRampToValueAtTime(1e-3, t + 0.3);
       n.connect(f);
       f.connect(g);
@@ -40468,7 +40590,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       o.frequency.setValueAtTime(160, t);
       o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
       const og = c.createGain();
-      og.gain.setValueAtTime(0.6, t);
+      og.gain.setValueAtTime(0.6 * vol, t);
       og.gain.exponentialRampToValueAtTime(1e-3, t + 0.25);
       o.connect(og);
       og.connect(this.master);
@@ -40725,7 +40847,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     return b.build();
   }
   var Pedestrians = class {
-    constructor(scene2, M2, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5) {
+    constructor(scene2, M2, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5, crew = 6) {
       this.list = [];
       this.young = count;
       this.nElders = elders;
@@ -40735,12 +40857,12 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       this.nTeens = teens;
       this.nGangs = gangs;
       this.gangs = [];
-      for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: "x", lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0 });
+      for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: "x", lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0, ally: g === 3 });
       teens += gangs * 3;
       this.stores = [];
       this.staffSpots = [];
       this.onPick = null;
-      this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff;
+      this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff + crew;
       const total = this.count;
       this.sites = [];
       this.dyn = [];
@@ -40888,6 +41010,12 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
           B.box(0, 0.42, 0.25, 0.12, 0.24, 0.12, "#2f6aa6");
           B.box(-0.12, 0.38, -0.25, 0.2, 0.14, 0.14, "#a8703a");
         }), true),
+        gun: mk2(mergedGeo((B) => {
+          B.box(0, -0.7, 0.02, 0.03, 0.17, 0.045, "#1b1c1f");
+          B.box(0, -0.78, 0.02, 0.014, 0.05, 0.02, "#2a2b2f");
+          B.box(0, -0.62, -0.035, 0.028, 0.06, 0.04, "#141517");
+          B.box(0, -0.6, 0, 0.05, 0.05, 0.05, "#3a2f28");
+        }), true),
         cane: mk2(caneGeo, true),
         bag: mk2(bagGeo, true),
         roll: mk2(rollGeo, true),
@@ -40905,7 +41033,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       const c = new Color(), zero = new Matrix4().makeScale(0, 0, 0);
       for (let i = 0; i < total; i++) {
         const nk = i - count - elders;
-        const kind = i < count ? "young" : nk < 0 ? (i - count) % 2 === 0 ? "oma" : "opa" : nk < kids ? "kid" : nk < kids + playKids ? "pkid" : nk < kids + playKids + playPars ? "ppar" : nk < kids + playKids + playPars + teens ? "teen" : nk - kids - playKids - playPars - teens < bums ? "bum" : nk - kids - playKids - playPars - teens - bums < shoppers ? "shopper" : "staff";
+        const kind = i < count ? "young" : nk < 0 ? (i - count) % 2 === 0 ? "oma" : "opa" : nk < kids ? "kid" : nk < kids + playKids ? "pkid" : nk < kids + playKids + playPars ? "ppar" : nk < kids + playKids + playPars + teens ? "teen" : nk - kids - playKids - playPars - teens < bums ? "bum" : nk - kids - playKids - playPars - teens - bums < shoppers ? "shopper" : nk - kids - playKids - playPars - teens - bums - shoppers < staff ? "staff" : "crew";
         const elder = kind === "oma" || kind === "opa" || kind === "bum";
         const pick = (a) => a[Math.floor(Math.random() * a.length)];
         const p = { active: false, kind, elder, x: 0, z: 0, axis: "x", dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: "", sayT: 0, cool: 0, lane: 0, s: 0 };
@@ -40959,6 +41087,18 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
           p.px = void 0;
           p.sidx = kind === "staff" ? nk - kids - playKids - playPars - teens - bums - shoppers : 0;
         }
+        if (kind === "crew") {
+          p.active = false;
+          p.protect = true;
+          p.has.hair = false;
+          p.has.cap = false;
+          p.has.cane = p.has.bag = p.has.roll = false;
+          p.has.glasses = true;
+          p.crewIdx = nk - kids - playKids - playPars - teens - bums - shoppers - staff;
+          p.px = void 0;
+          p.cd = 1;
+          p.ts = "follow";
+        }
         if (kind === "ppar") {
           p.protect = true;
           p.slot = nk - kids - playKids;
@@ -40973,7 +41113,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         if (p.has.roll) p.has.cane = false;
         if (p.has.cane && kind === "oma") p.has.bag = false;
         this.list.push(p);
-        const coat = kind === "oma" ? pick(OMA_COAT) : kind === "opa" ? pick(OPA_COAT) : kind === "kid" || kind === "pkid" ? pick(["#ff4f4f", "#ffb020", "#2fb0ff", "#7ad04a", "#c85bff", "#ff7ab8", "#ffe14a"]) : kind === "bum" ? pick(["#5a4a38", "#3e4a3a", "#4a3f52", "#6a5a44", "#44464a"]) : kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ["#17181b", "#2b2d33", "#5a1a1a", "#1a2a4a", "#3a3a3f"] : ["#e8d020", "#2fb0ff", "#ff7ab8", "#7ad04a", "#e07a2e", "#c9c9c9"]) : CLOTH[i % CLOTH.length];
+        const coat = kind === "oma" ? pick(OMA_COAT) : kind === "opa" ? pick(OPA_COAT) : kind === "kid" || kind === "pkid" ? pick(["#ff4f4f", "#ffb020", "#2fb0ff", "#7ad04a", "#c85bff", "#ff7ab8", "#ffe14a"]) : kind === "bum" ? pick(["#5a4a38", "#3e4a3a", "#4a3f52", "#6a5a44", "#44464a"]) : kind === "crew" ? TEAMS[3].coat : kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ["#17181b", "#2b2d33", "#5a1a1a", "#1a2a4a", "#3a3a3f"] : ["#e8d020", "#2fb0ff", "#ff7ab8", "#7ad04a", "#e07a2e", "#c9c9c9"]) : CLOTH[i % CLOTH.length];
         this.parts.torso.setColorAt(i, c.set(coat));
         const skin = pick(SKIN);
         this.parts.head.setColorAt(i, c.set(skin));
@@ -40983,7 +41123,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         for (const k of ["armL", "armR"]) this.parts[k].setColorAt(i, c.set(coat));
         this.parts.beer.setColorAt(i, c.set("#ffffff"));
         this.parts.faceB.setColorAt(i, c.set("#ffffff"));
-        this.parts.hood.setColorAt(i, c.set(kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].hood : pick(["#101114", "#1d1d22", "#2a1414", "#14202c"]) : "#000000"));
+        this.parts.hood.setColorAt(i, c.set(kind === "crew" ? TEAMS[3].hood : kind === "teen" ? p.gang !== void 0 && p.rowdy ? TEAMS[p.gang % 6].hood : pick(["#101114", "#1d1d22", "#2a1414", "#14202c"]) : "#000000"));
         this.parts.hair.setColorAt(i, c.set(kind === "oma" ? pick(OMA_HAIR) : kind === "opa" ? "#d8d8d8" : pick(HAIR)));
         this.parts.cap.setColorAt(i, c.set(pick(["#6a6a60", "#4a4a50", "#7a6a50"])));
         for (const k of ["cane", "bag", "roll", "face", "faceA", "faceR", "glasses", "swing", "cigT", "beer", "faceB"]) this.parts[k].setColorAt(i, c.set("#ffffff"));
@@ -41117,6 +41257,8 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       for (const k of ["cane", "bag", "roll"]) P_[k].setMatrixAt(i, this._zero);
       if (o.cart) place(P_.cart, 0, 0, -0.84, 0.82);
       else P_.cart.setMatrixAt(i, this._zero);
+      if (o.gun) place(P_.gun, h, -0.24, 0.54, 0, o.aR || 0);
+      else P_.gun.setMatrixAt(i, this._zero);
       if (o.swing) {
         m.makeRotationY(o.swing.yaw);
         m.setPosition(o.swing.x, o.swing.y, o.swing.z);
@@ -41269,7 +41411,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
             }
           }
         }
-      } else if (p.rowdy) {
+      } else if (p.rowdy && !(G2 && G2.ally)) {
         if (pl.armed && dp < 18) {
           if (!p.fakeSaid) {
             p.fakeSaid = true;
@@ -41361,7 +41503,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         }
         if (dp < 13 && p.sayT <= 0 && p.cool <= 0) {
           const mop = pl.moped;
-          const L = mop ? ["Geile Simme!", "Schwalbe/S51? Respekt!", "Moin! Sch\xF6nes Moped!"] : ["Moin!", "Na, alles fit?", "Sch\xF6nen Tag noch!", "Cooler Roller!"];
+          const L = G2 && G2.ally ? ["Yo, Boss!", "Gr\xFCne Gang f\xFCr immer!", "Alles klar, Chef?", "Wir haben deinen R\xFCcken!"] : mop ? ["Geile Simme!", "Schwalbe/S51? Respekt!", "Moin! Sch\xF6nes Moped!"] : ["Moin!", "Na, alles fit?", "Sch\xF6nen Tag noch!", "Cooler Roller!"];
           this.say(p, L[Math.floor(Math.random() * L.length)], 2.6);
           p.cool = 9 + Math.random() * 6;
           p.waveT = 2;
@@ -41733,6 +41875,136 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       }
       this.roadOf(p);
     }
+    /** the player's own gang (H): armed green youths that follow and fight for the player */
+    spawnCrew(x, z, heading) {
+      let n = 0;
+      for (let i = 0; i < this.count; i++) {
+        const p = this.list[i];
+        if (p.kind !== "crew") continue;
+        if (p.active) {
+          const a2 = Math.random() * 6.28;
+          p.px = x + Math.cos(a2) * 2.5;
+          p.pz = z + Math.sin(a2) * 2.5;
+          p.ts = "follow";
+          continue;
+        }
+        if (n >= 3) continue;
+        const a = heading + Math.PI + (n - 1) * 0.9 + (Math.random() - 0.5) * 0.3, r = 2 + Math.random() * 1.2;
+        p.active = true;
+        p.px = x + Math.sin(a) * r;
+        p.pz = z + Math.cos(a) * r;
+        p.yawT = heading;
+        p.down = 0;
+        p.hp = 100;
+        p.ts = "follow";
+        p.cd = 0.8 + Math.random();
+        p.say = "";
+        p.sayT = 0;
+        p.walkPh = Math.random() * 6;
+        p.phase0 = Math.random() * 6;
+        p.flash = 0;
+        p.target = null;
+        p.taken = false;
+        this.say(p, ["F\xFCr die Gr\xFCnen!", "Yo Boss, wir sind da!", "Wer will Stress?!"][n % 3], 3);
+        n++;
+      }
+      return n;
+    }
+    crewCount() {
+      let n = 0;
+      for (const p of this.list) if (p.kind === "crew" && p.active) n++;
+      return n;
+    }
+    /** gang members that fight for the player: follow, pick an enemy, shoot or punch */
+    updateCrew(i, p, dt, t, player) {
+      if (!p.active) {
+        if (p.px !== void 0) {
+          this.hideFigure(i);
+          p.px = void 0;
+        }
+        return;
+      }
+      const pl = player || { x: p.px, z: p.pz, heading: 0, speed: 0 };
+      if (p.sayT > 0) p.sayT -= dt;
+      if (p.flash > 0) p.flash -= dt;
+      p.cd -= dt;
+      p.tt = (p.tt || 0) - dt;
+      let dpx = pl.x - p.px, dpz = pl.z - p.pz, dpl = Math.hypot(dpx, dpz);
+      if (dpl > 55) {
+        const a = (pl.heading || 0) + Math.PI + (p.crewIdx - 2.5) * 0.5;
+        p.px = pl.x + Math.sin(a) * 3;
+        p.pz = pl.z + Math.cos(a) * 3;
+        dpx = pl.x - p.px;
+        dpz = pl.z - p.pz;
+        dpl = 3;
+        p.target = null;
+      }
+      if (p.tt <= 0) {
+        p.tt = 0.35;
+        let best = null, bd = 1e9;
+        for (const q2 of this.list) {
+          if (!q2.active || q2.down > 0 || q2.taken || q2.protect) continue;
+          const hostile = q2.kind === "teen" && q2.rowdy && !(q2.gang !== void 0 && this.gangs[q2.gang].ally) && (q2.ts === "stress" || q2.ts === "brawl" || Math.hypot(q2.x - pl.x, q2.z - pl.z) < 11) || q2.elder && q2.chase > 0;
+          if (!hostile) continue;
+          const dq = Math.hypot(q2.x - p.px, q2.z - p.pz);
+          if (dq > 28 || Math.hypot(q2.x - pl.x, q2.z - pl.z) > 34) continue;
+          if (dq < bd) {
+            bd = dq;
+            best = q2;
+          }
+        }
+        p.target = best;
+      }
+      const q = p.target && p.target.active && p.target.down <= 0 ? p.target : null;
+      let moving = false, aim = false, yaw = p.yawT, sp = 0;
+      if (q) {
+        const dx = q.x - p.px, dz = q.z - p.pz, d = Math.hypot(dx, dz) || 1;
+        yaw = Math.atan2(dx, dz);
+        if (d > 9) {
+          sp = 4.6;
+        } else {
+          aim = true;
+          if (p.cd <= 0) {
+            p.cd = 0.9 + Math.random() * 0.8;
+            p.flash = 0.09;
+            const hitIt = Math.random() < 0.72;
+            if (hitIt) this.hit(q, dx / d, dz / d, 100, { gun: true, long: true });
+            if (this.onCrewShot) this.onCrewShot(p, q.x, q.z, hitIt);
+            if (p.sayT <= 0 && Math.random() < 0.35) this.say(p, ["F\xFCr den Boss!", "Weg mit dem!", "Gr\xFCne Gang!", "Nimm das!"][Math.floor(Math.random() * 4)], 1.8);
+          }
+          if (d < 3.5) sp = -1.2;
+        }
+        if (sp) {
+          p.px += dx / d * sp * dt;
+          p.pz += dz / d * sp * dt;
+          moving = true;
+        }
+      } else {
+        const h = pl.heading || 0, k = p.crewIdx, side = (k % 3 - 1) * 1.7, back = 2.4 + Math.floor(k / 3) * 1.8;
+        const tx = pl.x - Math.sin(h) * back + Math.cos(h) * side, tz = pl.z - Math.cos(h) * back - Math.sin(h) * side;
+        const dx = tx - p.px, dz = tz - p.pz, d = Math.hypot(dx, dz);
+        if (d > 0.9) {
+          sp = Math.min(5.4, 1.5 + d * 0.9);
+          p.px += dx / d * sp * dt;
+          p.pz += dz / d * sp * dt;
+          yaw = Math.atan2(dx, dz);
+          moving = true;
+        } else yaw = h;
+        if (p.sayT <= 0 && dpl < 8 && Math.random() < dt * 0.04) this.say(p, ["Alles klar, Boss!", "Wir sind bereit.", "Gr\xFCn regiert!"][Math.floor(Math.random() * 3)], 2.2);
+      }
+      let dd = yaw - p.yawT;
+      while (dd > Math.PI) dd -= 2 * Math.PI;
+      while (dd < -Math.PI) dd += 2 * Math.PI;
+      p.yawT += dd * Math.min(1, dt * 9);
+      if (moving) p.walkPh = (p.walkPh || 0) + dt * Math.min(12, 4 + Math.abs(sp) * 1.6);
+      const run = Math.abs(sp) > 3, swn = moving ? Math.sin(p.walkPh) * (run ? 0.9 : 0.55) : 0;
+      const o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 1, hunch: aim ? 0.08 : 0.12 + (run ? 0.12 : 0), legL: swn, legR: -swn, aL: aim ? -0.5 : -swn, aR: aim ? -1.5 : -0.25 + swn * 0.3, head: 1, gun: true, hood: true, faceR: true };
+      this.drawFigure(i, p, o);
+      p.x = p.px;
+      p.z = p.pz;
+      this.dyn.push({ x: p.px, z: p.pz, r: 0.34, vx: 0, vz: 0, ped: p });
+      this.roadOf(p);
+    }
     /** shop assistants: cashiers, petrol station clerk, car salesman */
     updateStaff(i, p, dt, t, player) {
       const spot = this.staffSpots[p.sidx];
@@ -41952,7 +42224,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     }
     /** Player punches ped p (from direction dx,dz). Returns 'hit' | 'ko' | null */
     hit(p, dx, dz, dmg = 14, opts = {}) {
-      if (!p.active || p.down > 0) return null;
+      if (!p.active || p.down > 0 || p.kind === "crew") return null;
       p.hp = (p.hp ?? 100) - dmg;
       p.flinch = 0.3;
       p.hitT = 6;
@@ -42017,6 +42289,10 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         }
         if (p.kind === "staff") {
           this.updateStaff(i, p, dt, t, player);
+          continue;
+        }
+        if (p.kind === "crew") {
+          this.updateCrew(i, p, dt, t, player);
           continue;
         }
         if (!p.active) this.spawn(p, px2, pz2, R);
@@ -45078,6 +45354,9 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         e.preventDefault();
         break;
       case "KeyH":
+        callCrew();
+        break;
+      case "KeyU":
         setWbar(!cfg.wbar);
         break;
       case "KeyN":
@@ -47065,7 +47344,7 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   }
   var _bv = new Vector3();
   function updateBubbles() {
-    const list = peds.list.filter((p) => p.active && (p.elder && (p.anger > 14 || p.sayT > 0) || p.kind === "teen" && p.sayT > 0)).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
+    const list = peds.list.filter((p) => p.active && (p.elder && (p.anger > 14 || p.sayT > 0) || p.kind === "teen" && p.sayT > 0 || p.kind === "crew" && p.sayT > 0)).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
     const W = window.innerWidth, H = window.innerHeight;
     for (let i = 0; i < 4; i++) {
       const el = bubbleEls[i], it = list[i];
@@ -47081,9 +47360,9 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       }
       el.classList.remove("hidden");
       el.style.transform = `translate(${((_bv.x * 0.5 + 0.5) * W).toFixed(0)}px, ${((-_bv.y * 0.5 + 0.5) * H).toFixed(0)}px) translate(-50%,-100%)`;
-      const teen = p.kind === "teen";
-      const face = teen ? p.rowdy ? "\u{1F608}" : "\u{1F60E}" : p.chase > 0 ? "\u{1F92C}" : p.mood >= 2 ? "\u{1F621}" : p.mood === 1 ? "\u{1F620}" : p.kind === "bum" ? "\u{1F37A}" : "\u{1F642}";
-      const who = teen ? p.rowdy ? "Halbstarker" : "Netter Typ" : p.kind === "bum" ? "Obdachloser" : p.kind === "oma" ? "Oma" : "Opa";
+      const crew = p.kind === "crew", ally = p.kind === "teen" && p.gang !== void 0 && peds.gangs[p.gang].ally, teen = p.kind === "teen";
+      const face = crew || ally ? "\u{1F49A}" : teen ? p.rowdy ? "\u{1F608}" : "\u{1F60E}" : p.chase > 0 ? "\u{1F92C}" : p.mood >= 2 ? "\u{1F621}" : p.mood === 1 ? "\u{1F620}" : p.kind === "bum" ? "\u{1F37A}" : "\u{1F642}";
+      const who = crew ? "Deine Gang" : ally ? "Gr\xFCne Gang (Freund)" : teen ? p.rowdy ? "Halbstarker" : "Netter Typ" : p.kind === "bum" ? "Obdachloser" : p.kind === "oma" ? "Oma" : "Opa";
       const html = `<b>${face} ${who}</b>${p.sayT > 0 ? "<span>" + p.say + "</span>" : ""}${teen ? "" : `<i><u style="width:${p.anger.toFixed(0)}%;background:${p.anger > 80 ? "#ff3b3b" : p.anger > 50 ? "#ff9a2a" : "#ffd23a"}"></u></i>`}`;
       if (el._h !== html) {
         el._h = html;
@@ -47115,6 +47394,23 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
     $("crash").style.opacity = 0.6;
     if (st.mode === "walk") walker.stun = 0.9;
     else scooter.v *= 0.3;
+  };
+  function callCrew() {
+    if (st.track || st.paused || st.shopOpen) return;
+    const hd = me.heading;
+    const n = peds.spawnCrew(me.x, me.z, hd);
+    const all = peds.crewCount();
+    if (n > 0) {
+      audio.chime([392, 523, 659]);
+      toast("\u{1F49A} Deine Gang ist da!", `${all} Gr\xFCne mit Waffen k\xE4mpfen f\xFCr dich \xB7 nochmal H = ruft alle zu dir`, 3e3);
+    } else toast("\u{1F49A} Deine Gang", `alle ${all} sind bei dir \u2013 sie schie\xDFen auf Feinde, die dich bedrohen`, 2200);
+  }
+  peds.onCrewShot = (p, tx, tz, hit) => {
+    addTracer(p.x + Math.sin(p.yawT) * 0.5, 1.25, p.z + Math.cos(p.yawT) * 0.5, tx, 1.15, tz);
+    const d = Math.hypot(p.x - me.x, p.z - me.z);
+    if (d < 70) audio.shot(clamp2(1 - d / 80, 0.15, 0.55));
+    if (hit && cfg.blood) blood.splash(tx, 1.15, tz, tx - p.x, tz - p.z, 18);
+    if (hit && d < 60) audio.thud(3);
   };
   peds.onBrawlHit = (x, z, bleed) => {
     const d = Math.hypot(x - me.x, z - me.z);

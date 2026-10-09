@@ -35,7 +35,7 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `C` | Kamera wechseln (hinter dem Roller / Ego-Cockpit mit Display) |
 | `R` | **Eine Hand** vom Lenker nehmen (Einhand-Wheelie zahlt mehr als das Doppelte) – nochmal `R` = wieder beide Hände |
 | `Backspace` | Reset – setzt dich auf die nächste Straße / Strecke |
-| `H` | **Wheelie-Bar** an/aus (begrenzt den Wheelie auf ca. 32°, sicherer; im Menü ebenfalls) |
+| `U` | **Wheelie-Bar** an/aus (begrenzt den Wheelie auf ca. 32°, sicherer; im Menü ebenfalls) |
 | `G` | **Vape** ziehen (einmal kaufen: Kiosk im Simson-Laden 20 € oder Supermarkt/Tankstelle) – dicke weiße Wolke, leuchtende LED. FPS-Anzeige jetzt auf `O` |
 | `L` / `B` | Licht an/aus · Hupe (halten) |
 | `T` | Tageszeit um 3 h vorstellen |
@@ -145,7 +145,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 ## Fünf Roller
 
 * **ZT3 Pro** (Shop, **150 €**): 40 km/h, mit VESC 70 km/h. · **Kukirin G2** (Shop, **300 €**): 55 km/h, mit VESC 70 km/h.
-* Alle Roller haben jetzt **Wheelie-Bar** (Stützrad hinten, `H`) und **Lenkerend-Spiegel**. Der Fahrer ist ~17 % größer, mit neuen Handschuhen
+* Alle Roller haben jetzt **Wheelie-Bar** (Stützrad hinten, `U`) und **Lenkerend-Spiegel**. Der Fahrer ist ~17 % größer, mit neuen Handschuhen
   (einzelne Finger, Daumen, Knöchel-Polster, Manschette); bei „Eine Hand“ winkt die linke Hand offen in die Luft.
 
 
@@ -232,6 +232,11 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 
 ## Startgeld
 * Du startest jetzt mit **1.000.000 €** (bestehende Spielstände werden einmalig auf 1.000.000 € aufgestockt) – kauf alles: Roller, Mopeds, Autos, Tuning.
+
+## Grüne Gang 💚
+* **Du gehörst zur grünen Gang:** Dein Spieler sieht jetzt gefährlicher aus – grüne Jacke, schwarzer Helm mit Leucht-Streifen, Totenkopf-Sturmhaube, neongrüne Brille, Schulterspikes, Ketten und ein Totenkopf-Patch „GREEN“ auf dem Rücken (zu Fuß und auf dem Roller).
+* **`H` ruft deine Jugendlichen:** je Druck erscheinen 3 grüne Gang-Mitglieder neben dir (bis zu 6; nochmal `H` bei voller Gang ruft alle zu dir). Sie folgen dir (auch wenn du fährst), und **nur sie und du haben Waffen**: sie schießen auf Rivalen-Gangs, die dich bedrohen, aggressive Halbstarke und wütende Rentner/Obdachlose. Sie sind unverwundbar und lassen sich nicht abschießen.
+* Die grüne Gang auf den Gehwegen ist deine Verbündete (grüßt dich, nimmt dich nicht ins Visier) und prügelt sich mit ihrem Rivalen (Gelb). Die Wheelie-Bar liegt jetzt auf `U`.
 
 ## Entwickeln
 

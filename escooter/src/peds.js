@@ -39,15 +39,15 @@ const SAY = {
 function mergedGeo(fn) { const s = new BatchSet(); const b = s.get('a'); b.ao = false; fn(b); return b.build(); }
 
 export class Pedestrians {
-  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5) {
+  constructor(scene, M, count = 16, elders = 6, kids = 4, playKids = 10, playPars = 4, teens = 10, bums = 3, gangs = 7, shoppers = 8, staff = 5, crew = 6) {
     this.list = [];
     this.young = count;
     this.nElders = elders; this.nKids = kids; this.nPlayKids = playKids; this.nPlayPars = playPars;
     this.nTeens = teens; this.nGangs = gangs;
-    this.gangs = []; for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: 'x', lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0 });
+    this.gangs = []; for (let g = 0; g < gangs; g++) this.gangs.push({ active: false, axis: 'x', lane: 0, s: 0, dir: 1, speed: 1.25, hold: false, wait: false, yaw: 0, rowdy: g < 6, rival: g < 6 ? g ^ 1 : -1, fight: null, cool: 0, ally: g === 3 });
     teens += gangs * 3; // walking gangs are teens too (3 per gang)
     this.stores = []; this.staffSpots = []; this.onPick = null;
-    this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff;
+    this.count = count + elders + kids + playKids + playPars + teens + bums + shoppers + staff + crew;
     const total = this.count;
     this.sites = [];
     this.dyn = [];
@@ -117,6 +117,7 @@ export class Pedestrians {
         B.box(0, 1.0, -0.5, 0.5, 0.04, 0.04, '#d42020'); for (const sx of [-1, 1]) B.box(sx * 0.25, 0.9, -0.47, 0.03, 0.3, 0.03, '#d42020');
         B.box(-0.1, 0.4, 0.1, 0.2, 0.2, 0.2, '#e8c020'); B.box(0.12, 0.38, -0.1, 0.18, 0.16, 0.22, '#d4301e'); B.box(0.0, 0.42, 0.25, 0.12, 0.24, 0.12, '#2f6aa6'); B.box(-0.12, 0.38, -0.25, 0.2, 0.14, 0.14, '#a8703a');
       }), true),
+      gun: mk(mergedGeo((B) => { B.box(0, -0.7, 0.02, 0.03, 0.17, 0.045, '#1b1c1f'); B.box(0, -0.78, 0.02, 0.014, 0.05, 0.02, '#2a2b2f'); B.box(0, -0.62, -0.035, 0.028, 0.06, 0.04, '#141517'); B.box(0, -0.6, 0.0, 0.05, 0.05, 0.05, '#3a2f28'); }), true),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
       cigT: mk(mergedGeo((B) => {
         const cz = (r, l, z, col) => B.geo(new THREE.CylinderGeometry(r, r, l, 10).rotateX(Math.PI / 2), new THREE.Matrix4().makeTranslation(0.022, -0.052, z), col);
@@ -127,7 +128,7 @@ export class Pedestrians {
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (let i = 0; i < total; i++) {
       const nk = i - count - elders;
-      const kind = i < count ? 'young' : nk < 0 ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : nk < kids + playKids + playPars + teens ? 'teen' : (nk - kids - playKids - playPars - teens) < bums ? 'bum' : (nk - kids - playKids - playPars - teens - bums) < shoppers ? 'shopper' : 'staff';
+      const kind = i < count ? 'young' : nk < 0 ? ((i - count) % 2 === 0 ? 'oma' : 'opa') : nk < kids ? 'kid' : nk < kids + playKids ? 'pkid' : nk < kids + playKids + playPars ? 'ppar' : nk < kids + playKids + playPars + teens ? 'teen' : (nk - kids - playKids - playPars - teens) < bums ? 'bum' : (nk - kids - playKids - playPars - teens - bums) < shoppers ? 'shopper' : (nk - kids - playKids - playPars - teens - bums - shoppers) < staff ? 'staff' : 'crew';
       const elder = kind === 'oma' || kind === 'opa' || kind === 'bum';
       const pick = (a) => a[Math.floor(Math.random() * a.length)];
       const p = { active: false, kind, elder, x: 0, z: 0, axis: 'x', dir: 1, side: 1, speed: elder ? 0.7 + Math.random() * 0.3 : 1.4, phase: Math.random() * 6, yaw: 0, wait: 0, down: 0, anger: 0, mood: 0, chase: 0, say: '', sayT: 0, cool: 0, lane: 0, s: 0 };
@@ -141,12 +142,13 @@ export class Pedestrians {
       }
       if (kind === 'bum') { p.has.hair = true; p.has.cap = Math.random() < 0.8; p.has.cane = p.has.bag = p.has.roll = false; p.has.glasses = false; p.speed = 0.6; }
       if (kind === 'shopper' || kind === 'staff') { p.active = false; p.has.hair = Math.random() < 0.85; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; p.store = null; p.respawn = Math.random() * 40; p.px = undefined; p.sidx = kind === 'staff' ? nk - kids - playKids - playPars - teens - bums - shoppers : 0; }
+      if (kind === 'crew') { p.active = false; p.protect = true; p.has.hair = false; p.has.cap = false; p.has.cane = p.has.bag = p.has.roll = false; p.has.glasses = true; p.crewIdx = nk - kids - playKids - playPars - teens - bums - shoppers - staff; p.px = undefined; p.cd = 1; p.ts = 'follow'; }
       if (kind === 'ppar') { p.protect = true; p.slot = nk - kids - playKids; p.has.hair = true; p.has.cane = p.has.bag = p.has.roll = p.has.cap = false; }
       if (kind === 'young') { p.has.hair = Math.random() < 0.85; p.has.cane = false; p.has.bag = Math.random() < 0.3; }
       if (p.has.roll) p.has.cane = false;
       if (p.has.cane && kind === 'oma') p.has.bag = false;
       this.list.push(p);
-      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'bum' ? pick(['#5a4a38', '#3e4a3a', '#4a3f52', '#6a5a44', '#44464a']) : kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9'])) : CLOTH[i % CLOTH.length];
+      const coat = kind === 'oma' ? pick(OMA_COAT) : kind === 'opa' ? pick(OPA_COAT) : kind === 'kid' || kind === 'pkid' ? pick(['#ff4f4f', '#ffb020', '#2fb0ff', '#7ad04a', '#c85bff', '#ff7ab8', '#ffe14a']) : kind === 'bum' ? pick(['#5a4a38', '#3e4a3a', '#4a3f52', '#6a5a44', '#44464a']) : kind === 'crew' ? TEAMS[3].coat : kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].coat : pick(p.rowdy ? ['#17181b', '#2b2d33', '#5a1a1a', '#1a2a4a', '#3a3a3f'] : ['#e8d020', '#2fb0ff', '#ff7ab8', '#7ad04a', '#e07a2e', '#c9c9c9'])) : CLOTH[i % CLOTH.length];
       this.parts.torso.setColorAt(i, c.set(coat));
       const skin = pick(SKIN);
       this.parts.head.setColorAt(i, c.set(skin)); this.parts.nose.setColorAt(i, c.set(skin));
@@ -154,7 +156,7 @@ export class Pedestrians {
       for (const k of ['legL', 'legR']) this.parts[k].setColorAt(i, c.set(kind === 'oma' ? pick(['#3a3a48', '#5a4a58', '#2a3a4a']) : kind === 'kid' || kind === 'pkid' ? pick(['#2a4a8a', '#3a3a3f', '#6a3f7a', '#2f6a4a']) : PANTS[i % PANTS.length]));
       for (const k of ['armL', 'armR']) this.parts[k].setColorAt(i, c.set(coat));
       this.parts.beer.setColorAt(i, c.set('#ffffff')); this.parts.faceB.setColorAt(i, c.set('#ffffff'));
-      this.parts.hood.setColorAt(i, c.set(kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].hood : pick(['#101114', '#1d1d22', '#2a1414', '#14202c'])) : '#000000'));
+      this.parts.hood.setColorAt(i, c.set(kind === 'crew' ? TEAMS[3].hood : kind === 'teen' ? (p.gang !== undefined && p.rowdy ? TEAMS[p.gang % 6].hood : pick(['#101114', '#1d1d22', '#2a1414', '#14202c'])) : '#000000'));
       this.parts.hair.setColorAt(i, c.set(kind === 'oma' ? pick(OMA_HAIR) : kind === 'opa' ? '#d8d8d8' : pick(HAIR)));
       this.parts.cap.setColorAt(i, c.set(pick(['#6a6a60', '#4a4a50', '#7a6a50'])));
       for (const k of ['cane', 'bag', 'roll', 'face', 'faceA', 'faceR', 'glasses', 'swing', 'cigT', 'beer', 'faceB']) this.parts[k].setColorAt(i, c.set('#ffffff'));
@@ -233,6 +235,7 @@ export class Pedestrians {
     if (o.cig) place(P_.cigT, h, 0, 0.71, 0.02, 0, hs); else P_.cigT.setMatrixAt(i, this._zero);
     for (const k of ['cane', 'bag', 'roll']) P_[k].setMatrixAt(i, this._zero);
     if (o.cart) place(P_.cart, 0, 0, -0.84, 0.82); else P_.cart.setMatrixAt(i, this._zero);
+    if (o.gun) place(P_.gun, h, -0.24, 0.54, 0, o.aR || 0); else P_.gun.setMatrixAt(i, this._zero);
     if (o.swing) { // swing seat + chains, hinged at the beam
       m.makeRotationY(o.swing.yaw); m.setPosition(o.swing.x, o.swing.y, o.swing.z);
       tt.makeRotationX(-o.swing.th); m.multiply(tt);
@@ -307,7 +310,7 @@ export class Pedestrians {
           }
         }
       }
-    } else if (p.rowdy) {
+    } else if (p.rowdy && !(G && G.ally)) {
       if (pl.armed && dp < 18) { // thinks the gun is a toy
         if (!p.fakeSaid) { p.fakeSaid = true; const L = ['Haha, die Waffe ist doch fake!', 'Spielzeug, Alter! Lächerlich!', 'Die traut sich eh nicht!', 'Ey, Plastikknarre!']; this.say(p, L[Math.floor(Math.random() * L.length)], 3.2); }
       } else p.fakeSaid = false;
@@ -341,7 +344,7 @@ export class Pedestrians {
       if (p.ts === 'back') { const dx = homeX - p.px, dz = homeZ - p.pz, d = Math.hypot(dx, dz); if (d < (G ? 0.5 : 0.15)) { p.ts = rest; p.px = homeX; p.pz = homeZ; p.yawT = bench.yaw; } else { p.px += (dx / d) * (G ? 2.2 : 1.5) * dt; p.pz += (dz / d) * 1.5 * dt; p.walkPh = (p.walkPh || 0) + dt * 7; p.yawT = Math.atan2(dx, dz); } }
       if (dp < 13 && p.sayT <= 0 && p.cool <= 0) {
         const mop = pl.moped;
-        const L = mop ? ['Geile Simme!', 'Schwalbe/S51? Respekt!', 'Moin! Schönes Moped!'] : ['Moin!', 'Na, alles fit?', 'Schönen Tag noch!', 'Cooler Roller!'];
+        const L = G && G.ally ? ['Yo, Boss!', 'Grüne Gang für immer!', 'Alles klar, Chef?', 'Wir haben deinen Rücken!'] : mop ? ['Geile Simme!', 'Schwalbe/S51? Respekt!', 'Moin! Schönes Moped!'] : ['Moin!', 'Na, alles fit?', 'Schönen Tag noch!', 'Cooler Roller!'];
         this.say(p, L[Math.floor(Math.random() * L.length)], 2.6); p.cool = 9 + Math.random() * 6; p.waveT = 2;
       }
       if (p.waveT > 0) p.waveT -= dt;
@@ -555,6 +558,83 @@ export class Pedestrians {
     this.roadOf(p);
   }
 
+  /** the player's own gang (H): armed green youths that follow and fight for the player */
+  spawnCrew(x, z, heading) {
+    let n = 0;
+    for (let i = 0; i < this.count; i++) {
+      const p = this.list[i];
+      if (p.kind !== 'crew') continue;
+      if (p.active) { // everyone already here: call them to the player
+        const a = Math.random() * 6.28; p.px = x + Math.cos(a) * 2.5; p.pz = z + Math.sin(a) * 2.5; p.ts = 'follow'; continue;
+      }
+      if (n >= 3) continue;
+      const a = heading + Math.PI + (n - 1) * 0.9 + (Math.random() - 0.5) * 0.3, r = 2.0 + Math.random() * 1.2;
+      p.active = true; p.px = x + Math.sin(a) * r; p.pz = z + Math.cos(a) * r; p.yawT = heading; p.down = 0; p.hp = 100; p.ts = 'follow'; p.cd = 0.8 + Math.random(); p.say = ''; p.sayT = 0; p.walkPh = Math.random() * 6; p.phase0 = Math.random() * 6; p.flash = 0; p.target = null; p.taken = false;
+      this.say(p, ['Für die Grünen!', 'Yo Boss, wir sind da!', 'Wer will Stress?!'][n % 3], 3);
+      n++;
+    }
+    return n;
+  }
+  crewCount() { let n = 0; for (const p of this.list) if (p.kind === 'crew' && p.active) n++; return n; }
+  /** gang members that fight for the player: follow, pick an enemy, shoot or punch */
+  updateCrew(i, p, dt, t, player) {
+    if (!p.active) { if (p.px !== undefined) { this.hideFigure(i); p.px = undefined; } return; }
+    const pl = player || { x: p.px, z: p.pz, heading: 0, speed: 0 };
+    if (p.sayT > 0) p.sayT -= dt;
+    if (p.flash > 0) p.flash -= dt;
+    p.cd -= dt; p.tt = (p.tt || 0) - dt;
+    let dpx = pl.x - p.px, dpz = pl.z - p.pz, dpl = Math.hypot(dpx, dpz);
+    if (dpl > 55) { const a = (pl.heading || 0) + Math.PI + (p.crewIdx - 2.5) * 0.5; p.px = pl.x + Math.sin(a) * 3; p.pz = pl.z + Math.cos(a) * 3; dpx = pl.x - p.px; dpz = pl.z - p.pz; dpl = 3; p.target = null; }
+    // enemy selection: rival gangs / aggressive youths / chasing elders close to the player
+    if (p.tt <= 0) {
+      p.tt = 0.35; let best = null, bd = 1e9;
+      for (const q of this.list) {
+        if (!q.active || q.down > 0 || q.taken || q.protect) continue;
+        const hostile = (q.kind === 'teen' && q.rowdy && !(q.gang !== undefined && this.gangs[q.gang].ally) && (q.ts === 'stress' || q.ts === 'brawl' || Math.hypot(q.x - pl.x, q.z - pl.z) < 11)) || (q.elder && q.chase > 0);
+        if (!hostile) continue;
+        const dq = Math.hypot(q.x - p.px, q.z - p.pz);
+        if (dq > 28 || Math.hypot(q.x - pl.x, q.z - pl.z) > 34) continue;
+        if (dq < bd) { bd = dq; best = q; }
+      }
+      p.target = best;
+    }
+    const q = p.target && p.target.active && p.target.down <= 0 ? p.target : null;
+    let moving = false, aim = false, yaw = p.yawT, sp = 0;
+    if (q) {
+      const dx = q.x - p.px, dz = q.z - p.pz, d = Math.hypot(dx, dz) || 1;
+      yaw = Math.atan2(dx, dz);
+      if (d > 9) { sp = 4.6; }
+      else {
+        aim = true;
+        if (p.cd <= 0) {
+          p.cd = 0.9 + Math.random() * 0.8; p.flash = 0.09;
+          const hitIt = Math.random() < 0.72;
+          if (hitIt) this.hit(q, dx / d, dz / d, 100, { gun: true, long: true });
+          if (this.onCrewShot) this.onCrewShot(p, q.x, q.z, hitIt);
+          if (p.sayT <= 0 && Math.random() < 0.35) this.say(p, ['Für den Boss!', 'Weg mit dem!', 'Grüne Gang!', 'Nimm das!'][Math.floor(Math.random() * 4)], 1.8);
+        }
+        if (d < 3.5) sp = -1.2; // keep some distance
+      }
+      if (sp) { p.px += (dx / d) * sp * dt; p.pz += (dz / d) * sp * dt; moving = true; }
+    } else {
+      // follow the player in a loose formation
+      const h = pl.heading || 0, k = p.crewIdx, side = (k % 3 - 1) * 1.7, back = 2.4 + Math.floor(k / 3) * 1.8;
+      const tx = pl.x - Math.sin(h) * back + Math.cos(h) * side, tz = pl.z - Math.cos(h) * back - Math.sin(h) * side;
+      const dx = tx - p.px, dz = tz - p.pz, d = Math.hypot(dx, dz);
+      if (d > 0.9) { sp = Math.min(5.4, 1.5 + d * 0.9); p.px += (dx / d) * sp * dt; p.pz += (dz / d) * sp * dt; yaw = Math.atan2(dx, dz); moving = true; }
+      else yaw = h;
+      if (p.sayT <= 0 && dpl < 8 && Math.random() < dt * 0.04) this.say(p, ['Alles klar, Boss!', 'Wir sind bereit.', 'Grün regiert!'][Math.floor(Math.random() * 3)], 2.2);
+    }
+    let dd = yaw - p.yawT; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI; p.yawT += dd * Math.min(1, dt * 9);
+    if (moving) p.walkPh = (p.walkPh || 0) + dt * Math.min(12, 4 + Math.abs(sp) * 1.6);
+    const run = Math.abs(sp) > 3, swn = moving ? Math.sin(p.walkPh) * (run ? 0.9 : 0.55) : 0;
+    const o = { x: p.px, y: 0.12, z: p.pz, yaw: p.yawT, sc: 1, hunch: aim ? 0.08 : 0.12 + (run ? 0.12 : 0), legL: swn, legR: -swn, aL: aim ? -0.5 : -swn, aR: aim ? -1.5 : -0.25 + swn * 0.3, head: 1.0, gun: true, hood: true, faceR: true };
+    this.drawFigure(i, p, o);
+    p.x = p.px; p.z = p.pz;
+    this.dyn.push({ x: p.px, z: p.pz, r: 0.34, vx: 0, vz: 0, ped: p });
+    this.roadOf(p);
+  }
+
   /** shop assistants: cashiers, petrol station clerk, car salesman */
   updateStaff(i, p, dt, t, player) {
     const spot = this.staffSpots[p.sidx];
@@ -661,7 +741,7 @@ export class Pedestrians {
 
   /** Player punches ped p (from direction dx,dz). Returns 'hit' | 'ko' | null */
   hit(p, dx, dz, dmg = 14, opts = {}) {
-    if (!p.active || p.down > 0) return null;
+    if (!p.active || p.down > 0 || p.kind === 'crew') return null;
     p.hp = (p.hp ?? 100) - dmg; p.flinch = 0.3; p.hitT = 6;
     p.hitStreak = (p.hitStreak || 0) + 1;
     const l = Math.hypot(dx, dz) || 1;
@@ -694,6 +774,7 @@ export class Pedestrians {
       if (p.kind === 'teen') { this.updateTeen(i, p, dt, t, player); continue; }
       if (p.kind === 'shopper') { this.updateShopper(i, p, dt, t, player); continue; }
       if (p.kind === 'staff') { this.updateStaff(i, p, dt, t, player); continue; }
+      if (p.kind === 'crew') { this.updateCrew(i, p, dt, t, player); continue; }
       if (!p.active) this.spawn(p, px, pz, R);
       if (!p.active) { for (const k of Object.keys(P_)) P_[k].setMatrixAt(i, this._zero); continue; }
       let x = p.x, z = p.z;

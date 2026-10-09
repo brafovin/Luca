@@ -15,7 +15,7 @@ function mat(color, o = {}) {
 /** Articulated pedestrian figure (balaclava + goggles + helmet + courier backpack). */
 export class WalkerModel {
   constructor(o = {}) {
-    const jacket = o.jacket || 0x56606b, pants = o.pants || 0x191b21, helmetCol = o.helmet || 0xf2f2f0, pack = o.pack === undefined ? null : o.pack;
+    const jacket = o.jacket || 0x2a8a46, pants = o.pants || 0x15171b, helmetCol = o.helmet || 0x17191d, pack = o.pack === undefined ? null : o.pack;
     this.group = new THREE.Group();
     const g = this.group;
     g.scale.setScalar(1.15); // a bit bigger than before
@@ -51,7 +51,7 @@ export class WalkerModel {
     const neck = mk(new THREE.CylinderGeometry(0.05, 0.068, 0.13, 10), bal, this.head); neck.position.y = 0.04;
     const cheeks = mk(new THREE.SphereGeometry(0.09, 10, 8), bal, this.head); cheeks.position.set(0, 0.12, 0.005); cheeks.scale.set(1, 0.8, 0.95);
     const slit = mk(new THREE.BoxGeometry(0.118, 0.034, 0.03), mat(0xc89878), this.head); slit.position.set(0, 0.185, 0.085);
-    const lens = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 0xff8a2a, { roughness: 0.06, metalness: 0.95 }), this.head); lens.position.set(0, 0.275, 0.112); lens.rotation.x = -0.75;
+    const lens = mk(new THREE.BoxGeometry(0.16, 0.06, 0.044), mat(o.lens || 0x39ff6a, { roughness: 0.06, metalness: 0.95, emissive: 0x0f7a2a, emissiveIntensity: 0.9 }), this.head); lens.position.set(0, 0.275, 0.112); lens.rotation.x = -0.75;
     const frame = mk(new THREE.BoxGeometry(0.172, 0.07, 0.036), mat(0x2c3138), this.head); frame.position.set(0, 0.273, 0.104); frame.rotation.x = -0.75;
     for (const sx of [-1, 1]) { // eyes + brows + nose
       mk(new THREE.BoxGeometry(0.036, 0.022, 0.01), mat(0xf4f4f2), this.head).position.set(sx * 0.037, 0.19, 0.1015);
@@ -62,11 +62,23 @@ export class WalkerModel {
     mk(new THREE.SphereGeometry(0.02, 8, 6), bal, this.head).position.set(0, 0.16, 0.1);
     const helmet = mk(new THREE.SphereGeometry(0.128, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.43), mat(helmetCol, { roughness: 0.22, metalness: 0.25 }), this.head); helmet.position.set(0, 0.19, -0.01); helmet.scale.set(1, 1.04, 1.12);
     const peak = mk(new THREE.BoxGeometry(0.16, 0.012, 0.07), mat(helmetCol, { roughness: 0.22 }), this.head); peak.position.set(0, 0.255, 0.125); peak.rotation.x = -0.18;
+    // --- gang look: skull print on the balaclava, green stripe on the helmet, studded chain, back patch
+    { const teeth = mat(0xeeeeea, { roughness: 0.5 }), gap = mat(0x050505);
+      mk(new THREE.BoxGeometry(0.09, 0.03, 0.01), gap, this.head).position.set(0, 0.075, 0.1);
+      for (let k = -3; k <= 3; k++) mk(new THREE.BoxGeometry(0.0105, 0.026, 0.012), teeth, this.head).position.set(k * 0.0125, 0.075, 0.103);
+      mk(new THREE.BoxGeometry(0.1, 0.004, 0.012), gap, this.head).position.set(0, 0.075, 0.104);
+      const hs = mk(new THREE.BoxGeometry(0.026, 0.012, 0.25), mat(0x39ff6a, { emissive: 0x0f7a2a, emissiveIntensity: 0.7 }), this.head); hs.position.set(0, 0.318, -0.01); hs.rotation.x = 0.0;
+      const mChain = mat(0xb8bcc2, { metalness: 1, roughness: 0.25 });
+      for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2; const lk = mk(new THREE.TorusGeometry(0.018, 0.0058, 6, 10), mChain, this.torso); lk.position.set(Math.cos(a) * 0.185, 0.07 + Math.sin(a) * 0.01, Math.sin(a) * 0.125); lk.rotation.set(k % 2 ? 0 : Math.PI / 2, a, 0); }
+      for (let k = 0; k < 9; k++) { const a = Math.PI * 0.15 + (k / 8) * Math.PI * 0.7; const lk = mk(new THREE.TorusGeometry(0.016, 0.0055, 6, 10), mChain, this.torso); lk.position.set(Math.cos(a) * 0.13, 0.45 - Math.sin(a) * 0.1, 0.105 + Math.sin(a) * 0.02); lk.rotation.set(k % 2 ? 0 : Math.PI / 2, 0, 0); }
+      const skullTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#0c1a10'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#39ff6a'; x.lineWidth = 5; x.strokeRect(4, 4, 120, 120); x.fillStyle = '#eef4ee'; x.beginPath(); x.arc(64, 54, 30, 0, 7); x.fill(); x.fillRect(46, 70, 36, 22); x.fillStyle = '#0c1a10'; x.beginPath(); x.arc(52, 54, 8, 0, 7); x.arc(76, 54, 8, 0, 7); x.fill(); x.beginPath(); x.moveTo(64, 62); x.lineTo(59, 72); x.lineTo(69, 72); x.fill(); for (let k = 0; k < 4; k++) x.fillRect(52 + k * 7, 80, 2, 10); x.fillStyle = '#39ff6a'; x.font = '900 17px Arial Black, Arial'; x.textAlign = 'center'; x.fillText('GREEN', 64, 116); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const patch = mk(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshStandardMaterial({ map: skullTex, roughness: 0.7 }), this.torso); patch.position.set(0, 0.3, -0.115); patch.rotation.y = Math.PI; patch.castShadow = false; }
     // arms (pivot at shoulder)
     this.arms = [];
     for (const sx of [1, -1]) {
       const piv = new THREE.Group(); piv.position.set(sx * 0.21, 0.5, 0); this.torso.add(piv);
       mk(new THREE.SphereGeometry(0.066, 8, 6), mat(jacket), piv);
+      { const mSp = mat(0xb8bcc2, { metalness: 1, roughness: 0.25 }); for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; const sp = mk(new THREE.ConeGeometry(0.014, 0.065, 6), mSp, piv); sp.position.set(Math.cos(a) * 0.035 * (k % 2 ? 1 : 0.5) + sx * 0.02, 0.07, Math.sin(a) * 0.035); sp.rotation.z = -sx * 0.25; } }
       const arm = mk(new THREE.CapsuleGeometry(0.05, 0.46, 4, 8), mat(jacket), piv); arm.position.y = -0.3;
       const band = mk(new THREE.CylinderGeometry(0.057, 0.057, 0.04, 10), mat(0xdfe5e8, { metalness: 0.3 }), piv); band.position.y = -0.34;
       const gl = mat(0x141517), gk = mat(0xff7a1a);

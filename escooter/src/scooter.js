@@ -133,18 +133,18 @@ export class Scooter {
     tilt.add(rider);
     this.rider = rider;
     const std = (o) => new THREE.MeshStandardMaterial(o);
-    const mJacket = std({ color: 0x4a5560, roughness: 0.8 });
+    const mJacket = std({ color: 0x2a8a46, roughness: 0.8 });
     const mJacketDark = std({ color: 0x2c3138, roughness: 0.85 });
     const mReflect = std({ color: 0xdfe5e8, roughness: 0.35, metalness: 0.3, emissive: 0x303638, emissiveIntensity: 0.4 });
     const mPants = std({ color: 0x191b21, roughness: 0.85 });
     const mShoe = std({ color: 0xe9e9e9, roughness: 0.6 });
     const mSole = std({ color: 0x2a2a2d, roughness: 0.9 });
     const mGlove = std({ color: 0x141517, roughness: 0.7 });
-    const mHelmet = std({ color: 0xf2f2f0, roughness: 0.22, metalness: 0.25 });
+    const mHelmet = std({ color: 0x17191d, roughness: 0.22, metalness: 0.25 });
     const mBal = std({ color: 0x0c0c0e, roughness: 0.97 });
     const mSkin = std({ color: 0xc89878, roughness: 0.8 });
-    const mLens = std({ color: 0xff8a2a, roughness: 0.06, metalness: 0.95, envMapIntensity: 1.6 });
-    const mAccent = std({ color: 0xff7a1a, roughness: 0.6 });
+    const mLens = std({ color: 0x39ff6a, roughness: 0.06, metalness: 0.95, envMapIntensity: 1.6, emissive: 0x0f7a2a, emissiveIntensity: 0.9 });
+    const mAccent = std({ color: 0x39ff6a, roughness: 0.5, emissive: 0x0f7a2a, emissiveIntensity: 0.7 });
     const mk = (geo, mat, parent = rider) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
     this.rParts = {};
 
@@ -195,6 +195,10 @@ export class Scooter {
       const pu = mk(new THREE.BoxGeometry(0.008, 0.01, 0.004), mPupil); pu.userData.pos = [sx * 0.039, 0.004, 0.1108]; head.push(pu);
       const lid = mk(new THREE.BoxGeometry(0.042, 0.007, 0.012), mBal); lid.userData.pos = [sx * 0.037, 0.0185, 0.1018]; head.push(lid);
       const bw = mk(new THREE.BoxGeometry(0.05, 0.009, 0.012), mBrowC); bw.userData.pos = [sx * 0.038, 0.029, 0.1], bw.rotation.z = sx * -0.12; head.push(bw);
+    }
+    { // skull print on the balaclava
+      const gap = mk(new THREE.BoxGeometry(0.09, 0.03, 0.01), std({ color: 0x050505 })); gap.userData.pos = [0, -0.045, 0.097]; head.push(gap);
+      for (let k = -3; k <= 3; k++) { const th = mk(new THREE.BoxGeometry(0.0105, 0.026, 0.012), std({ color: 0xeeeeea, roughness: 0.5 })); th.userData.pos = [k * 0.0125, -0.045, 0.1]; head.push(th); }
     }
     const nose = mk(new THREE.SphereGeometry(0.02, 8, 6), mBal); nose.userData.pos = [0, -0.012, 0.1]; nose.scale.set(0.8, 1.1, 1); head.push(nose);
     const chinPad = mk(new THREE.BoxGeometry(0.07, 0.012, 0.02), mJacketDark); chinPad.userData.pos = [0, -0.08, 0.08]; head.push(chinPad);
@@ -329,6 +333,13 @@ export class Scooter {
     bodyPart(new THREE.TorusGeometry(0.1, 0.034, 8, 18), mJacketDark, [0, 0.215, -0.03], [1.1, 1, 0.9]).rotation.x = Math.PI / 2; // hood/collar roll
     bodyPart(new THREE.BoxGeometry(0.09, 0.05, 0.05), mJacket, [0, 0.215, -0.1]);                   // folded hood
     bodyPart(new THREE.BoxGeometry(0.02, 0.026, 0.012), mZip, [0, -0.2, 0.105]);                    // belt buckle
+    { // gang look: shoulder spikes, studded chain, skull patch on the back
+      const mSp = std({ color: 0xb8bcc2, metalness: 1, roughness: 0.25 });
+      for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) bodyPart(new THREE.ConeGeometry(0.016, 0.07, 6), mSp, [sx * (0.13 + k * 0.03), 0.275 - k * 0.02, -0.01 + (k - 1) * 0.03]).rotation.z = -sx * (0.5 + k * 0.2);
+      const skull = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#0c1a10'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#39ff6a'; x.lineWidth = 5; x.strokeRect(4, 4, 120, 120); x.fillStyle = '#eef4ee'; x.beginPath(); x.arc(64, 54, 30, 0, 7); x.fill(); x.fillRect(46, 70, 36, 22); x.fillStyle = '#0c1a10'; x.beginPath(); x.arc(52, 54, 8, 0, 7); x.arc(76, 54, 8, 0, 7); x.fill(); x.beginPath(); x.moveTo(64, 62); x.lineTo(59, 72); x.lineTo(69, 72); x.fill(); for (let k = 0; k < 4; k++) x.fillRect(52 + k * 7, 80, 2, 10); x.fillStyle = '#39ff6a'; x.font = '900 17px Arial Black, Arial'; x.textAlign = 'center'; x.fillText('GREEN', 64, 116); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const bp = bodyPart(new THREE.PlaneGeometry(0.22, 0.22), std({ map: skull, roughness: 0.7 }), [0, 0.03, -0.108]); bp.rotation.y = Math.PI; bp.castShadow = false;
+      for (let k = 0; k < 11; k++) { const a = Math.PI * 0.1 + (k / 10) * Math.PI * 0.8; bodyPart(new THREE.TorusGeometry(0.016, 0.0055, 6, 10), std({ color: 0xb8bcc2, metalness: 1, roughness: 0.25 }), [Math.cos(a) * 0.13, 0.2 - Math.sin(a) * 0.12, 0.1]).rotation.x = k % 2 ? 0 : Math.PI / 2; }
+    }
     this.torsoDetail = detail;
     this.pelvis = mk(new THREE.SphereGeometry(0.135, 14, 10), mPants); this.pelvis.scale.set(1.15 * K, 0.85 * K, 0.95 * K);
     this.kneePads = [0, 1].map(() => { const g = new THREE.Group(); const m = mk(new THREE.BoxGeometry(0.1, 0.11, 0.05), mJacketDark, g); const t = mk(new THREE.BoxGeometry(0.07, 0.014, 0.012), mReflect, g); t.position.set(0, 0.0, 0.028); g.scale.setScalar(K); rider.add(g); return g; });

@@ -298,7 +298,8 @@ window.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'KeyC': toggleCam(); break;
     case 'Backspace': resetOnRoad(); e.preventDefault(); break;
-    case 'KeyH': setWbar(!cfg.wbar); break;
+    case 'KeyH': callCrew(); break;
+    case 'KeyU': setWbar(!cfg.wbar); break;
     case 'KeyN': toggleKnife(); break;
     case 'KeyQ': toggleGun(); break;
     case 'KeyR': if (st.mode === 'walk' && st.gun) { walker.reload(); } else toggleOneHand(); break;
@@ -1589,7 +1590,7 @@ const bubbleEls = [];
 for (let i = 0; i < 4; i++) { const el = document.createElement('div'); el.className = 'bubble hidden'; $('bubbles').appendChild(el); bubbleEls.push(el); }
 const _bv = new THREE.Vector3();
 function updateBubbles() {
-  const list = peds.list.filter((p) => p.active && ((p.elder && (p.anger > 14 || p.sayT > 0)) || (p.kind === 'teen' && p.sayT > 0))).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
+  const list = peds.list.filter((p) => p.active && ((p.elder && (p.anger > 14 || p.sayT > 0)) || (p.kind === 'teen' && p.sayT > 0) || (p.kind === 'crew' && p.sayT > 0))).map((p) => ({ p, d: Math.hypot(p.x - me.x, p.z - me.z) })).sort((a, b) => a.d - b.d).slice(0, 4);
   const W = window.innerWidth, H = window.innerHeight;
   for (let i = 0; i < 4; i++) {
     const el = bubbleEls[i], it = list[i];
@@ -1599,9 +1600,9 @@ function updateBubbles() {
     if (_bv.z > 1 || _bv.z < -1 || Math.abs(_bv.x) > 1.2) { el.classList.add('hidden'); continue; }
     el.classList.remove('hidden');
     el.style.transform = `translate(${((_bv.x * 0.5 + 0.5) * W).toFixed(0)}px, ${((-_bv.y * 0.5 + 0.5) * H).toFixed(0)}px) translate(-50%,-100%)`;
-    const teen = p.kind === 'teen';
-    const face = teen ? (p.rowdy ? '😈' : '😎') : p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : p.kind === 'bum' ? '🍺' : '🙂';
-    const who = teen ? (p.rowdy ? 'Halbstarker' : 'Netter Typ') : p.kind === 'bum' ? 'Obdachloser' : p.kind === 'oma' ? 'Oma' : 'Opa';
+    const crew = p.kind === 'crew', ally = p.kind === 'teen' && p.gang !== undefined && peds.gangs[p.gang].ally, teen = p.kind === 'teen';
+    const face = crew || ally ? '💚' : teen ? (p.rowdy ? '😈' : '😎') : p.chase > 0 ? '🤬' : p.mood >= 2 ? '😡' : p.mood === 1 ? '😠' : p.kind === 'bum' ? '🍺' : '🙂';
+    const who = crew ? 'Deine Gang' : ally ? 'Grüne Gang (Freund)' : teen ? (p.rowdy ? 'Halbstarker' : 'Netter Typ') : p.kind === 'bum' ? 'Obdachloser' : p.kind === 'oma' ? 'Oma' : 'Opa';
     const html = `<b>${face} ${who}</b>${p.sayT > 0 ? '<span>' + p.say + '</span>' : ''}${teen ? '' : `<i><u style="width:${p.anger.toFixed(0)}%;background:${p.anger > 80 ? '#ff3b3b' : p.anger > 50 ? '#ff9a2a' : '#ffd23a'}"></u></i>`}`;
     if (el._h !== html) { el._h = html; el.innerHTML = html; }
   }
@@ -1619,6 +1620,21 @@ peds.onShove = (p) => {
   audio.thud(5);
   st.crashT = 0.4; $('crash').style.opacity = 0.6;
   if (st.mode === 'walk') walker.stun = 0.9; else scooter.v *= 0.3;
+};
+function callCrew() {
+  if (st.track || st.paused || st.shopOpen) return;
+  const hd = me.heading;
+  const n = peds.spawnCrew(me.x, me.z, hd);
+  const all = peds.crewCount();
+  if (n > 0) { audio.chime([392, 523, 659]); toast('💚 Deine Gang ist da!', `${all} Grüne mit Waffen kämpfen für dich · nochmal H = ruft alle zu dir`, 3000); }
+  else toast('💚 Deine Gang', `alle ${all} sind bei dir – sie schießen auf Feinde, die dich bedrohen`, 2200);
+}
+peds.onCrewShot = (p, tx, tz, hit) => {
+  addTracer(p.x + Math.sin(p.yawT) * 0.5, 1.25, p.z + Math.cos(p.yawT) * 0.5, tx, 1.15, tz);
+  const d = Math.hypot(p.x - me.x, p.z - me.z);
+  if (d < 70) audio.shot(clamp(1 - d / 80, 0.15, 0.55));
+  if (hit && cfg.blood) blood.splash(tx, 1.15, tz, tx - p.x, tz - p.z, 18);
+  if (hit && d < 60) audio.thud(3);
 };
 peds.onBrawlHit = (x, z, bleed) => {
   const d = Math.hypot(x - me.x, z - me.z);
