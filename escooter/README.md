@@ -246,6 +246,9 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Parks:** Teich mit Steinen, Schilf und Seerosen, Gras-Büschel, Wildblumen-Beete, Steinkanten an den Wegen, Picknickdecken.
 * **Autos:** Radlauf-Kanten, rote Bremssättel, Nummernschilder mit EU-Feld und Buchstaben.
 
+## Grafikqualität 420p
+* Neue Stufe **„420p (Retro, sehr schnell)“** (Menü → Grafikqualität): das Spiel rendert fest mit 420 Pixeln Höhe und skaliert aufs Fenster hoch – deutlich flüssiger auf schwachen Rechnern, ohne automatische Auflösungsanpassung. Sie ist jetzt die Standardeinstellung (einmalig auf alle gesetzt); Niedrig/Mittel/Hoch sind weiter wählbar.
+
 ## Entwickeln
 
 ```
