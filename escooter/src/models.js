@@ -705,7 +705,8 @@ export function decorate(m) {
   // bell on the left of the bar, phone holder with a glowing navigation screen on the right
   const brass = std({ color: 0xd8d9dc, roughness: 0.2, metalness: 1, envMapIntensity: 1.6 });
   add(m.steer, new THREE.CylinderGeometry(0.012, 0.012, 0.03, 8), dark, gx * 0.55, gy + 0.018, -0.02);
-  const bell = add(m.steer, new THREE.SphereGeometry(0.03, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), brass, gx * 0.55, gy + 0.034, -0.02);
+  const bell = add(m.steer, new THREE.CylinderGeometry(0.022, 0.034, 0.05, 14), dark, gx * 0.55, gy + 0.05, -0.02); bell.rotation.x = Math.PI / 2 - 0.3; // electric horn
+  add(m.steer, new THREE.TorusGeometry(0.034, 0.004, 6, 14), brass, gx * 0.55, gy + 0.05, 0.003).rotation.x = -0.3;
   add(m.steer, new THREE.BoxGeometry(0.03, 0.006, 0.012), dark, gx * 0.55 + 0.015, gy + 0.037, 0.03).rotation.z = 0.2;
   const navTex = textCanvas(64, 112, (x, w, h) => {
     x.fillStyle = '#0d1b2a'; x.fillRect(0, 0, w, h);

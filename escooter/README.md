@@ -36,7 +36,8 @@ Ampeln, Verkehr und NPCs laufen lokal auf jedem Client.
 | `R` | **Eine Hand** vom Lenker nehmen (Einhand-Wheelie zahlt mehr als das Doppelte) – nochmal `R` = wieder beide Hände |
 | `Backspace` | Reset – setzt dich auf die nächste Straße / Strecke |
 | `H` | **Wheelie-Bar** an/aus (begrenzt den Wheelie auf ca. 32°, sicherer; im Menü ebenfalls) |
-| `L` / `B` | Licht an/aus · Klingel |
+| `G` | **Vape** ziehen (einmal kaufen: Kiosk im Simson-Laden 20 € oder Supermarkt/Tankstelle) – dicke weiße Wolke, leuchtende LED. FPS-Anzeige jetzt auf `O` |
+| `L` / `B` | Licht an/aus · Hupe (halten) |
 | `T` | Tageszeit um 3 h vorstellen |
 | `M` | Ton an/aus |
 | `Esc` / `P` | Pause / Menü (Einstellungen: Qualität, Akku-Modus, Tageszeit, nasse Straße …) |
@@ -193,7 +194,7 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Absteigen & laufen** (`F`): Der Roller bleibt mit Seitenständer stehen, du läufst/rennst in 3rd- oder 1st-Person
   (`C`), kannst in den Shop und wieder aufsteigen.
 * **Oma & Opa**: schlendern mit Rollator, Handtasche oder Gehstock über die Gehwege. Fährst/stehst du länger neben ihnen
-  (schneller = nerviger, Klingel `B` zusätzlich), steigt ihr Ärger-Balken (😠 → 😡). Bei 100 % rennen sie dir mit
+  (schneller = nerviger, Hupe `B` zusätzlich), steigt ihr Ärger-Balken (😠 → 😡). Bei 100 % rennen sie dir mit
   **10 km/h hinterher** (🤬) – erwischen sie dich, gibt es Prügel mit Handtasche/Stock (−25 €). Fährst du sie um: −100 Punkte.
 * **Multiplayer**: andere Spieler fahren/laufen mit Namensschild, Farbe und VESC-Anzeige, kollidieren mit dir und
   chatten mit dir.
@@ -213,6 +214,12 @@ Auf Touch-Geräten erscheinen Bildschirm-Tasten, Gamepads (Stick + Trigger) funk
 * **Wind:** Baumkronen wiegen sich im Wind (stärker bei Regen).
 * **Leben in der Luft:** tagsüber fallende Blätter und Pollen, nachts Glühwürmchen.
 * **Blumenkästen** mit bunten Blumen zwischen den Straßenbäumen.
+
+## Auto-Update: Tacho, Sicht, Hupe, Vape 🚗💨
+* **Im Auto mehr sehen:** deutlich größeres Sichtfeld (Ich-Perspektive und Verfolgerkamera), höhere Sitzposition, der Fahrer verdeckt die Sicht nicht mehr.
+* **Tacho** auf dem Armaturenbrett (analoge Skala mit Nadel + Digitalanzeige, passt sich der Höchstgeschwindigkeit an – beim Sportwagen bis 700).
+* **Hupe statt Klingel** bei Autos (Zweiklang), Mopeds (nasal) und E-Rollern (elektrisch): `B` halten = durchhupen.
+* **Vape** 💨: `G` = ziehen, dicke Wolke, LED glüht; zu Fuß, auf dem Roller und in der Ich-Perspektive.
 
 ## Entwickeln
 

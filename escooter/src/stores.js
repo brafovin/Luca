@@ -16,6 +16,7 @@ export const PRODUCTS = [
   { id: 9, name: 'Brot', price: 1.79, shape: 'box', w: 0.34, h: 0.13, d: 0.12, cols: ['#a8703a', '#c89050'], fx: 'food' },
   { id: 10, name: 'Waschmittel', price: 6.99, shape: 'box', w: 0.3, h: 0.36, d: 0.16, cols: ['#2a7ac4', '#e8e8e8', '#2fb04a'], fx: 'misc' },
   { id: 11, name: 'Zahnpasta', price: 1.95, shape: 'box', w: 0.16, h: 0.05, d: 0.04, cols: ['#e8e8e8', '#2fb0d4'], fx: 'misc' },
+  { id: 12, name: 'Vape', price: 14.99, shape: 'box', w: 0.06, h: 0.14, d: 0.035, cols: ['#14151a', '#7a2fd0', '#ff4fa3', '#17d6ff'], fx: 'vape' },
 ];
 
 const LEVELS = [0.42, 0.95, 1.48]; // y of the item rows on a gondola (shelf boards sit just below)
@@ -24,7 +25,7 @@ export const LEVEL_Y = LEVELS;
 function marketLayout() {
   const x0 = LOT0 + 8, w = 44, z0 = LOT0 + 1, d = 30, x1 = x0 + w, z1 = z0 + d, cx = (x0 + x1) / 2;
   const gz = [z0 + 11.5, z0 + 16, z0 + 20.5, z0 + 25];
-  const cats = [[0, 1, 3], [4, 5, 11], [6, 7, 10], [8, 2, 9]];
+  const cats = [[0, 1, 3], [4, 5, 12], [6, 7, 10], [8, 2, 9]];
   const gondolas = gz.map((z, k) => ({ x: cx, z, len: 26, depth: 1.2, alongX: true, cats: cats[k], faces: [1, -1] }));
   const sides = [
     { x: x0 + 0.95, z: (z0 + 9 + z1 - 3) / 2, len: z1 - 3 - z0 - 9, depth: 0.8, alongX: false, cats: [3, 2, 0], faces: [1] },
@@ -38,7 +39,7 @@ function marketLayout() {
 
 function gasLayout() {
   const x0 = LOT0 + 14, w = 28, z0 = LOT0 + 38, d = 14, x1 = x0 + w, z1 = z0 + d, cx = (x0 + x1) / 2;
-  const gondolas = [z0 + 6.4, z0 + 9.8].map((z, k) => ({ x: cx - 4, z, len: 14, depth: 1.0, alongX: true, cats: k ? [4, 5, 6] : [0, 1, 3], faces: [1, -1] }));
+  const gondolas = [z0 + 6.4, z0 + 9.8].map((z, k) => ({ x: cx - 4, z, len: 14, depth: 1.0, alongX: true, cats: k ? [4, 12, 6] : [0, 1, 3], faces: [1, -1] }));
   const chillers = [{ x: cx, z: z1 - 0.95, len: w - 6, depth: 1.0, alongX: true, cats: [8, 0, 1, 2], faces: [-1], chill: true }];
   const tills = [{ x: cx + 7.5, z: z0 + 3.4, alongX: true, cashier: { x: cx + 7.5, z: z0 + 2.4, yaw: 0 }, pay: { x: cx + 7.5, z: z0 + 5.0 }, queue: { x: cx + 7.5, z: z0 + 5.2 }, gap: cx + 4.5 }];
   const lanes = [z0 + 4.6, (gondolas[0].z + gondolas[1].z) / 2, z0 + 11.9];

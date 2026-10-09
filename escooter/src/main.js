@@ -1,6 +1,7 @@
 import { CARS, CAR_IDS } from './pcar.js';
 import { Shops } from './shops.js';
 import { Horizon } from './horizon.js';
+import { buildVape } from './vape.js';
 import { Ambient } from './ambient.js';
 import { LAYOUT } from './stores.js';
 import * as THREE from 'three';
@@ -148,6 +149,7 @@ const SHOP_MODELS = {
   schwalbe: { price: 1100, key: '', name: 'Simson Schwalbe KR51', sound: [196, 262, 330, 440], shop: 2 },
 };
 for (const c of Object.values(CARS)) SHOP_MODELS[c.id] = { price: c.price, key: '', name: c.name, sound: [262, 330, 392, 523, 659], shop: 3, car: true };
+const VAPE_PRICE = 20;
 const MTX_PRICE = 600, PZ_PRICE = 250, CIG_PRICE = 8;
 const st = {
   running: false, paused: true, fp: false, userHead: null, resScale: 1,
@@ -303,7 +305,8 @@ window.addEventListener('keydown', (e) => {
     case 'KeyP': case 'Escape': if (st.started) setPaused(!st.paused); break;
     case 'Enter': if (st.paused) $('btnStart').click(); else { openChat(); e.preventDefault(); } break;
     case 'KeyL': st.userHead = !(st.userHead ?? sky.lampsOn > 0.4); toast(st.userHead ? 'Licht an' : 'Licht aus', '', 900); break;
-    case 'KeyB': audio.bell(); peds.bell(me.x, me.z); break;
+    case 'KeyB': { const hk = hornKind(); if (hk && !e.repeat) { audio.hornStart(hk); peds.bell(me.x, me.z); } break; }
+    case 'KeyG': vapeKey(); break;
     case 'KeyX': switchModel(); break;
     case 'KeyK': setPolice(!cfg.police); break;
     case 'KeyV': toggleTrack(); break;
@@ -311,10 +314,12 @@ window.addEventListener('keydown', (e) => {
     case 'KeyM': audio.setMuted(!audio.muted); toast(audio.muted ? 'Ton aus' : 'Ton an', '', 900); break;
     case 'KeyT': cfg.hours = (cfg.hours + 3) % 24; $('optTime').value = cfg.hours; break;
     case 'KeyI': dropBasket(); break;
-    case 'KeyG': st.showFps = !st.showFps; $('fps').classList.toggle('hidden', !st.showFps); break;
+    case 'KeyO': st.showFps = !st.showFps; $('fps').classList.toggle('hidden', !st.showFps); break;
   }
 });
-window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'KeyB') audio.hornStop(); });
+window.addEventListener('blur', () => audio.hornStop());
+function hornKind() { return st.mode !== 'ride' ? null : scooter.model.car ? 'car' : scooter.model.moped ? 'moped' : 'scooter'; }
 
 // mouse steering: click into the game to capture the cursor; moving the mouse left/right steers
 function lockMouse() {
@@ -911,6 +916,7 @@ function payBasket() {
   let extra = '';
   for (const it of st.basket) {
     if (it.fx === 'energy') { st.energyT = 90; extra = ' · ⚡ schneller laufen (90 s)'; }
+    if (it.fx === 'vape' && !st.vape) { st.vape = true; store.set('vape', true); extra += ' · 💨 Vape: G = ziehen'; }
     st.score += it.fx === 'misc' ? 10 : 25;
   }
   audio.chime([660, 880]);
@@ -1031,6 +1037,7 @@ function renderShop() {
     }
   } else if (t.id === 'kiosk') {
     h += `<div class="srow"><div class="sinfo"><b>Zigaretten (20 Stück)</b><small>Du hast <b>${st.cigs}</b>. Mit <b>Z</b> zündest du dir eine an (brennt ~45 s, Rauch steigt auf). Rauchen schadet der Gesundheit.</small></div><button class="buy" data-act="cig" ${st.money < CIG_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${CIG_PRICE} €</button></div>`;
+    h += `<div class="srow"><div class="sinfo"><b>Vape</b><small>Mit <b>G</b> ziehst du – dicke weiße Wolke, leuchtende LED, unbegrenzt nutzbar.</small></div>` + (st.vape ? `<span class="sown">✓ gekauft</span>` : `<button class="buy" data-act="vape" ${st.money < VAPE_PRICE ? 'data-poor="1"' : ''}>Kaufen · ${VAPE_PRICE} €</button>`) + `</div>`;
   } else if (t.id === 'scooters') {
     const rows = [['g4', 'KuKirin G4', 0, 'Starter · 65 km/h (Turbo 100) · VESC 150'], ['zt3', 'ZT3 Pro', SHOP_MODELS.zt3.price, '40 km/h · VESC 70'], ['g2', 'Kukirin G2', SHOP_MODELS.g2.price, '55 km/h · VESC 70'], ['dt3', 'Dualtron Thunder 3', SHOP_MODELS.dt3.price, '110 km/h (Turbo 170) · VESC 235'], ['sonic', 'Weped Sonic', SHOP_MODELS.sonic.price, '200 km/h (Turbo 300) · VESC 500 · Rennstrecke: bis 5000 km/h']];
     for (const [id, name, price, info] of rows) {
@@ -1060,6 +1067,7 @@ function renderShop() {
     else if (a === 'use') { setModel(b.dataset.id); if (SHOP_MODELS[b.dataset.id].car && st.mode === 'walk') deliverCar(); renderShop(); }
     else if (a === 'up') buyUpgrade(b.dataset.id);
     else if (a === 'cig') { if (st.money >= CIG_PRICE) { earn(-CIG_PRICE); st.cigs += 20; store.set('cigs', st.cigs); audio.chime([523, 659]); renderShop(); } }
+    else if (a === 'vape') { if (st.money >= VAPE_PRICE) { earn(-VAPE_PRICE); st.vape = true; store.set('vape', true); audio.chime([523, 659, 880]); toast('💨 Vape gekauft', 'G = ziehen', 2400); renderShop(); } }
     else if (a === 'paint') buyPaint(st.paintSel, b.dataset.part, b.dataset.color);
   }));
   const sel = $('paintSel'); if (sel) sel.onchange = () => { st.paintSel = sel.value; renderShop(); };
@@ -1099,6 +1107,42 @@ function smokeKey() {
   applySmoke(); toast('🚬 Zigarette an', `noch ${st.cigs} · Z = ziehen · Y = ausdrücken`, 2200);
 }
 const toggleSmoke = smokeKey;
+/* ---- vape: G = take a drag (big white cloud) */
+st.vape = store.get('vape', false); st.vapeT = -1;
+const vapeFP = buildVape(-1, 1.15);
+vapeFP.group.visible = false; camera.add(vapeFP.group); for (const m of vapeFP.group.children) m.renderOrder = 5;
+function vapeKey() {
+  if (st.track || st.shopOpen || st.paused) return;
+  if (!st.vape) { toast('Du hast keine Vape', 'Gibt es im Kiosk (Simson-Laden) und im Supermarkt / an der Tankstelle', 2600); return; }
+  if (st.vapeT >= 0) return;
+  st.vapeT = 0; audio.vape();
+}
+function updateVape(dt) {
+  const fp = st.fp && !st.dbgCam, walking = st.mode === 'walk';
+  if (st.vapeT < 0) { if (scooter.vape.visible) scooter.vape.visible = false; if (walker.model.vape.visible) walker.model.vape.visible = false; if (vapeFP.group.visible) vapeFP.group.visible = false; return; }
+  st.vapeT += dt;
+  const t = st.vapeT;
+  const amt = t < 0.7 ? t / 0.7 : t < 1.7 ? 1 : Math.max(0, 1 - (t - 1.7) / 0.5);
+  const glow = t < 1.5 ? Math.min(1, t / 0.5) : Math.max(0, 1 - (t - 1.5) / 0.7);
+  const show = t < 2.3;
+  walker.model.vape.visible = show && walking; scooter.vape.visible = show && !walking && !fp; vapeFP.group.visible = show && fp;
+  _vc.setRGB(0.25 + 0.6 * glow, 0.1 + 0.2 * glow, 0.5 + 0.5 * glow);
+  scooter.vapeLed.color.copy(_vc); walker.model.vapeLed.color.copy(_vc); vapeFP.led.color.copy(_vc);
+  scooter.dragAmt = Math.max(scooter.dragAmt || 0, amt); walker.model.dragAmt = Math.max(walker.model.dragAmt || 0, amt);
+  if (fp) { vapeFP.group.position.set(0.045 - 0.04 * amt, -0.085 + 0.03 * amt, -0.2); vapeFP.group.rotation.set(0.0 + 0.1 * amt, 0.12 - 0.1 * amt, -0.05); }
+  if (t > 1.5 && t < 3.9) { // exhale a big cloud
+    st.vapAcc = (st.vapAcc || 0) + 55 * dt;
+    while (st.vapAcc >= 1) {
+      st.vapAcc--;
+      let dx, dy, dz;
+      if (fp) { camera.getWorldDirection(_fw); _sp.copy(camera.position).addScaledVector(_fw, 0.4); _sp.y -= 0.08; dx = _fw.x * 1.1; dy = 0.08; dz = _fw.z * 1.1; }
+      else { const yw = walking ? walker.yaw : scooter.heading; (walking ? walker.model.vapeTip : scooter.vapeTip).getWorldPosition(_sp); _sp.x += Math.sin(yw) * 0.12; _sp.z += Math.cos(yw) * 0.12; dx = Math.sin(yw) * 1.1; dy = 0.2; dz = Math.cos(yw) * 1.1; }
+      smoke.emit(_sp.x, _sp.y, _sp.z, dx + (Math.random() - 0.5) * 0.4, dy, dz + (Math.random() - 0.5) * 0.4, 'vape', 1);
+    }
+  }
+  if (t > 4.2) { st.vapeT = -1; if (st.smokeT <= 0) { scooter.dragAmt = 0; walker.model.dragAmt = 0; } }
+}
+const _vc = new THREE.Color();
 function putOut() {
   if (st.smokeT <= 0) return;
   st.smokeT = 0; st.dragT = -1; applySmoke(); toast('Zigarette ausgedrückt', '', 1100);
@@ -1174,6 +1218,7 @@ function updateSmoke(dt) {
     if (st.puffT <= 0 && st.dragT < 0) { st.puffT = 9 + Math.random() * 5; st.dragT = 0; }
     if (st.smokeT <= 0) { st.dragT = -1; applySmoke(); toast('Zigarette aufgeraucht', '', 1200); }
   } else if (st.smokeT <= 0 && cigFP.visible) cigFP.visible = false;
+  updateVape(dt);
   smoke.update(dt);
 }
 const _ec = new THREE.Color();
@@ -1307,7 +1352,7 @@ function updateCamera(dt, first) {
     fpLook.getWorldQuaternion(camera.quaternion);
     const sh = s.shake * 0.04 + Math.min(spd, 140) * 0.0007;
     camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh;
-    camera.fov = lerp(camera.fov, baseFov + 6, 0.1);
+    camera.fov = lerp(camera.fov, baseFov + 6 + (s.model.fovAdd || 0), 0.1);
   } else {
     const cmul = s.model.camMul || 1;
     const dist = (3.5 + Math.min(spd / s.vTurbo, 1) * 1.8) * zoom * cmul;
@@ -1331,7 +1376,7 @@ function updateCamera(dt, first) {
     camera.position.y += (Math.random() - 0.5) * sh;
     camera.lookAt(tx, ty, tz);
     camera.rotateZ(-s.lean * 0.12);
-    camera.fov = lerp(camera.fov, baseFov, 0.1);
+    camera.fov = lerp(camera.fov, baseFov + (s.model.car ? 12 : 0), 0.1);
   }
   camera.updateProjectionMatrix();
 }
@@ -1581,7 +1626,7 @@ peds.onSmack = (p) => {
   const how = bum ? 'mit der Bierflasche' : p.kind === 'oma' ? 'mit der Handtasche' : 'mit dem Gehstock';
   earn(-25);
   toast(`${who} erwischt dich!`, `Ein Schlag ${how} · −25 €`, 2400);
-  audio.thud(6); audio.bell();
+  audio.thud(6);
   st.crashT = 0.5; $('crash').style.opacity = 0.7;
   if (st.mode === 'walk') walker.stun = 1.1; else scooter.v *= 0.2;
 };
@@ -1682,7 +1727,7 @@ function tick(dt, now, render = true) {
     if (st.track) trackUpdate(dt2);
     if (scooter.pedHit) {
       const p = scooter.pedHit; scooter.pedHit = null;
-      if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : p.elder ? (p.kind === 'oma' ? 'Oma umgefahren!' : 'Opa umgefahren!') : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.bell(); if (p.elder) p.anger = Math.min(100, p.anger + 40); }
+      if (!p.down || p.down <= 0) { p.down = 3.2; st.score = Math.max(0, st.score - 100); toast(p.kind === 'scooter' ? 'Pass auf, Roller-Fahrer!' : p.elder ? (p.kind === 'oma' ? 'Oma umgefahren!' : 'Opa umgefahren!') : 'Vorsicht, Fußgänger!', '−100 Punkte', 1500); audio.honk(hornKind() || 'scooter', 0.18); if (p.elder) p.anger = Math.min(100, p.anger + 40); }
     }
     simAcc = 0;
     const dOdo = scooter.odo - odo0;
