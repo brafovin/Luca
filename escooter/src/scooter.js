@@ -200,10 +200,10 @@ export class Scooter {
     const headG = new THREE.Group(); rider.add(headG); this.headG = headG;
     { // cigarette (shown while smoking)
       const cg = new THREE.Group(); cg.position.set(0.022, -0.052, 0.098); cg.rotation.x = 0.12; cg.visible = false; headG.add(cg);
-      const body = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.1), std({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = 0.056; cg.add(body);
-      const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0165, 0.0165, 0.032), std({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0; cg.add(filt);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 12).rotateX(Math.PI / 2), std({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = 0.056; cg.add(body);
+      const filt = new THREE.Mesh(new THREE.CylinderGeometry(0.00825, 0.00825, 0.032, 12).rotateX(Math.PI / 2), std({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0; cg.add(filt);
       const emMat = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false });
-      const ember = new THREE.Mesh(new THREE.BoxGeometry(0.0145, 0.0145, 0.01), emMat); ember.position.z = 0.111; cg.add(ember);
+      const ember = new THREE.Mesh(new THREE.CylinderGeometry(0.00725, 0.00725, 0.01, 12).rotateX(Math.PI / 2), emMat); ember.position.z = 0.111; cg.add(ember);
       const tip = new THREE.Object3D(); tip.position.z = 0.118; cg.add(tip);
       this.cig = cg; this.cigTip = tip; this.cigEmber = emMat; this.cigEmberMesh = ember;
     }

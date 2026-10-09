@@ -36555,13 +36555,13 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
       this.cig.visible = false;
       this.head.add(this.cig);
       {
-        const b = new Mesh(new BoxGeometry(0.016, 0.016, 0.1), mat(15921384));
+        const b = new Mesh(new CylinderGeometry(8e-3, 8e-3, 0.1, 12).rotateX(Math.PI / 2), mat(15921384));
         b.position.z = 0.056;
         this.cig.add(b);
-        const f = new Mesh(new BoxGeometry(0.0165, 0.0165, 0.032), mat(14198880));
+        const f = new Mesh(new CylinderGeometry(825e-5, 825e-5, 0.032, 12).rotateX(Math.PI / 2), mat(14198880));
         this.cig.add(f);
         this.cigEmber = new MeshBasicMaterial({ color: 16738842, toneMapped: false });
-        const e = new Mesh(new BoxGeometry(0.0145, 0.0145, 0.01), this.cigEmber);
+        const e = new Mesh(new CylinderGeometry(725e-5, 725e-5, 0.01, 12).rotateX(Math.PI / 2), this.cigEmber);
         e.position.z = 0.111;
         this.cig.add(e);
         const tp = new Object3D();
@@ -38445,14 +38445,14 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         cg.rotation.x = 0.12;
         cg.visible = false;
         headG.add(cg);
-        const body = new Mesh(new BoxGeometry(0.016, 0.016, 0.1), std2({ color: 15921384, roughness: 0.9 }));
+        const body = new Mesh(new CylinderGeometry(8e-3, 8e-3, 0.1, 12).rotateX(Math.PI / 2), std2({ color: 15921384, roughness: 0.9 }));
         body.position.z = 0.056;
         cg.add(body);
-        const filt = new Mesh(new BoxGeometry(0.0165, 0.0165, 0.032), std2({ color: 14198880, roughness: 0.9 }));
+        const filt = new Mesh(new CylinderGeometry(825e-5, 825e-5, 0.032, 12).rotateX(Math.PI / 2), std2({ color: 14198880, roughness: 0.9 }));
         filt.position.z = 0;
         cg.add(filt);
         const emMat = new MeshBasicMaterial({ color: 16738842, toneMapped: false });
-        const ember = new Mesh(new BoxGeometry(0.0145, 0.0145, 0.01), emMat);
+        const ember = new Mesh(new CylinderGeometry(725e-5, 725e-5, 0.01, 12).rotateX(Math.PI / 2), emMat);
         ember.position.z = 0.111;
         cg.add(ember);
         const tip = new Object3D();
@@ -40493,6 +40493,12 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         scene2.add(m);
         return m;
       };
+      const roundLimb = (r, h, sz) => {
+        const g = new CapsuleGeometry(r, h - 2 * r, 5, 12);
+        g.scale(1, 1, sz);
+        g.translate(0, -h / 2, 0);
+        return g;
+      };
       const box2 = (w, h, d, pivotTop) => {
         const g = new BoxGeometry(w, h, d);
         if (pivotTop) g.translate(0, -h / 2, 0);
@@ -40595,12 +40601,12 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
           B.box(0, -0.06, 0.112, 0.036, 0.012, 0.01, "#4a1a1a");
         }), true),
         hood: mk2(new SphereGeometry(0.148, 14, 10, Math.PI * 0.82, Math.PI * 1.36, 0, Math.PI * 0.7)),
-        torso: mk2(box2(0.36, 0.56, 0.2)),
+        torso: mk2(new CapsuleGeometry(0.112, 0.336, 6, 16).scale(1.72, 1, 1.02)),
         head: mk2(new SphereGeometry(0.11, 10, 8)),
-        legL: mk2(box2(0.15, 0.82, 0.17, true)),
-        legR: mk2(box2(0.15, 0.82, 0.17, true)),
-        armL: mk2(box2(0.1, 0.58, 0.12, true)),
-        armR: mk2(box2(0.1, 0.58, 0.12, true)),
+        legL: mk2(roundLimb(0.088, 0.82, 1.08)),
+        legR: mk2(roundLimb(0.088, 0.82, 1.08)),
+        armL: mk2(roundLimb(0.06, 0.58, 1.1)),
+        armR: mk2(roundLimb(0.06, 0.58, 1.1)),
         hair: mk2(new SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
         cap: mk2(new CylinderGeometry(0.125, 0.135, 0.05, 12)),
         cart: mk2(mergedGeo((B) => {
@@ -40623,9 +40629,10 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
         bag: mk2(bagGeo, true),
         roll: mk2(rollGeo, true),
         cigT: mk2(mergedGeo((B) => {
-          B.box(0.022, -0.052, 0.14, 0.016, 0.016, 0.09, "#f2f0e8");
-          B.box(0.022, -0.052, 0.19, 0.0145, 0.0145, 0.012, "#ff6a1a");
-          B.box(0.022, -0.052, 0.098, 0.0165, 0.0165, 0.03, "#d8a860");
+          const cz = (r, l, z, col) => B.geo(new CylinderGeometry(r, r, l, 10).rotateX(Math.PI / 2), new Matrix4().makeTranslation(0.022, -0.052, z), col);
+          cz(8e-3, 0.09, 0.14, "#f2f0e8");
+          cz(72e-4, 0.012, 0.19, "#ff6a1a");
+          cz(83e-4, 0.03, 0.098, "#d8a860");
         }), true),
         swing: mk2(mergedGeo((B) => {
           for (const sx of [-0.14, 0.14]) B.box(sx, -0.8, 0, 0.012, 1.6, 0.012, "#8a8d92");
@@ -45872,11 +45879,11 @@ vec3 pastel(float h){ return h < 0.2 ? vec3(0.95,0.78,0.42) : h < 0.4 ? vec3(0.5
   var cigFPEmber = new MeshBasicMaterial({ color: 16738842, toneMapped: false });
   var cigFPTip = new Object3D();
   {
-    const body = new Mesh(new BoxGeometry(0.016, 0.016, 0.16), new MeshStandardMaterial({ color: 15921384, roughness: 0.9 }));
+    const body = new Mesh(new CylinderGeometry(8e-3, 8e-3, 0.16, 12).rotateX(Math.PI / 2), new MeshStandardMaterial({ color: 15921384, roughness: 0.9 }));
     body.position.z = -0.08;
-    const filt = new Mesh(new BoxGeometry(0.0172, 0.0172, 0.05), new MeshStandardMaterial({ color: 14198880, roughness: 0.9 }));
+    const filt = new Mesh(new CylinderGeometry(86e-4, 86e-4, 0.05, 12).rotateX(Math.PI / 2), new MeshStandardMaterial({ color: 14198880, roughness: 0.9 }));
     filt.position.z = 0;
-    const ember = new Mesh(new BoxGeometry(0.0155, 0.0155, 0.012), cigFPEmber);
+    const ember = new Mesh(new CylinderGeometry(775e-5, 775e-5, 0.012, 12).rotateX(Math.PI / 2), cigFPEmber);
     ember.position.z = -0.166;
     cigFPTip.position.z = -0.175;
     cigFP.add(body, filt, ember, cigFPTip);

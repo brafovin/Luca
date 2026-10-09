@@ -56,6 +56,7 @@ export class Pedestrians {
       scene.add(m);
       return m;
     };
+    const roundLimb = (r, h, sz) => { const g = new THREE.CapsuleGeometry(r, h - 2 * r, 5, 12); g.scale(1, 1, sz); g.translate(0, -h / 2, 0); return g; };
     const box = (w, h, d, pivotTop) => { const g = new THREE.BoxGeometry(w, h, d); if (pivotTop) g.translate(0, -h / 2, 0); return g; };
     const rollGeo = mergedGeo((B) => {
       const c = '#8a2a3a';
@@ -99,10 +100,10 @@ export class Pedestrians {
         B.box(0, -0.075, 0.088, 0.115, 0.075, 0.03, '#8a8880'); B.box(0, -0.04, 0.106, 0.07, 0.016, 0.014, '#8a8880'); B.box(0, -0.06, 0.112, 0.036, 0.012, 0.01, '#4a1a1a');
       }), true),
       hood: mk(new THREE.SphereGeometry(0.148, 14, 10, Math.PI * 0.82, Math.PI * 1.36, 0, Math.PI * 0.7)),
-      torso: mk(box(0.36, 0.56, 0.2)),
+      torso: mk(new THREE.CapsuleGeometry(0.112, 0.336, 6, 16).scale(1.72, 1, 1.02)),
       head: mk(new THREE.SphereGeometry(0.11, 10, 8)),
-      legL: mk(box(0.15, 0.82, 0.17, true)), legR: mk(box(0.15, 0.82, 0.17, true)),
-      armL: mk(box(0.1, 0.58, 0.12, true)), armR: mk(box(0.1, 0.58, 0.12, true)),
+      legL: mk(roundLimb(0.088, 0.82, 1.08)), legR: mk(roundLimb(0.088, 0.82, 1.08)),
+      armL: mk(roundLimb(0.06, 0.58, 1.1)), armR: mk(roundLimb(0.06, 0.58, 1.1)),
       hair: mk(new THREE.SphereGeometry(0.122, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.4)),
       cap: mk(new THREE.CylinderGeometry(0.125, 0.135, 0.05, 12)),
       cart: mk(mergedGeo((B) => {
@@ -113,7 +114,10 @@ export class Pedestrians {
         B.box(-0.1, 0.4, 0.1, 0.2, 0.2, 0.2, '#e8c020'); B.box(0.12, 0.38, -0.1, 0.18, 0.16, 0.22, '#d4301e'); B.box(0.0, 0.42, 0.25, 0.12, 0.24, 0.12, '#2f6aa6'); B.box(-0.12, 0.38, -0.25, 0.2, 0.14, 0.14, '#a8703a');
       }), true),
       cane: mk(caneGeo, true), bag: mk(bagGeo, true), roll: mk(rollGeo, true),
-      cigT: mk(mergedGeo((B) => { B.box(0.022, -0.052, 0.14, 0.016, 0.016, 0.09, '#f2f0e8'); B.box(0.022, -0.052, 0.19, 0.0145, 0.0145, 0.012, '#ff6a1a'); B.box(0.022, -0.052, 0.098, 0.0165, 0.0165, 0.03, '#d8a860'); }), true),
+      cigT: mk(mergedGeo((B) => {
+        const cz = (r, l, z, col) => B.geo(new THREE.CylinderGeometry(r, r, l, 10).rotateX(Math.PI / 2), new THREE.Matrix4().makeTranslation(0.022, -0.052, z), col);
+        cz(0.008, 0.09, 0.14, '#f2f0e8'); cz(0.0072, 0.012, 0.19, '#ff6a1a'); cz(0.0083, 0.03, 0.098, '#d8a860');
+      }), true),
       swing: mk(mergedGeo((B) => { for (const sx of [-0.14, 0.14]) B.box(sx, -0.8, 0, 0.012, 1.6, 0.012, '#8a8d92'); B.box(0, -1.6, 0, 0.4, 0.04, 0.2, '#d42020'); }), true),
     };
     const c = new THREE.Color(), zero = new THREE.Matrix4().makeScale(0, 0, 0);

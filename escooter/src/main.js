@@ -1080,9 +1080,9 @@ const cigFP = new THREE.Group(); // visible in first person (child of the camera
 const cigFPEmber = new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false });
 const cigFPTip = new THREE.Object3D();
 {
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.16), new THREE.MeshStandardMaterial({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = -0.08;
-  const filt = new THREE.Mesh(new THREE.BoxGeometry(0.0172, 0.0172, 0.05), new THREE.MeshStandardMaterial({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0;
-  const ember = new THREE.Mesh(new THREE.BoxGeometry(0.0155, 0.0155, 0.012), cigFPEmber); ember.position.z = -0.166;
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 12).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xf2f0e8, roughness: 0.9 })); body.position.z = -0.08;
+  const filt = new THREE.Mesh(new THREE.CylinderGeometry(0.0086, 0.0086, 0.05, 12).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd8a860, roughness: 0.9 })); filt.position.z = 0.0;
+  const ember = new THREE.Mesh(new THREE.CylinderGeometry(0.00775, 0.00775, 0.012, 12).rotateX(Math.PI / 2), cigFPEmber); ember.position.z = -0.166;
   cigFPTip.position.z = -0.175;
   cigFP.add(body, filt, ember, cigFPTip);
   cigFP.visible = false; camera.add(cigFP);
