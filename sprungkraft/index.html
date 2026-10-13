@@ -90,6 +90,20 @@ button:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
 .title-fox{width:120px;height:120px;margin-bottom:-14px}
 .best{margin-top:10px;font-weight:900;color:#fff;text-shadow:0 2px 0 var(--ink)}
 
+/* Schwierigkeit */
+.diff{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:16px}
+.diff-label{font-weight:900;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#fff;text-shadow:0 2px 0 var(--ink)}
+.diff-opts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.diff-btn{font-family:var(--f-display);font-size:17px;letter-spacing:.3px;padding:6px 16px;border-radius:999px;background:#fff;color:var(--ink);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.diff-btn:hover{transform:translateY(-1px)}
+.diff-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.diff-btn[aria-checked="true"]{background:var(--dc)}
+.diff-desc{margin:0;max-width:540px;text-align:center;font-weight:800;font-size:14px;line-height:1.35;color:#fff;background:rgba(27,35,64,.85);padding:6px 14px;border-radius:12px}
+.card .diff{margin:0 0 16px}
+.card .diff-label{color:var(--ink);text-shadow:none}
+.card .diff-desc{background:var(--cream-dim);color:var(--ink)}
+.badge{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:999px;border:2px solid var(--ink);font:900 11px var(--f-body);color:var(--ink)}
+
 /* Levelauswahl */
 .level-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
 .level-card{position:relative;text-align:left;border:3px solid var(--ink);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 5px 0 var(--ink);transition:transform .1s}
@@ -140,6 +154,10 @@ kbd{display:inline-block;min-width:24px;padding:1px 7px;margin:1px;border:2px so
 }
 @media (max-width:900px){.hud-center{display:none}}
 @media (max-height:430px){
+  .tagline{display:none}
+  .diff{margin-top:10px;gap:6px}
+  .diff-btn{font-size:15px;padding:4px 12px}
+  .diff-desc{font-size:12px;padding:4px 10px}
   .dpad{width:156px;height:78px;font-size:26px}
   .t-btn{width:66px;height:66px}
   .t-btn.jump{width:84px;height:84px}
@@ -204,6 +222,11 @@ kbd{display:inline-block;min-width:24px;padding:1px 7px;margin:1px;border:2px so
       <button class="btn alt" data-action="levels">Level wählen</button>
       <button class="btn alt" data-action="help">Steuerung</button>
     </div>
+    <div class="diff" data-diff-picker>
+      <span class="diff-label">Schwierigkeit</span>
+      <div class="diff-opts" role="radiogroup" aria-label="Schwierigkeit"></div>
+      <p class="diff-desc"></p>
+    </div>
     <div class="best" id="title-best"></div>
   </div>
 </section>
@@ -211,6 +234,11 @@ kbd{display:inline-block;min-width:24px;padding:1px 7px;margin:1px;border:2px so
 <section class="screen" id="screen-levels" hidden>
   <div class="card">
     <h2>Level wählen</h2>
+    <div class="diff" data-diff-picker>
+      <span class="diff-label">Schwierigkeit</span>
+      <div class="diff-opts" role="radiogroup" aria-label="Schwierigkeit"></div>
+      <p class="diff-desc"></p>
+    </div>
     <div class="level-grid" id="level-grid"></div>
     <div class="btns"><button class="btn alt" data-action="back">Zurück</button></div>
   </div>
@@ -232,6 +260,7 @@ kbd{display:inline-block;min-width:24px;padding:1px 7px;margin:1px;border:2px so
         </table>
         <p style="margin-top:10px"><b>Tipps:</b> Rollen macht dich schnell, passt durch enge Tunnel und rollt Schleimis, Käfer und Frösche einfach um. Aus der Rolle springen gibt einen extra weiten Sprung. In der Luft gibt es einmal pro Sprung eine <b>Luftrolle</b> mit Schub nach vorn. Auf dem Handy gibt es Knöpfe, ein Gamepad geht auch.</p>
         <p>Am Ende jedes Levels wartet die <b>Zielflagge</b> – je höher du sie triffst, desto mehr Punkte.</p>
+        <p><b>Schwierigkeit:</b> Einfach, Normal, Schwer oder Unmöglich – wählbar im Hauptmenü und in der Levelauswahl.</p>
       </div>
       <div>
         <h3>Power-ups</h3>

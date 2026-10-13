@@ -54,6 +54,21 @@ In jedem Level gibt es Kontrollpunkte und **drei versteckte Edelsteine**. Freige
 Edelsteine und der Punkterekord werden im Browser gespeichert. Wer die Flagge weiter oben trifft, bekommt mehr
 Punkte, schnelle Spieler einen Zeitbonus.
 
+## Schwierigkeit
+Im Hauptmenü und in der Levelauswahl wählbar; die Wahl wird gespeichert. Auf jeder Levelkarte steht die
+schwerste Stufe, auf der du das Level geschafft hast.
+
+| | Einfach | Normal | Schwer | Unmöglich |
+|---|---|---|---|---|
+| Leben | 5 | 3 | 3 | 1 |
+| Start | großer Fuchs | klein | klein | klein |
+| Tempo von Gegnern und Geschossen | 75 % | 100 % | 125 % | 150 % |
+| Boss-Treffer | 2 | 3 | 4 | 5 |
+| Abgrund und Lava | zurück an den Rand (kostet nur das Power-up) | Leben weg | Leben weg | Leben weg |
+| Kontrollpunkte | ja | ja | ja | keine |
+| Treffer | Pilz schützt, 3 s Schonzeit | Pilz schützt, 2 s | Pilz schützt, 1,2 s | jeder Treffer ist sofort vorbei |
+| Punkte | ×0,5 | ×1 | ×1,5 | ×3 |
+
 ## Power-ups
 | Power-up | Wirkung |
 |---|---|

@@ -136,3 +136,30 @@ const store = {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* privater Modus o. ä. */ }
   },
 };
+
+// ---- Schwierigkeitsgrade ----------------------------------------------------------
+// speed: Tempo von Gegnern und Geschossen, bossSpeed: Tempo der Bosse, inv: Schonzeit nach einem Treffer (s),
+// rescue: Abgrund/Lava setzt dich an den letzten sicheren Platz zurück, oneHit: jeder Treffer ist sofort vorbei
+const DIFFICULTIES = [
+  { id: 'easy', name: 'Einfach', color: '#3ee07a', lives: 5, startPower: 1, speed: 0.75, bossSpeed: 0.8, bossHp: 2, inv: 3,
+    checkpoints: true, rescue: true, oneHit: false, score: 0.5,
+    desc: '5 Leben, du startest groß, Gegner sind langsamer. Fällst du in einen Abgrund, landest du wieder am Rand.' },
+  { id: 'normal', name: 'Normal', color: '#ffd23f', lives: 3, startPower: 0, speed: 1, bossSpeed: 1, bossHp: 3, inv: 2,
+    checkpoints: true, rescue: false, oneHit: false, score: 1,
+    desc: '3 Leben, Bosse brauchen 3 Treffer. So ist das Spiel gedacht.' },
+  { id: 'hard', name: 'Schwer', color: '#ff9f43', lives: 3, startPower: 0, speed: 1.25, bossSpeed: 1.2, bossHp: 4, inv: 1.2,
+    checkpoints: true, rescue: false, oneHit: false, score: 1.5,
+    desc: 'Gegner sind schneller, Bosse brauchen 4 Treffer, kürzere Schonzeit nach Treffern. 1,5-fache Punkte.' },
+  { id: 'impossible', name: 'Unmöglich', color: '#ff6b7a', lives: 1, startPower: 0, speed: 1.5, bossSpeed: 1.4, bossHp: 5, inv: 1,
+    checkpoints: false, rescue: false, oneHit: true, score: 3,
+    desc: '1 Leben, jeder Treffer ist sofort vorbei, keine Kontrollpunkte, Bosse brauchen 5 Treffer. 3-fache Punkte.' },
+];
+let DIFF = DIFFICULTIES[1];
+{
+  const i = Number(store.get('sk_diff', 1));
+  if (Number.isInteger(i) && i >= 0 && i < DIFFICULTIES.length) DIFF = DIFFICULTIES[i];
+}
+function setDifficulty(i) {
+  DIFF = DIFFICULTIES[clamp(i, 0, DIFFICULTIES.length - 1)];
+  store.set('sk_diff', DIFFICULTIES.indexOf(DIFF));
+}

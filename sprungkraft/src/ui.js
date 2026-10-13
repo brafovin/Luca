@@ -80,6 +80,19 @@ const UI = (() => {
     $('help-enemies').innerHTML = enemies.map(([i, n, d]) => `<li><img src="${icons['e_' + i]}" alt=""><span><b>${n}:</b> ${d}</span></li>`).join('');
   }
 
+  function renderDiffPickers() {
+    document.querySelectorAll('[data-diff-picker]').forEach((root) => {
+      const opts = root.querySelector('.diff-opts');
+      if (!opts.children.length) {
+        opts.innerHTML = DIFFICULTIES.map((d, i) =>
+          `<button class="diff-btn" role="radio" data-diff="${i}" style="--dc:${d.color}">${d.name}</button>`).join('');
+      }
+      opts.querySelectorAll('.diff-btn').forEach((b) => b.setAttribute('aria-checked', String(DIFFICULTIES[+b.dataset.diff] === DIFF)));
+      root.querySelector('.diff-desc').textContent = DIFF.desc;
+    });
+  }
+  const diffName = (i) => (i != null && i >= 0 ? DIFFICULTIES[i].name : null);
+
   function buildLevelGrid() {
     const grid = $('level-grid');
     grid.innerHTML = '';
@@ -89,8 +102,10 @@ const UI = (() => {
       btn.className = 'level-card';
       btn.disabled = locked;
       const got = G.save.gems[def.id] || [];
+      const best = (G.save.cleared || {})[def.id];
+      const badge = best != null && best >= 0 ? `<span class="badge" style="background:${DIFFICULTIES[best].color}">✓ ${diffName(best)}</span>` : '';
       btn.innerHTML = `<canvas width="320" height="180"></canvas>${locked ? '<div class="lock">🔒 Gesperrt</div>' : ''}
-        <div class="meta"><div><div class="num">Welt ${def.id}</div><div class="name">${def.name}</div></div>
+        <div class="meta"><div><div class="num">Welt ${def.id}</div><div class="name">${def.name}</div>${badge}</div>
         <div class="g">${[0, 1, 2].map((g) => `<img src="${icons['gem' + g]}" class="${got.includes(g) ? '' : 'off'}" alt="">`).join('')}</div></div>`;
       btn.addEventListener('click', () => { Sound.play('select'); startGame(i); });
       grid.appendChild(btn);
@@ -126,6 +141,7 @@ const UI = (() => {
     for (const s of SCREENS) $('screen-' + s).hidden = s !== name;
     current = name;
     if (name === 'levels') buildLevelGrid();
+    if (name === 'title' || name === 'levels') renderDiffPickers();
     if (name === 'title') {
       const cont = G.save.unlocked > 1;
       $('btn-continue').textContent = cont ? `Weiter: Welt ${G.save.unlocked}` : 'Spielen';
@@ -156,7 +172,7 @@ const UI = (() => {
 
   function banner(def, lives) {
     if (!def) { $('banner').hidden = true; return; }
-    $('banner-world').textContent = `Welt ${def.id}`;
+    $('banner-world').textContent = `Welt ${def.id} · ${DIFF.name}`;
     $('banner-name').textContent = def.name;
     $('banner-lives').textContent = `× ${lives}`;
     $('banner').hidden = false;
@@ -172,6 +188,7 @@ const UI = (() => {
       <span>Zeitbonus</span><b>+${st.timeBonus.toLocaleString('de-DE')}</b>
       <span>Münzen</span><b>${st.coins}</b>
       <span>Edelsteine</span><b>${st.gems} / ${st.total}</b>
+      <span>Schwierigkeit</span><b>${DIFF.name} (×${String(DIFF.score).replace('.', ',')})</b>
       <span class="total">Punkte</span><b class="total">${G.score.toLocaleString('de-DE')}</b>`;
     $('btn-next').textContent = last ? 'Zum Abschluss' : `Weiter zu Welt ${G.levelIndex + 2}`;
     show('clear');
@@ -189,6 +206,7 @@ const UI = (() => {
     store.set('sk_save', G.save);
     $('win-stats').innerHTML = `
       <span>Punkte</span><b>${G.score.toLocaleString('de-DE')}</b>
+      <span>Schwierigkeit</span><b>${DIFF.name}</b>
       <span>Edelsteine</span><b>${total} / ${LEVELS.length * 3}</b>
       <span>Rekord</span><b>${G.save.best.toLocaleString('de-DE')}</b>`;
     hud(false);
@@ -210,7 +228,7 @@ const UI = (() => {
     set('hud-coins', String(G.coinCount));
     set('hud-score', String(G.score).padStart(6, '0'));
     set('hud-time', fmtTime(G.levelTime));
-    set('hud-level', `${LEVELS[G.levelIndex].id} · ${LEVELS[G.levelIndex].name}`);
+    set('hud-level', `${LEVELS[G.levelIndex].id} · ${LEVELS[G.levelIndex].name} · ${DIFF.name}`);
     const saved = G.save.gems[LEVELS[G.levelIndex].id] || [];
     const gemKey = [0, 1, 2].map((i) => (G.runGems.has(i) || saved.includes(i) ? 1 : 0)).join('') + G.levelIndex;
     if (cache.gems !== gemKey) {
@@ -281,6 +299,8 @@ const UI = (() => {
     buildIcons();
     buildHelp();
     document.body.addEventListener('click', (e) => {
+      const d = e.target.closest('[data-diff]');
+      if (d) { setDifficulty(+d.dataset.diff); Sound.play('select'); renderDiffPickers(); return; }
       const b = e.target.closest('[data-action]');
       if (b) onAction(b.dataset.action);
     });
