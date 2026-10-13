@@ -101,12 +101,12 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
 .board li small{font-weight:800;color:var(--ketchup);font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-left:4px}
 .board .rule{margin:4px 0 0;padding-top:7px;border-top:1px solid #2c3038;font-weight:800;font-size:13px;color:var(--dough-dim)}
 .board .rule b{color:var(--dough)}
-.road{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
-.road li{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-.road li span{width:100%;aspect-ratio:1;max-width:30px;border-radius:50%;background:#2a2e37;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--f-display);font-size:11px;color:var(--dough-dim)}
-.road li.key span{background:var(--mustard);color:var(--ink)}
-.road li.done span{background:var(--lettuce);color:var(--ink)}
-.road li small{font-size:9.5px;font-weight:900;color:var(--dough);text-align:center;line-height:1.1;white-space:nowrap}
+.road{position:relative;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.road::before{content:'';position:absolute;left:8%;right:8%;top:15px;height:3px;border-radius:3px;background:#3a3f4a}
+.road li{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.road li span{width:32px;height:32px;border-radius:50%;background:var(--mustard);border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--f-display);font-size:12px;color:var(--ink)}
+.road li.done span{background:var(--lettuce)}
+.road li small{max-width:100%;font-size:10px;font-weight:900;color:var(--dough);text-align:center;line-height:1.1;overflow-wrap:anywhere}
 .how{margin:0;font-size:13px;line-height:1.45;font-weight:700;color:var(--dough-dim)}
 .how b{color:var(--dough)}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -123,8 +123,11 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
 #bigmap canvas{width:min(92vw,78vh,600px);height:min(92vw,78vh,600px);border-radius:18px;border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink)}
 #bigmap p{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);margin:0;font-weight:900;color:var(--dough-dim)}
 
+#flash{position:fixed;inset:0;z-index:8;background:#fff;opacity:0;pointer-events:none}
+#flash.go{animation:flash 1.6s ease-out forwards}
 #nogl{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font-weight:800;font-size:16px}
 
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
 @keyframes pop{0%{transform:scale(.6)}100%{transform:scale(1)}}
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-8deg)}100%{transform:scale(1)}}
 @keyframes floatUp{0%{opacity:0;margin-top:10px;scale:.7}15%{opacity:1;scale:1.1}100%{opacity:0;margin-top:-70px;scale:1}}
@@ -183,19 +186,15 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
         <li><span class="ic">🥙</span>Döner<span class="dots"></span><em>2.000</em></li>
         <li><span class="ic">🦖</span>Dino<small>selten</small><span class="dots"></span><em>5.000</em></li>
       </ul>
-      <p class="rule">Alle <b>200.000 Punkte</b> geht's ein Level hoch.</p>
+      <p class="rule">Alle <b>200.000 Punkte</b> geht's ein Level hoch. Ab <b>Level 15</b> fliegst du ins Weltall zu den fetten Dinos.</p>
     </div>
     <ol class="road" id="road">
-      <li class="key"><span>1</span><small>Laufen</small></li>
-      <li><span>2</span></li>
-      <li class="key"><span>3</span><small>Rollen</small></li>
-      <li><span>4</span></li>
-      <li class="key"><span>5</span><small>Rollstuhl</small></li>
-      <li><span>6</span></li>
-      <li><span>7</span></li>
-      <li><span>8</span></li>
-      <li><span>9</span></li>
-      <li class="key"><span>10</span><small>Ganze Map</small></li>
+      <li data-l="1"><span>1</span><small>Laufen</small></li>
+      <li data-l="3"><span>3</span><small>Rollen</small></li>
+      <li data-l="5"><span>5</span><small>Rollstuhl</small></li>
+      <li data-l="10"><span>10</span><small>Ganze Map</small></li>
+      <li data-l="15"><span>15</span><small>Weltall</small></li>
+      <li data-l="20"><span>20</span><small>Urknall</small></li>
     </ol>
     <p class="how"><b>Das Essen liegt auf der Straße.</b> Lauf drüber, dann landet es im Inventar. Unten aufs Essen tippen, um es zu essen (gedrückt halten isst weiter).<br>Handy: Finger aufs Bild legen und ziehen. PC: <b>WASD</b> oder Pfeile, <b>1 2 3</b> essen, <b>Leertaste</b> alles essen, <b>M</b> Karte.</p>
     <div class="btns">
@@ -209,7 +208,7 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
   <div class="card panel">
     <div>
       <h2 class="logo"><span>Level 10!</span></h2>
-      <p class="tag">Du bist so fett wie die ganze Map. Die Stadt liegt komplett unter dir.</p>
+      <p class="tag">Du bist so fett wie die ganze Map. Schieb dich über die Insel und saug mit dem Mund weiter Essen ein. Ab Level 15 fliegst du ins Weltall!</p>
     </div>
     <dl class="stats" id="stats"></dl>
     <div class="btns">
@@ -218,6 +217,20 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
     </div>
   </div>
 </div>
+
+<div id="over" class="overlay" hidden>
+  <div class="card panel">
+    <div>
+      <h2 class="logo"><span>Urknall!</span></h2>
+      <p class="tag">Du warst so fett, dass das ganze Weltall zusammengebrochen ist. Alle Planeten sind explodiert, du bist geplatzt, und ein neues Universum ist entstanden.</p>
+    </div>
+    <dl class="stats" id="overStats"></dl>
+    <p class="how"><b>Spiel vorbei.</b></p>
+    <div class="btns"><button id="overReset" class="big">Nochmal von vorn</button></div>
+  </div>
+</div>
+
+<div id="flash"></div>
 
 <div id="bigmap" hidden><canvas id="bigc" width="1100" height="1100"></canvas><p>Tippen zum Schließen</p></div>
 
@@ -232,14 +245,15 @@ const fmt = n => Math.round(n).toLocaleString('de-DE');
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);
 
 // ================= Regeln =================
-const LEVEL_PTS = 200000, MAX_LEVEL = 10;
+const LEVEL_PTS = 200000, MAP_LEVEL = 10, SPACE_LEVEL = 15, END_LEVEL = 20;
 const PTS = { pizza: 5000, doener: 2000, dino: 5000 };
 // Körpergröße (Radius in Metern) am Anfang jedes Levels; Level 10 = so groß wie die Map
 const R_LEVEL = [0, 0.55, 0.8, 1.15, 1.7, 2.6, 4.5, 8.5, 17, 38, 85];
-const R_FINAL = 1000;
-const levelFor = p => Math.min(MAX_LEVEL, 1 + Math.floor(p / LEVEL_PTS));
-const stageFor = L => L >= MAX_LEVEL ? 'blob' : L >= 5 ? 'chair' : L >= 3 ? 'roll' : L === 2 ? 'walk2' : 'walk';
-const STAGE_TXT = L => L >= 10 ? 'So fett wie die Map' : L >= 5 ? 'Sitzt im Rollstuhl' : L >= 3 ? 'Rollt durch die Stadt' : L === 2 ? 'Watschelt' : 'Läuft noch';
+const R_EARTH = [1000, 1150, 1300, 1450, 1600, 1750];   // Level 10–14: über die ganze Insel und weiter
+const R_SPACE0 = 3;                                      // Weltall: neuer Maßstab, wächst um 20 % pro Level
+const levelFor = p => Math.min(END_LEVEL, 1 + Math.floor(p / LEVEL_PTS));
+const stageFor = L => L >= SPACE_LEVEL ? 'space' : L >= MAP_LEVEL ? 'blob' : L >= 5 ? 'chair' : L >= 3 ? 'roll' : L === 2 ? 'walk2' : 'walk';
+const STAGE_TXT = L => L >= END_LEVEL ? 'Urknall' : L >= SPACE_LEVEL ? 'Im Weltall' : L >= MAP_LEVEL ? 'So fett wie die Map' : L >= 5 ? 'Sitzt im Rollstuhl' : L >= 3 ? 'Rollt durch die Stadt' : L === 2 ? 'Watschelt' : 'Läuft noch';
 const LEVEL_MSG = {
   2: 'Die Hose spannt schon.',
   3: 'Du bist so rund, du rollst jetzt!',
@@ -250,6 +264,16 @@ const LEVEL_MSG = {
   8: 'Ganze Straßenblöcke passen unter dich.',
   9: 'Fast so groß wie die Stadt!',
   10: 'Du bist so fett wie die ganze Map!',
+  11: 'Die Insel ist zu klein für dich!',
+  12: 'Die Fische haben Angst vor dir.',
+  13: 'Man sieht dich vom Flugzeug aus.',
+  14: 'Noch ein Level, dann fliegst du ins Weltall!',
+  15: 'Ab ins Weltall! Hier wimmelt es von fetten Dinos.',
+  16: 'Die Weltraum-Dinos sind fast so fett wie du.',
+  17: 'Schwerelos mampfen!',
+  18: 'Der Mond schaut schon nervös.',
+  19: 'Das Weltall knirscht. Noch ein Level …',
+  20: 'Das Weltall bricht zusammen!',
 };
 
 // ================= Map =================
@@ -304,20 +328,23 @@ function part(geo, color, o = {}) {
   const c = new THREE.Color(color), n = g.attributes.position.count, a = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
   g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  g.setAttribute('tongue', new THREE.BufferAttribute(new Float32Array(n).fill(o.tongue ? 1 : 0), 1));
   return g;
 }
 function merge(list) {
   let n = 0; for (const g of list) n += g.attributes.position.count;
-  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), ton = new Float32Array(n);
   let o = 0;
   for (const g of list) {
     pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); col.set(g.attributes.color.array, o * 3);
+    ton.set(g.attributes.tongue.array, o);
     o += g.attributes.position.count;
   }
   const m = new THREE.BufferGeometry();
   m.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   m.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   m.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  m.setAttribute('tongue', new THREE.BufferAttribute(ton, 1));
   m.computeBoundingSphere();
   return m;
 }
@@ -514,24 +541,29 @@ function doenerGeo() {
   return g;
 }
 function dinoGeo() {
-  const G = '#43a547', D = '#2f7f34', L2 = '#a6d66a';
+  // Fetter Dino mit Kugelbauch, der die ganze Zeit die Zunge rausstreckt (die Zunge wackelt im Shader)
+  const G = '#43a547', D = '#2f7f34', L2 = '#b8e27c', TG = '#ff4f86';
+  const S = new THREE.SphereGeometry(1, 14, 10);
   const L = [
-    part(BOX, G, { s: [1.35, 1.5, 2.3], rx: -0.3, p: [0, 2.0, 0] }),
-    part(BOX, L2, { s: [1.05, 1.1, 1.7], rx: -0.3, p: [0, 1.8, 0.25] }),
-    part(BOX, G, { s: [1.05, 0.95, 1.45], p: [0, 3.05, 1.45] }),
-    part(BOX, D, { s: [0.95, 0.3, 1.25], p: [0, 2.45, 1.5] }),
-    part(BOX, '#ffffff', { s: [0.86, 0.14, 1.12], p: [0, 2.63, 1.55] }),
-    part(new THREE.CylinderGeometry(0.1, 0.6, 2.4, 6), G, { rx: -Math.PI / 2 - 0.25, p: [0, 1.75, -2.0] }),
+    part(S, G, { s: [1.6, 1.45, 1.65], p: [0, 1.75, -0.15] }),
+    part(S, L2, { s: [1.3, 1.2, 1.05], p: [0, 1.6, 0.55] }),
+    part(S, G, { s: [0.98, 0.82, 1.15], p: [0, 3.2, 1.15] }),
+    part(S, '#5a1020', { s: [0.62, 0.2, 0.4], p: [0, 2.95, 2.0] }),
+    part(BOX, '#ffffff', { s: [0.78, 0.09, 0.14], p: [0, 3.04, 2.28] }),
+    part(BOX, TG, { s: [0.44, 0.1, 1.15], rx: 0.9, p: [0, 2.6, 2.45], tongue: true }),
+    part(S, TG, { s: [0.26, 0.08, 0.24], p: [0, 2.17, 2.8], tongue: true }),
+    part(new THREE.ConeGeometry(0.62, 2.3, 10), G, { rx: -Math.PI / 2 - 0.3, p: [0, 1.35, -2.1] }),
   ];
   for (const sx of [-1, 1]) {
-    L.push(part(BOX, '#ffffff', { s: [0.1, 0.28, 0.3], p: [sx * 0.53, 3.25, 1.7] }));
-    L.push(part(BOX, '#111111', { s: [0.12, 0.15, 0.15], p: [sx * 0.55, 3.25, 1.78] }));
-    L.push(part(BOX, D, { s: [0.48, 1.35, 0.65], p: [sx * 0.55, 0.68, -0.1] }));
-    L.push(part(BOX, D, { s: [0.58, 0.22, 0.95], p: [sx * 0.55, 0.11, 0.12] }));
-    L.push(part(BOX, G, { s: [0.2, 0.2, 0.62], rx: 0.6, p: [sx * 0.62, 2.15, 1.05] }));
+    L.push(part(S, '#ffffff', { s: [0.24, 0.27, 0.14], p: [sx * 0.4, 3.62, 1.9] }));
+    L.push(part(S, '#111111', { s: [0.11, 0.13, 0.07], p: [sx * 0.42, 3.62, 2.02] }));
+    L.push(part(S, '#ff9fb0', { s: [0.2, 0.12, 0.08], p: [sx * 0.62, 3.1, 1.85] }));
+    L.push(part(S, G, { s: [0.22, 0.22, 0.5], rx: 0.5, p: [sx * 1.2, 2.25, 0.95] }));
+    L.push(part(new THREE.CylinderGeometry(0.48, 0.55, 0.9, 10), D, { p: [sx * 0.8, 0.45, -0.05] }));
+    L.push(part(S, D, { s: [0.55, 0.22, 0.7], p: [sx * 0.8, 0.12, 0.3] }));
   }
-  const spike = new THREE.ConeGeometry(0.2, 0.5, 4);
-  for (let k = 0; k < 6; k++) L.push(part(spike, '#ff9d1a', { p: [0, 2.85 - k * 0.12, 0.7 - k * 0.55] }));
+  const spike = new THREE.ConeGeometry(0.22, 0.55, 4);
+  for (let k = 0; k < 6; k++) { const a = 0.15 + k * 0.32; L.push(part(spike, '#ff9d1a', { rx: -a, p: [0, 1.75 + Math.cos(a) * 1.45, -0.15 - Math.sin(a) * 1.65] })); }
   return merge(L);
 }
 const FU = { uTime: { value: 0 }, uItemScale: { value: 1 } };
@@ -552,6 +584,23 @@ foodMat.onBeforeCompile = sh => {
       transformed.y += (0.12 + 0.12 * sin(uTime * 2.6 + fPh)) * uItemScale;`);
 };
 const GEOS = [pizzaGeo(), doenerGeo()];
+const DINO_GEO = dinoGeo();
+const dinoMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+dinoMat.onBeforeCompile = sh => {
+  sh.uniforms.uTime = FU.uTime;
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nuniform float uTime;\nattribute float tongue;')
+    .replace('#include <begin_vertex>', `
+      vec3 transformed = vec3(position);
+      if (tongue > 0.5) {
+        float tPh = instanceMatrix[3][0] * 0.13 + instanceMatrix[3][2] * 0.17;
+        vec3 tp = transformed - vec3(0.0, 3.0, 2.1);
+        float ta = sin(uTime * 7.0 + tPh) * 0.35, tb = sin(uTime * 4.3 + tPh * 1.7) * 0.4;
+        tp.yz = mat2(cos(ta), sin(ta), -sin(ta), cos(ta)) * tp.yz;
+        tp.xz = mat2(cos(tb), sin(tb), -sin(tb), cos(tb)) * tp.xz;
+        transformed = tp + vec3(0.0, 3.0, 2.1);
+      }`);
+};
 const TYPE_NAMES = ['pizza', 'doener'];
 
 // Essen entlang aller Straßen verteilen
@@ -606,12 +655,90 @@ const RESPAWN = 80;
 
 // ================= Dinos =================
 const DN = 26;
-const dinoMesh = new THREE.InstancedMesh(dinoGeo(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), DN);
+const dinoMesh = new THREE.InstancedMesh(DINO_GEO, dinoMat, DN);
 dinoMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 dinoMesh.frustumCulled = false;
 scene.add(dinoMesh);
 const dinos = [];
 for (let i = 0; i < DN; i++) dinos.push({ park: i < 7, x: 0, z: 0, yaw: 0, ki: 0, kj: 0, pi: -1, pj: -1, ti: 0, tj: 0, s: 0, state: 0, p: 0, ph: Math.random() * 10, respawn: 0 });
+
+// ================= Weltall (ab Level 15) =================
+const spaceScene = new THREE.Scene();
+const SPACE_BG = new THREE.Color('#05061a');
+spaceScene.background = SPACE_BG.clone();
+spaceScene.add(new THREE.HemisphereLight('#dfe8ff', '#33255a', 1.4));
+{ const l = new THREE.DirectionalLight('#fff3df', 2.6); l.position.set(0.6, 0.7, 0.4); spaceScene.add(l); }
+const backdrop = new THREE.Group(); spaceScene.add(backdrop);   // Sterne, Nebel, Erde, Mond – wandern mit der Kamera mit
+const srnd = mulberry32(777);
+function glowTex(stops) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const g = cv.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  for (const [o, c] of stops) gr.addColorStop(o, c);
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function planetTex(kind) {
+  const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const blob = (x, y, r) => { for (const ox of [-W, 0, W]) { g.beginPath(); g.arc(x + ox, y, r, 0, 7); g.fill(); } };
+  if (kind === 'earth') {
+    g.fillStyle = '#1d64c8'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 24; i++) {
+      const cx = srnd() * W, cy = H * (0.2 + srnd() * 0.6), n = 10 + srnd() * 22 | 0;
+      for (let k = 0; k < n; k++) {
+        g.fillStyle = srnd() < 0.22 ? '#a58f52' : srnd() < 0.5 ? '#3c9a45' : '#4fae4a';
+        blob(cx + (srnd() - 0.5) * 170, cy + (srnd() - 0.5) * 90, 14 + srnd() * 36);
+      }
+    }
+    g.fillStyle = '#f2f6ff'; g.fillRect(0, 0, W, 24); g.fillRect(0, H - 24, W, 24);
+    g.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 0; i < 70; i++) { g.beginPath(); g.ellipse(srnd() * W, srnd() * H, 30 + srnd() * 70, 6 + srnd() * 12, 0, 0, 7); g.fill(); }
+  } else {
+    g.fillStyle = '#a7a6a2'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 2;
+    for (let i = 0; i < 160; i++) { g.fillStyle = srnd() < 0.5 ? '#8e8d89' : '#bdbcb7'; const x = srnd() * W, y = srnd() * H, rr2 = 4 + srnd() * 28; blob(x, y, rr2); g.beginPath(); g.arc(x, y, rr2, 0, 7); g.stroke(); }
+  }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const stars = (() => {
+  const n = 5000, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), c = new THREE.Color();
+  const tints = ['#ffffff', '#cfe0ff', '#fff1c9', '#ffd2e6'];
+  for (let i = 0; i < n; i++) {
+    const u = srnd() * 2 - 1, a = srnd() * Math.PI * 2, rad = Math.sqrt(1 - u * u);
+    pos[i * 3] = Math.cos(a) * rad * 9000; pos[i * 3 + 1] = u * 9000; pos[i * 3 + 2] = Math.sin(a) * rad * 9000;
+    c.set(tints[srnd() * 4 | 0]).multiplyScalar(0.45 + srnd() * 0.55);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, vertexColors: true, depthWrite: false }));
+  backdrop.add(pts); return pts;
+})();
+for (const [x, y, z, sz, c] of [[0, -6500, -2500, 9000, '150,80,255'], [4200, -5200, -5200, 7000, '40,200,220'], [-5200, -4200, -4000, 6500, '255,90,170']]) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex([[0, `rgba(${c},0.5)`], [0.5, `rgba(${c},0.16)`], [1, `rgba(${c},0)`]]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  sp.position.set(x, y, z); sp.scale.setScalar(sz); backdrop.add(sp);
+}
+const EARTH_POS = new THREE.Vector3(-1500, -3200, -3000), MOON_POS = new THREE.Vector3(2300, -1700, -4300);
+const earth = new THREE.Mesh(new THREE.SphereGeometry(1900, 48, 32), new THREE.MeshLambertMaterial({ map: planetTex('earth') }));
+earth.position.copy(EARTH_POS); backdrop.add(earth);
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(1990, 48, 32), new THREE.MeshBasicMaterial({ color: '#6cc4ff', transparent: true, opacity: 0.2, side: THREE.BackSide, depthWrite: false })));
+const moon = new THREE.Mesh(new THREE.SphereGeometry(430, 32, 24), new THREE.MeshLambertMaterial({ map: planetTex('moon') }));
+moon.position.copy(MOON_POS); backdrop.add(moon);
+const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+bang.visible = false; spaceScene.add(bang);
+
+// Essen und ganz viele fette Dinos schweben im All; was zu weit weg ist, taucht vor dir wieder auf
+const SFN = 170, SDN = 150;
+const sFoodMesh = [0, 1].map(t => {
+  const m = new THREE.InstancedMesh(GEOS[t], foodMat, SFN);
+  m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; spaceScene.add(m); return m;
+});
+const sFood = [];
+for (let t = 0; t < 2; t++) for (let i = 0; i < SFN; i++) sFood.push({ t, i, x: 0, y: 0, z: 0, state: 0, p: 0 });
+const sDinoMesh = new THREE.InstancedMesh(DINO_GEO, dinoMat, SDN);
+sDinoMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); sDinoMesh.frustumCulled = false; spaceScene.add(sDinoMesh);
+const sDinos = [];
+for (let i = 0; i < SDN; i++) sDinos.push({ x: 0, y: 0, z: 0, vx: 0, vz: 0, yaw: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.8, ph: Math.random() * 10, fat: 1 + Math.random() * 0.45, state: 0, p: 0 });
 
 // ================= Spielfigur =================
 const SPH = new THREE.SphereGeometry(1, 24, 16);
@@ -639,6 +766,9 @@ for (const sx of [-1, 1]) {
 const mouth = mk(SPH, M('#6e0f1d'), head, [0, -0.17, 0.45], [0.15, 0.05, 0.07]);
 mk(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), M('#ffc21a'), head, [0, 0.08, 0], [0.53, 0.46, 0.53]);
 mk(BOX, M('#e8392c'), head, [0, 0.1, -0.5], [0.55, 0.05, 0.34]);
+const helmet = mk(SPH, new THREE.MeshPhongMaterial({ color: '#d5f0ff', transparent: true, opacity: 0.25, shininess: 120, specular: '#ffffff', depthWrite: false }), head, [0, 0.02, 0.03], 0.76);
+const collar = mk(new THREE.TorusGeometry(0.5, 0.08, 8, 24), M('#c7cdd6'), head, [0, -0.5, 0.02]);
+collar.rotation.x = Math.PI / 2;
 const arms = [-1, 1].map(sx => {
   const g = new THREE.Group(); rig.add(g);
   mk(SPH, mSkin, g, [0, -0.38, 0], [0.24, 0.45, 0.24]);
@@ -680,6 +810,7 @@ const STAGES = {
   roll:  { body: [1.28, 1.28, 1.28], belly: [1.02, 0.98, 0.95, 0, -0.28, 0.5], cy: 1.28, head: [0, 0.66, 0.72], arm: [1.25, 0.15, 0.1], leg: [0.55, -1.0, 0.32, 0, 0.2], chair: false, rad: 1.3, shadow: 1.25 },
   chair: { body: [1.45, 1.2, 1.32], belly: [1.18, 1.0, 1.0, 0, -0.36, 0.55], cy: 2.15, head: [0, 1.5, 0.06], arm: [1.45, 0.35, 0.1], leg: [0.55, -0.8, 1.0, -1.1, 0.55], chair: true, rad: 1.8, shadow: 2.0 },
   // Level 10: kein Rollstuhl hält das mehr aus – der Körper fließt über die ganze Stadt, Gesicht nach oben
+  space: { body: [1.3, 1.22, 1.22], belly: [1.05, 0.92, 0.9, 0, -0.26, 0.45], cy: 1.6, head: [0, 1.45, 0.06], arm: [1.3, 0.35, 0], armZ: 1.0, leg: [0.5, -0.95, 0.85, 0.3, 0], chair: false, rad: 1.35, shadow: 1.3 },
   blob:  { body: [1.55, 0.42, 1.55], belly: [1.25, 0.32, 1.25, 0, -0.06, 0.32], cy: 0.42, head: [0, 0.6, 0.5], headS: 0.75, headTilt: -0.8, arm: [1.5, 0.02, 0.4], armZ: 1.35, leg: [0.7, -0.3, 0.5, -1.45, 1.35], chair: false, rad: 1.55, shadow: 1.6 },
 };
 let curStage = '';
@@ -700,6 +831,8 @@ function applyStage(name) {
   }
   chair.visible = c.chair; chair.position.y = -c.cy;
   shadow.scale.setScalar(c.shadow);
+  helmet.visible = collar.visible = name === 'space';
+  shadow.visible = name !== 'space';
   if (name === 'roll') rollQ.setFromEuler(new THREE.Euler(0, pl.yaw, 0));
 }
 
@@ -714,6 +847,7 @@ scene.add(partMesh);
 const PAL = {
   pizza: ['#f7cf4a', '#cf3b22', '#d8953a'], doener: ['#8a4b24', '#5cbf3a', '#e9c27d'], dino: ['#43a547', '#a6d66a', '#ff9d1a'],
   confetti: ['#e8392c', '#ffc21a', '#4cbb4f', '#2f8ad1', '#e8338a', '#ffffff'], dust: ['#9d958a', '#b8b0a4', '#7f786f'],
+  boom: ['#e8338a', '#f5c29a', '#ffc21a', '#ff7a1a', '#ffffff', '#e8392c', '#2d3f7c'],
 };
 for (const k in PAL) PAL[k] = PAL[k].map(c => new THREE.Color(c));
 const parts = [];
@@ -730,7 +864,7 @@ function updateParts(dt) {
     p.life -= dt;
     if (p.life <= 0) { parts.splice(i, 1); continue; }
     p.vy -= p.grav * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.r += p.sp * dt;
-    if (p.y < 0) { p.y = 0; p.vy *= -0.3; p.vx *= 0.6; p.vz *= 0.6; }
+    if (p.y < 0 && !inSpace) { p.y = 0; p.vy *= -0.3; p.vx *= 0.6; p.vz *= 0.6; }
   }
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
@@ -761,7 +895,7 @@ function noise(dur, vol, f1, f2, delay = 0) {
   if (!AC || muted) return;
   if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
   const t = AC.currentTime + delay, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
-  s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.setValueAtTime(f1, t);
+  s.buffer = noiseBuf; s.loop = true; f.type = 'lowpass'; f.frequency.setValueAtTime(f1, t);
   if (f2) f.frequency.exponentialRampToValueAtTime(f2, t + dur);
   envl(g, t, 0.005, dur, vol); s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + dur + 0.05);
 }
@@ -770,7 +904,10 @@ const gate = (k, ms) => { const n = performance.now(); if (n - (sfxLast[k] || 0)
 const SFX = {
   pick(t) { if (gate('pick', 45)) tone(t === 'pizza' ? 900 : t === 'dino' ? 420 : 680, 0.08, 'triangle', 0.1, t === 'pizza' ? 1400 : 1000); },
   chomp() { if (gate('chomp', 55)) { noise(0.07, 0.35, 1500, 300); tone(170, 0.09, 'square', 0.06, 80, 0.02); } },
-  roar() { tone(150, 0.8, 'sawtooth', 0.16, 55); tone(95, 0.8, 'sawtooth', 0.12, 40); noise(0.7, 0.22, 900, 200); },
+  whoosh() { noise(1.4, 0.3, 250, 5000); tone(70, 1.3, 'sawtooth', 0.1, 600); },
+  rumble() { noise(3.2, 0.35, 120, 700); tone(45, 3.2, 'sawtooth', 0.12, 95); },
+  boom() { noise(2.6, 0.6, 2600, 60); tone(90, 2, 'sine', 0.4, 25); tone(55, 2.2, 'square', 0.1, 20); },
+  roar() { if (!gate('roar', 350)) return; tone(150, 0.8, 'sawtooth', 0.16, 55); tone(95, 0.8, 'sawtooth', 0.12, 40); noise(0.7, 0.22, 900, 200); },
   level() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.08, null, i * 0.09)); },
   crush() { if (gate('crush', 130)) { noise(0.35, 0.35, 500, 60); tone(70, 0.3, 'sine', 0.22, 35); } },
   win() { [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'square', 0.09, null, i * 0.13)); noise(1.2, 0.14, 3000, 500, 0.9); },
@@ -783,16 +920,19 @@ const eaten = { pizza: 0, doener: 0, dino: 0 };
 const pl = { x: 0, z: 0, vx: 0, vz: 0, yaw: 0, walkPh: 0, wheelA: 0, chomp: 0 };
 let curR = R_LEVEL[1];
 let started = false, playing = false, finaleT = -1, T = 0;
+let inSpace = false, endT = -1, boomed = false, overShown = false, endPuff = 1;
 const eatQ = []; let eatCd = 0;
 
 function radiusTarget() {
-  if (level >= MAX_LEVEL) return R_FINAL;
-  const t = clamp((points - (level - 1) * LEVEL_PTS) / LEVEL_PTS, 0, 1);
+  const t = level >= END_LEVEL ? 0 : clamp((points - (level - 1) * LEVEL_PTS) / LEVEL_PTS, 0, 1);
+  if (level >= SPACE_LEVEL) return R_SPACE0 * Math.pow(1.2, level - SPACE_LEVEL + t);
+  if (level >= MAP_LEVEL) { const k = level - MAP_LEVEL; return lerp(R_EARTH[k], R_EARTH[k + 1], t); }
   return R_LEVEL[level] * Math.pow(R_LEVEL[level + 1] / R_LEVEL[level], t);
 }
 const bodyR = () => STAGES[curStage].rad * curR;
-const magnetR = () => 3 + curR * 1.9;
-const itemScale = () => Math.min(11, 1 + Math.max(0, curR - 2) * 0.12);
+// ab Level 10 saugt nur noch der Mund Essen ein (sonst wäre die ganze Map auf einmal im Inventar)
+const magnetR = () => inSpace ? 2.5 + curR * 1.7 : level >= MAP_LEVEL ? 45 : 3 + curR * 1.9;
+const itemScale = () => inSpace ? 1.6 * Math.pow(curR / R_SPACE0, 0.6) : Math.min(11, 1 + Math.max(0, curR - 2) * 0.12);
 
 // ---------- Gebäude: Kollision (klein) oder platt machen (groß) ----------
 function forBuildingsNear(x, z, r, fn) {
@@ -840,22 +980,24 @@ function updateCrushing(dt) {
 // ---------- Essen einsammeln ----------
 function mouthPos(out) {
   const c = STAGES[curStage];
-  out.set(pl.x + Math.sin(pl.yaw) * 0.45 * curR, (c.cy + c.head[1]) * curR, pl.z + Math.cos(pl.yaw) * 0.45 * curR);
+  const f = (c.head[2] + 0.4 * (c.headS || 1)) * curR;
+  out.set(pl.x + Math.sin(pl.yaw) * f, (c.cy + c.head[1]) * curR, pl.z + Math.cos(pl.yaw) * f);
   return out;
 }
 const _mouth = new THREE.Vector3();
 function updateFood(dt) {
+  mouthPos(_mouth);
+  const big = level >= MAP_LEVEL, px = big ? _mouth.x : pl.x, pz = big ? _mouth.z : pl.z;
   const mr = magnetR(), mr2 = mr * mr;
-  const c0x = clamp(Math.floor((pl.x - mr + EDGE) / CELL), 0, CN - 1), c1x = clamp(Math.floor((pl.x + mr + EDGE) / CELL), 0, CN - 1);
-  const c0z = clamp(Math.floor((pl.z - mr + EDGE) / CELL), 0, CN - 1), c1z = clamp(Math.floor((pl.z + mr + EDGE) / CELL), 0, CN - 1);
+  const c0x = clamp(Math.floor((px - mr + EDGE) / CELL), 0, CN - 1), c1x = clamp(Math.floor((px + mr + EDGE) / CELL), 0, CN - 1);
+  const c0z = clamp(Math.floor((pz - mr + EDGE) / CELL), 0, CN - 1), c1z = clamp(Math.floor((pz + mr + EDGE) / CELL), 0, CN - 1);
   for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) {
     for (const id of cellItems[cz * CN + cx]) {
       if (IST[id] !== 0 && IST[id] !== 3) continue;
-      const dx = IX[id] - pl.x, dz = IZ[id] - pl.z;
+      const dx = IX[id] - px, dz = IZ[id] - pz;
       if (dx * dx + dz * dz < mr2) { IST[id] = 1; IP[id] = 0; flying.push(id); }
     }
   }
-  mouthPos(_mouth);
   for (let k = flying.length - 1; k >= 0; k--) {
     const id = flying[k];
     IP[id] += dt * 3.4;
@@ -916,6 +1058,7 @@ function nextNode(d, flee) {
 function updateDinos(dt) {
   const mr = magnetR(), sIt = itemScale(), br = bodyR();
   mouthPos(_mouth);
+  const big = level >= MAP_LEVEL, px = big ? _mouth.x : pl.x, pz = big ? _mouth.z : pl.z;
   for (let i = 0; i < DN; i++) {
     const d = dinos[i];
     let s = sIt, y = 0, wob = 0;
@@ -931,7 +1074,7 @@ function updateDinos(dt) {
       d.yaw += Math.atan2(Math.sin(dy), Math.cos(dy)) * damp(8, dt);
       d.ph += dt * sp * 1.6;
       y = Math.abs(Math.sin(d.ph)) * 0.25 * s; wob = Math.sin(d.ph) * 0.08;
-      if (playing && dd < mr + 1.6 * s) { d.state = 1; d.p = 0; d.fx = d.x; d.fz = d.z; }
+      if (playing && Math.hypot(px - d.x, pz - d.z) < mr + 1.6 * s) { d.state = 1; d.p = 0; d.fx = d.x; d.fz = d.z; }
     } else if (d.state === 1) {
       d.p += dt * 2.6;
       const e = Math.min(1, d.p) ** 2;
@@ -946,6 +1089,141 @@ function updateDinos(dt) {
     dinoMesh.setMatrixAt(i, dummy.matrix);
   }
   dinoMesh.instanceMatrix.needsUpdate = true;
+}
+
+// ---------- Weltall ----------
+const spaceFar = () => 60 + curR * 32;
+function spaceSpot(o, init) {
+  const near = init ? 5 + curR * 2 : 30 + curR * 9, far = spaceFar();
+  let a = Math.random() * Math.PI * 2;
+  if (!init && Math.hypot(pl.vx, pl.vz) > 1 && Math.random() < 0.7) a = Math.atan2(pl.vz, pl.vx) + (Math.random() - 0.5) * 2.2;
+  const d = Math.sqrt(lerp(near * near, far * far, Math.random()));
+  o.x = pl.x + Math.cos(a) * d; o.z = pl.z + Math.sin(a) * d; o.y = (Math.random() * 2 - 0.6) * curR;
+  o.state = 0; o.p = 0;
+  if (o.vx !== undefined) {
+    const sp = (1 + Math.random() * 2) * Math.pow(curR / R_SPACE0, 0.6), b = Math.random() * 6.28;
+    o.vx = Math.cos(b) * sp; o.vz = Math.sin(b) * sp;
+  }
+}
+function updateSpace(dt) {
+  mouthPos(_mouth);
+  const ending = endT >= 0, grab = playing || ending;
+  const mr = magnetR(), far2 = (spaceFar() * 1.25) ** 2, sIt = itemScale(), dS = 1.3 * Math.pow(curR / R_SPACE0, 0.6);
+  for (const o of sFood) {
+    if (o.state === 0) {
+      const dx = o.x - pl.x, dz = o.z - pl.z, d2 = dx * dx + dz * dz;
+      if (!ending && d2 > far2) spaceSpot(o, false);
+      else if (grab && (ending || d2 < mr * mr)) { o.state = 1; o.p = 0; o.fx = o.x; o.fy = o.y; o.fz = o.z; }
+    }
+    let x = o.x, y = o.y, z = o.z, sc1 = 1;
+    if (o.state === 1) {
+      o.p += dt * (ending ? 0.8 : 3.4);
+      const e = Math.min(1, o.p) ** 2;
+      x = lerp(o.fx, _mouth.x, e); y = lerp(o.fy, _mouth.y - 0.9 * sIt, e); z = lerp(o.fz, _mouth.z, e); sc1 = 1 - 0.7 * e;
+      if (o.p >= 1) {
+        if (ending) o.state = 2;
+        else { const t = TYPE_NAMES[o.t]; inv[t]++; SFX.pick(t); bumpSlot(t); spaceSpot(o, false); x = o.x; y = o.y; z = o.z; sc1 = 1; }
+      }
+    }
+    if (o.state === 2) sc1 = 0.0001;
+    _m.set(sc1, 0, 0, x, 0, sc1, 0, y, 0, 0, sc1, z, 0, 0, 0, 1);
+    sFoodMesh[o.t].setMatrixAt(o.i, _m);
+  }
+  sFoodMesh[0].instanceMatrix.needsUpdate = true; sFoodMesh[1].instanceMatrix.needsUpdate = true;
+  for (let i = 0; i < SDN; i++) {
+    const o = sDinos[i];
+    if (o.state === 0) {
+      o.x += o.vx * dt; o.z += o.vz * dt; o.yaw += o.spin * dt;
+      const dx = o.x - pl.x, dz = o.z - pl.z, d2 = dx * dx + dz * dz;
+      if (!ending && d2 > far2) spaceSpot(o, false);
+      else if (grab && (ending || d2 < (mr + 1.8 * dS) ** 2)) { o.state = 1; o.p = 0; o.fx = o.x; o.fy = o.y; o.fz = o.z; }
+    }
+    let x = o.x, y = o.y + Math.sin(T * 1.3 + o.ph) * 0.5 * dS, z = o.z, sc1 = dS, roll = Math.sin(T * 0.9 + o.ph) * 0.25;
+    if (o.state === 1) {
+      o.p += dt * (ending ? 0.7 : 2.6);
+      const e = Math.min(1, o.p) ** 2;
+      x = lerp(o.fx, _mouth.x, e); y = lerp(o.fy, _mouth.y - 1.5 * dS, e); z = lerp(o.fz, _mouth.z, e); sc1 = dS * (1 - 0.75 * e); roll = o.p * 9;
+      if (o.p >= 1) {
+        if (ending) o.state = 2;
+        else { inv.dino++; SFX.roar(); bumpSlot('dino'); spaceSpot(o, false); x = o.x; y = o.y; z = o.z; sc1 = dS; }
+      }
+    }
+    if (o.state === 2) sc1 = 0.0001;
+    const puff = 1 + 0.07 * Math.sin(T * 3 + o.ph);   // die Dinos schnaufen
+    dummy.position.set(x, y, z); dummy.rotation.set(Math.sin(T * 0.7 + o.ph) * 0.3, o.yaw, roll);
+    dummy.scale.set(sc1 * o.fat * puff, sc1 * puff, sc1 * o.fat * puff); dummy.updateMatrix();
+    sDinoMesh.setMatrixAt(i, dummy.matrix);
+  }
+  sDinoMesh.instanceMatrix.needsUpdate = true;
+}
+function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+function enterSpace(silent, keepPos) {
+  if (inSpace) return;
+  inSpace = true; won = true; winShown = true; finaleT = 99;
+  spaceScene.add(root); spaceScene.add(partMesh); parts.length = 0;
+  if (!keepPos) { pl.x = 0; pl.z = 0; }
+  pl.vx = pl.vz = 0;
+  applyStage('space');
+  curR = radiusTarget();
+  cam.x = pl.x; cam.z = pl.z; cam.pitch = 0.95; cam.dist = 10 + curR * 12;
+  for (const o of sFood) spaceSpot(o, true);
+  for (const o of sDinos) spaceSpot(o, true);
+  $('win').hidden = true;
+  if (!silent) { flash(); SFX.whoosh(); }
+}
+function exitSpace() {
+  if (!inSpace) return;
+  inSpace = false;
+  scene.add(root); scene.add(partMesh); parts.length = 0;
+}
+
+// ---------- Level 20: das Weltall bricht zusammen, Urknall, Spiel vorbei ----------
+function startEnding() {
+  endT = 0; boomed = false; overShown = false;
+  eatQ.length = 0; pl.vx = pl.vz = 0; playing = false;
+  won = true; save();
+  SFX.rumble();
+}
+function hideUniverse() {
+  root.visible = false; earth.visible = false; moon.visible = false;
+  sFoodMesh[0].visible = sFoodMesh[1].visible = false; sDinoMesh.visible = false;
+}
+function updateEnding(dt) {
+  endT += dt;
+  const t = endT;
+  if (t < 3.2) {
+    const k = t / 3.2, k2 = k * k;
+    backdrop.rotation.y += dt * (0.15 + k2 * 4);
+    earth.position.lerpVectors(EARTH_POS, _look.set(0, -curR * 4, 0), k2); earth.scale.setScalar(1 - 0.93 * k2);
+    moon.position.lerpVectors(MOON_POS, _look.set(0, -curR * 2, 0), k2); moon.scale.setScalar(1 - 0.9 * k2);
+    stars.scale.setScalar(1 - 0.85 * k2);
+    endPuff = 1 + 1.6 * k2 + Math.sin(T * 45) * 0.05 * k;
+    return;
+  }
+  if (!boomed) {
+    boomed = true;
+    const c = STAGES[curStage];
+    emit(420, pl.x, c.cy * curR, pl.z, PAL.boom, curR * 22, curR * 0.35, 0, 4);
+    hideUniverse();
+    flash(); SFX.boom();
+  }
+  const bt = t - 3.2;
+  bang.position.set(pl.x, STAGES[curStage].cy * curR, pl.z);
+  bang.scale.setScalar(curR * (2 + bt * bt * 20));
+  bang.material.opacity = Math.max(0, 1 - bt / 3.6);
+  bang.visible = bang.material.opacity > 0;
+  backdrop.rotation.y += dt * Math.max(0.05, 4 - bt * 2);
+  stars.scale.setScalar(Math.min(1, 0.15 + bt * 0.3));
+  spaceScene.background.copy(SPACE_BG).lerp(_col.set('#ffe6b0'), Math.max(0, 0.8 - bt * 0.35));
+  if (t > 7.8 && !overShown) showOver();
+}
+function showOver() {
+  overShown = true; playing = false;
+  const m = Math.floor(playTime / 60), s2 = Math.floor(playTime % 60);
+  const rows = [['Pizzen', fmt(eaten.pizza)], ['Döner', fmt(eaten.doener)], ['Dinos', fmt(eaten.dino)], ['Häuser platt', fmt(crushedCount)], ['Punkte', fmt(points)], ['Zeit', `${m}:${String(s2).padStart(2, '0')} min`]];
+  $('overStats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  $('start').hidden = true; $('win').hidden = true;
+  $('over').hidden = false;
 }
 
 // ---------- Essen aus dem Inventar ----------
@@ -984,13 +1262,15 @@ function updateEating(dt) {
 function levelUp(L) {
   const prevStage = stageFor(level);
   level = L;
-  if (stageFor(L) !== prevStage) applyStage(stageFor(L));
+  if (L >= SPACE_LEVEL && !inSpace) enterSpace(false, false);
+  else if (stageFor(L) !== prevStage) applyStage(stageFor(L));
   banner('Level ' + L, LEVEL_MSG[L] || '');
   SFX.level();
   const b = $('lvlBadge'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   const c = STAGES[curStage];
-  emit(L >= MAX_LEVEL ? 260 : 120, pl.x, c.cy * curR * 1.6, pl.z, PAL.confetti, 7 * curR + 4, 0.18 * curR + 0.1, 6 * curR + 3, 2.6);
-  if (L >= MAX_LEVEL && finaleT < 0) { finaleT = 0; SFX.win(); }
+  emit(L === MAP_LEVEL || L === SPACE_LEVEL ? 260 : 120, pl.x, c.cy * curR * 1.6, pl.z, PAL.confetti, 7 * curR + 4, (curR > 100 ? 0.05 : 0.18) * curR + 0.1, inSpace ? 0 : 6 * curR + 3, 2.6);
+  if (L >= MAP_LEVEL && L < SPACE_LEVEL && finaleT < 0) { finaleT = 0; SFX.win(); }
+  if (L >= END_LEVEL && endT < 0) startEnding();
   save();
 }
 
@@ -1038,13 +1318,15 @@ function bumpSlot(t) {
   const el = slots[t]; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
 }
 function weightText() {
-  const kg = 78 * Math.pow(curR / R_LEVEL[1], 3);
+  const r = inSpace ? R_EARTH[5] * curR / R_SPACE0 : curR;
+  const kg = 78 * Math.pow(r / R_LEVEL[1], 3);
   if (kg < 1000) return Math.round(kg) + ' kg';
   const t = kg / 1000;
   if (t < 1000) return t.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' t';
   if (t < 1e6) return fmt(t) + ' t';
   if (t < 1e9) return (t / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' Mio. t';
-  return (t / 1e9).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' Mrd. t';
+  if (t < 1e12) return (t / 1e9).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' Mrd. t';
+  return (t / 1e12).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' Bio. t';
 }
 const cntText = n => n < 1000 ? String(n) : n < 100000 ? (n / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + 'k' : Math.round(n / 1000) + 'k';
 const hudCache = {};
@@ -1053,10 +1335,10 @@ function updateHud() {
   setText('lvlNum', String(level));
   setText('stage', STAGE_TXT(level));
   const into = points - (level - 1) * LEVEL_PTS;
-  const pct = level >= MAX_LEVEL ? 100 : clamp(into / LEVEL_PTS * 100, 0, 100);
+  const pct = level >= END_LEVEL ? 100 : clamp(into / LEVEL_PTS * 100, 0, 100);
   const w = pct.toFixed(1) + '%';
   if (hudCache.bar !== w) { hudCache.bar = w; $('barFill').style.width = w; }
-  setText('barTxt', level >= MAX_LEVEL ? 'Max. Level' : fmt(into) + ' / ' + fmt(LEVEL_PTS));
+  setText('barTxt', level >= END_LEVEL ? 'Ende' : fmt(into) + ' / ' + fmt(LEVEL_PTS));
   setText('weight', weightText());
   setText('ptsNum', fmt(points));
   let total = 0;
@@ -1094,7 +1376,30 @@ function mmPaintCrushed() {
   for (const idx of mmCtxQueue) { const b = B[idx]; g.fillRect(w2m(b.x0), w2m(b.z0), Math.max(1, w2m(b.x1) - w2m(b.x0)), Math.max(1, w2m(b.z1) - w2m(b.z0))); }
   mmCtxQueue.length = 0;
 }
+function drawRadar(cv, big) {
+  const g = cv.getContext('2d'), S = cv.width, h = S / 2, k = h / spaceFar();
+  g.fillStyle = '#0a0d2a'; g.fillRect(0, 0, S, S);
+  g.strokeStyle = 'rgba(140,170,255,0.25)'; g.lineWidth = Math.max(1, S / 200);
+  for (const q of [0.33, 0.66, 0.98]) { g.beginPath(); g.arc(h, h, q * h, 0, 7); g.stroke(); }
+  const dr = Math.max(2, S / 120);
+  g.fillStyle = '#7fe07f';
+  for (const o of sDinos) {
+    if (o.state !== 0) continue;
+    const x = h + (o.x - pl.x) * k, y = h + (o.z - pl.z) * k;
+    if ((x - h) ** 2 + (y - h) ** 2 > h * h) continue;
+    g.beginPath(); g.arc(x, y, dr, 0, 7); g.fill();
+  }
+  g.beginPath(); g.arc(h, h, Math.max(S / 40, bodyR() * k), 0, 7);
+  g.fillStyle = '#e8338a'; g.fill(); g.lineWidth = Math.max(2, S / 120); g.strokeStyle = '#fff4de'; g.stroke();
+  if (big) {
+    g.font = `${Math.round(S / 26)}px Bungee, 'Arial Black', sans-serif`; g.textAlign = 'center'; g.fillStyle = '#fff4de';
+    g.fillText('Weltall', h, S * 0.08);
+    g.font = `800 ${Math.round(S / 40)}px Nunito, sans-serif`; g.fillStyle = '#7fe07f';
+    g.fillText('Grüne Punkte = fette Dinos', h, S * 0.95);
+  }
+}
 function drawMap(cv, labels) {
+  if (inSpace) return drawRadar(cv, labels);
   const g = cv.getContext('2d'), S = cv.width, k = S / MMS;
   g.drawImage(mmBg, 0, 0, S, S);
   if (labels) {
@@ -1182,7 +1487,7 @@ $('bigmap').addEventListener('click', toggleMap);
 function toggleMap() { $('bigmap').hidden = !$('bigmap').hidden; }
 
 function pause() {
-  if (!started) return;
+  if (!started || endT >= 0) return;
   playing = false; save();
   $('play').textContent = 'Weiter mampfen';
   $('reset').hidden = false;
@@ -1207,9 +1512,10 @@ function armReset(btn, label) {
 armReset($('reset'), 'Neues Spiel');
 armReset($('winReset'), 'Nochmal von vorn');
 $('winGo').addEventListener('click', () => { $('win').hidden = true; playing = true; });
+$('overReset').addEventListener('click', () => { audioOn(); resetGame(); $('over').hidden = true; started = true; playing = true; });
 
 function updateRoad() {
-  $('road').querySelectorAll('li').forEach((li, i) => li.classList.toggle('done', i + 1 <= level && started));
+  $('road').querySelectorAll('li').forEach(li => li.classList.toggle('done', started && level >= +li.dataset.l));
 }
 
 // ================= Speichern =================
@@ -1222,13 +1528,27 @@ function restore(d) {
   for (const t of ['pizza', 'doener', 'dino']) { inv[t] = Math.max(0, d.inv?.[t] | 0); eaten[t] = Math.max(0, d.eaten?.[t] | 0); }
   crushedCount = d.crushed | 0; playTime = +d.time || 0; won = !!d.won;
   level = levelFor(points);
-  pl.x = clamp(+d.x || 0, -EDGE, EDGE); pl.z = clamp(+d.z || 0, -EDGE, EDGE);
+  if (level >= SPACE_LEVEL) {
+    pl.x = +d.x || 0; pl.z = +d.z || 0;
+    enterSpace(true, true);
+    if (level >= END_LEVEL) { endT = 99; boomed = true; overShown = true; hideUniverse(); }
+    return;
+  }
+  const lim = level >= MAP_LEVEL ? EDGE * 0.85 : EDGE;
+  pl.x = clamp(+d.x || 0, -lim, lim); pl.z = clamp(+d.z || 0, -lim, lim);
   applyStage(stageFor(level));
   curR = radiusTarget();
-  if (level >= MAX_LEVEL) { finaleT = 99; pl.x = 0; pl.z = 0; won = true; }
+  if (level >= MAP_LEVEL) { finaleT = 99; won = true; winShown = true; }
   else if (level <= 5) collide(bodyR());
 }
 function resetGame() {
+  exitSpace();
+  endT = -1; boomed = false; overShown = false; endPuff = 1;
+  root.visible = true; earth.visible = moon.visible = true; bang.visible = false;
+  earth.position.copy(EARTH_POS); earth.scale.setScalar(1); moon.position.copy(MOON_POS); moon.scale.setScalar(1);
+  stars.scale.setScalar(1); backdrop.rotation.set(0, 0, 0); spaceScene.background.copy(SPACE_BG);
+  sFoodMesh[0].visible = sFoodMesh[1].visible = true; sDinoMesh.visible = true;
+  cam.dist = 18; cam.pitch = 0.88;
   points = 0; level = 1; playTime = 0; crushedCount = 0; won = false; finaleT = -1; winShown = false;
   for (const t of ['pizza', 'doener', 'dino']) { inv[t] = 0; eaten[t] = 0; }
   eatQ.length = 0;
@@ -1250,29 +1570,36 @@ addEventListener('pagehide', save);
 // ================= Kamera =================
 const cam = { dist: 18, pitch: 0.88, x: 0, z: 0, orbit: 0.6 };
 const _look = new THREE.Vector3();
-function fitDist() { const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); return 2050 / (t * Math.min(1, camera.aspect)); }
+function fitDist() { const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); return 2.05 * Math.max(curR, R_EARTH[0]) / (t * Math.min(1, camera.aspect)); }
+const spaceDist = () => (10 + curR * 12) / Math.sqrt(Math.min(1, camera.aspect * 1.25));
 function updateCamera(dt) {
   const c = STAGES[curStage];
   const ty = c.cy * curR * 0.8;
   if (!started) {
     cam.orbit += dt * 0.07;
-    const D = finaleT >= 0 ? fitDist() * 0.9 : Math.max(150, 9 + curR * 18), P = finaleT >= 0 ? 1.2 : 0.95;
+    const D = inSpace ? 14 + curR * 16 : finaleT >= 0 ? fitDist() * 0.9 : Math.max(150, 9 + curR * 18), P = inSpace ? 0.8 : finaleT >= 0 ? 1.2 : 0.95;
     camera.position.set(pl.x + Math.sin(cam.orbit) * Math.cos(P) * D, ty + Math.sin(P) * D, pl.z + Math.cos(cam.orbit) * Math.cos(P) * D);
     camera.lookAt(pl.x, ty + 4, pl.z);
     cam.x = pl.x; cam.z = pl.z;
   } else {
     let tDist, tPitch;
-    if (finaleT >= 0) { tDist = fitDist(); tPitch = 1.36; }
+    if (inSpace) { tDist = spaceDist() * (1 + clamp(endT - 3.2, 0, 1) * 5); tPitch = 0.95; }
+    else if (finaleT >= 0) { tDist = fitDist(); tPitch = 1.36; }
     else { tDist = (9 + curR * 13) / Math.sqrt(Math.min(1, camera.aspect * 1.25)); tPitch = lerp(0.88, 1.16, (level - 1) / 8); }
-    cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(tDist), damp(finaleT >= 0 ? 0.9 : 2.5, dt)));
+    cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(tDist), damp(finaleT >= 0 && !inSpace ? 0.9 : 2.5, dt)));
     cam.pitch = lerp(cam.pitch, tPitch, damp(2, dt));
     cam.x = lerp(cam.x, pl.x, damp(7, dt)); cam.z = lerp(cam.z, pl.z, damp(7, dt));
     camera.position.set(cam.x, ty + Math.sin(cam.pitch) * cam.dist, cam.z + Math.cos(cam.pitch) * cam.dist);
     camera.lookAt(cam.x, ty, cam.z);
+    if (endT >= 0 && endT < 4.7) {   // Beben beim Zusammenbruch
+      const a = (endT < 3.2 ? endT / 3.2 : Math.max(0, 1 - (endT - 3.2) / 1.5) * 2) * curR * 0.6;
+      camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a;
+    }
   }
   const dist = camera.position.distanceTo(_look.set(cam.x, ty, cam.z));
+  if (inSpace) backdrop.position.set(cam.x, 0, cam.z);
   camera.near = Math.max(0.1, dist / 150);
-  camera.far = dist * 8 + 900;
+  camera.far = inSpace ? 25000 : dist * 8 + 900;
   camera.updateProjectionMatrix();
   scene.fog.near = dist * 1.6;
   scene.fog.far = dist * 6 + 350;
@@ -1291,32 +1618,35 @@ function update(dt) {
   if (keys.l) ix -= 1; if (keys.r) ix += 1; if (keys.u) iz -= 1; if (keys.d) iz += 1;
   ix += joy.x; iz += joy.y;
   const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
-  const sp = finaleT >= 0 ? 0 : Math.min(320, 10 + 5 * curR);
-  const acc = damp(curStage === 'roll' ? 2.6 : curStage === 'chair' ? 5 : 9, dt);
+  const lockMove = !inSpace && finaleT >= 0 && finaleT < 6.5;   // Finale-Animation auf Level 10
+  const sp = lockMove ? 0 : inSpace ? 14 + curR * 4 : level >= MAP_LEVEL ? 110 : Math.min(320, 10 + 5 * curR);
+  const acc = damp({ roll: 2.6, chair: 5, blob: 1.5, space: 2.2 }[curStage] || 9, dt);
   pl.vx += (ix * sp - pl.vx) * acc; pl.vz += (iz * sp - pl.vz) * acc;
   pl.x += pl.vx * dt; pl.z += pl.vz * dt;
-  if (finaleT >= 0) { pl.x = lerp(pl.x, 0, damp(1.2, dt)); pl.z = lerp(pl.z, 0, damp(1.2, dt)); pl.yaw = lerp(pl.yaw, 0, damp(1.5, dt)); }
+  if (lockMove) { pl.x = lerp(pl.x, 0, damp(1.2, dt)); pl.z = lerp(pl.z, 0, damp(1.2, dt)); pl.yaw = lerp(pl.yaw, 0, damp(1.5, dt)); }
   const br = bodyR();
-  const lim = EDGE - Math.min(br, 6);
-  pl.x = clamp(pl.x, -lim, lim); pl.z = clamp(pl.z, -lim, lim);
-  if (level <= 5) collide(br * 0.92);
+  if (!inSpace) {
+    const lim = level >= MAP_LEVEL ? EDGE * 0.85 : EDGE - Math.min(br, 6);
+    pl.x = clamp(pl.x, -lim, lim); pl.z = clamp(pl.z, -lim, lim);
+    if (level <= 5) collide(br * 0.92);
+  }
   const speed = Math.hypot(pl.vx, pl.vz);
-  if (speed > 0.3 * curR && curStage !== 'roll') {
+  if (speed > Math.min(0.3 * curR, 8) && curStage !== 'roll') {
     const d = Math.atan2(pl.vx, pl.vz) - pl.yaw;
-    pl.yaw += Math.atan2(Math.sin(d), Math.cos(d)) * damp(10, dt);
+    pl.yaw += Math.atan2(Math.sin(d), Math.cos(d)) * damp(curStage === 'blob' ? 2 : 10, dt);
   } else if (curStage === 'roll' && speed > 0.1) pl.yaw = Math.atan2(pl.vx, pl.vz);
 
   // Wachsen
   const tR = radiusTarget();
-  curR = Math.exp(lerp(Math.log(curR), Math.log(tR), damp(finaleT >= 0 ? 0.75 : 3, dt)));
-  if (finaleT >= 0) {
+  curR = Math.exp(lerp(Math.log(curR), Math.log(tR), damp(finaleT >= 0 && !inSpace ? 0.75 : 3, dt)));
+  if (finaleT >= 0 && !inSpace) {
     finaleT += dt;
     if (finaleT > 6.5 && !won) { won = true; save(); }
     if (finaleT > 6.5 && !winShown && finaleT < 90) { winShown = true; showWin(); }
   }
 
   updateEating(dt);
-  updateFood(dt);
+  if (!inSpace) updateFood(dt);
   if (++mmT % 3 === 0) { mmPaintCrushed(); drawMap($('mini'), false); if (!$('bigmap').hidden) drawMap($('bigc'), true); }
 
   if ((poiCheck += dt) > 0.4) {
@@ -1345,6 +1675,11 @@ function animatePlayer(dt, speed) {
       for (const w of wheels) w.rotation.x = pl.wheelA;
       const push = Math.sin(pl.wheelA * 0.9) * 0.5 * move;
       arms[0].rotation.x = push; arms[1].rotation.x = push;
+    } else if (curStage === 'space') {
+      rig.rotateX(move * 0.35); rig.rotateZ(Math.sin(T * 1.1) * 0.12);
+      arms[0].rotation.x = Math.sin(T * 2.2) * 0.6; arms[1].rotation.x = Math.sin(T * 2.2 + 1.5) * 0.6;
+      legs[0].rotation.x = c.leg[3] + Math.sin(T * 1.7) * 0.35; legs[1].rotation.x = c.leg[3] + Math.sin(T * 1.7 + 2) * 0.35;
+      bob = Math.sin(T * 1.6) * 0.18;
     } else if (curStage !== 'blob') {
       pl.walkPh += speed * dt / (curR * 1.3);
       const s = Math.sin(pl.walkPh) * move;
@@ -1362,7 +1697,7 @@ function animatePlayer(dt, speed) {
     body.scale.set(c.body[0] * (1 + 0.05 * k), c.body[1] * (1 - 0.04 * k), c.body[2] * (1 + 0.05 * k));
   } else { mouth.scale.y = 0.05; head.rotation.x = c.headTilt || 0; body.scale.set(c.body[0], c.body[1], c.body[2]); }
   root.position.set(pl.x, 0, pl.z);
-  root.scale.setScalar(curR);
+  root.scale.setScalar(curR * endPuff);
 }
 function showWin() {
   const m = Math.floor(playTime / 60), s = Math.floor(playTime % 60);
@@ -1393,25 +1728,30 @@ function frame(now) {
     pl.vx = pl.vz = 0;
     if (++mmT % 6 === 0) drawMap($('mini'), false);
   }
-  if (finaleT >= 0 || level >= 6) crush(pl.x, pl.z, bodyR() * 1.05);
+  if (inSpace) {
+    updateSpace(dt);
+    if (endT >= 0) updateEnding(dt);
+  } else {
+    if (finaleT >= 0 || level >= 6) crush(pl.x, pl.z, bodyR() * 1.05);
+    updateDinos(dt);
+    updateCrushing(dt);
+  }
   FU.uTime.value = T;
   FU.uItemScale.value = itemScale();
-  updateDinos(dt);
-  updateCrushing(dt);
   updateParts(dt);
   animatePlayer(dt, speed);
   updateCamera(dt);
   for (const m of dirtyMeshes) m.instanceMatrix.needsUpdate = true;
   dirtyMeshes.clear();
   updateHud();
-  renderer.render(scene, camera);
+  renderer.render(inSpace ? spaceScene : scene, camera);
 }
 
 // Testhilfe (Konsole): __mampf.add(200000)
 window.__mampf = {
   add(n) { points += n; const L = levelFor(points); if (L > level) levelUp(L); },
   give(t, n) { inv[t] += n; },
-  get state() { return { points, level, curR, inv: { ...inv }, x: pl.x, z: pl.z, crushedCount, playing }; },
+  get state() { return { points, level, curR, inv: { ...inv }, x: pl.x, z: pl.z, crushedCount, playing, inSpace, endT }; },
   tp(x, z) { pl.x = x; pl.z = z; },
   get info() { return { items: N, buildings: B.length, ...renderer.info.render }; },
 };
@@ -1425,6 +1765,7 @@ function boot(hot) {
   const hasSave = !!data && (data.points > 0 || data.inv?.pizza || data.inv?.doener || data.inv?.dino);
   if (hasSave) { $('play').textContent = `Weiter mampfen (Level ${level})`; $('reset').hidden = false; }
   if (hot && typeof hot.points === 'number') { started = true; playing = true; $('start').hidden = true; }
+  if (level >= END_LEVEL) { started = true; showOver(); }
   updateRoad();
   requestAnimationFrame(frame);
 }
