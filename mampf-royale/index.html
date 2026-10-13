@@ -51,9 +51,10 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
 #mini{width:118px;height:118px;border-radius:14px;border:2px solid var(--ink);box-shadow:0 4px 0 var(--ink);background:#2c8fd8;pointer-events:auto;cursor:zoom-in;display:block}
 .btnRow{display:flex;gap:6px;pointer-events:auto}
 .iconBtn{width:40px;height:40px;border-radius:12px;font-size:17px;display:grid;place-items:center;background:var(--panel);border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-family:var(--f-display)}
+.iconBtn.on{background:var(--mustard);color:var(--ink)}
 .iconBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
 
-#poi{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translate(-50%,-6px);padding:7px 14px;border-radius:99px;font-family:var(--f-display);font-size:13px;letter-spacing:.04em;color:var(--ink);background:var(--dough);border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap}
+#poi{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 192px);transform:translate(-50%,-6px);width:max-content;max-width:calc(100vw - 32px);text-align:center;line-height:1.25;padding:7px 14px;border-radius:18px;font-family:var(--f-display);font-size:13px;letter-spacing:.04em;color:var(--ink);background:var(--dough);border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);opacity:0;transition:opacity .3s,transform .3s}
 #poi.show{opacity:1;transform:translate(-50%,0)}
 
 #banner{position:absolute;left:16px;right:16px;top:30%;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;opacity:0;pointer-events:none}
@@ -156,6 +157,7 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
     <div id="topRight">
       <canvas id="mini" width="236" height="236" title="Karte (M)"></canvas>
       <div class="btnRow">
+        <button id="warpBtn" class="iconBtn" aria-label="Warp an" aria-pressed="false" hidden>🚀</button>
         <button id="sndBtn" class="iconBtn" aria-label="Ton aus">🔊</button>
         <button id="helpBtn" class="iconBtn" aria-label="Pause und Regeln">II</button>
       </div>
@@ -186,7 +188,7 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
         <li><span class="ic">🥙</span>Döner<span class="dots"></span><em>2.000</em></li>
         <li><span class="ic">🦖</span>Dino<small>selten</small><span class="dots"></span><em>5.000</em></li>
       </ul>
-      <p class="rule">Alle <b>200.000 Punkte</b> geht's ein Level hoch. Ab <b>Level 15</b> fliegst du ins Weltall zu den fetten Dinos.</p>
+      <p class="rule">Alle <b>200.000 Punkte</b> geht's ein Level hoch. Ab <b>Level 15</b> fliegst du ins Weltall zu den fetten Dinos und allen Planeten.</p>
     </div>
     <ol class="road" id="road">
       <li data-l="1"><span>1</span><small>Laufen</small></li>
@@ -196,7 +198,7 @@ button:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
       <li data-l="15"><span>15</span><small>Weltall</small></li>
       <li data-l="20"><span>20</span><small>Urknall</small></li>
     </ol>
-    <p class="how"><b>Das Essen liegt auf der Straße.</b> Lauf drüber, dann landet es im Inventar. Unten aufs Essen tippen, um es zu essen (gedrückt halten isst weiter).<br>Handy: Finger aufs Bild legen und ziehen. PC: <b>WASD</b> oder Pfeile, <b>1 2 3</b> essen, <b>Leertaste</b> alles essen, <b>M</b> Karte.</p>
+    <p class="how"><b>Das Essen liegt auf der Straße.</b> Lauf drüber, dann landet es im Inventar. Unten aufs Essen tippen, um es zu essen (gedrückt halten isst weiter).<br>Handy: Finger aufs Bild legen und ziehen. PC: <b>WASD</b> oder Pfeile, <b>1 2 3</b> essen, <b>Leertaste</b> alles essen, <b>M</b> Karte. Im Weltall: <b>Shift</b> oder 🚀 = Warp.</p>
     <div class="btns">
       <button id="play" class="big">Los geht's!</button>
       <button id="reset" class="ghost" hidden>Neues Spiel</button>
@@ -268,7 +270,7 @@ const LEVEL_MSG = {
   12: 'Die Fische haben Angst vor dir.',
   13: 'Man sieht dich vom Flugzeug aus.',
   14: 'Noch ein Level, dann fliegst du ins Weltall!',
-  15: 'Ab ins Weltall! Hier wimmelt es von fetten Dinos.',
+  15: 'Ab ins Weltall! Fette Dinos und lauter Planeten.',
   16: 'Die Weltraum-Dinos sind fast so fett wie du.',
   17: 'Schwerelos mampfen!',
   18: 'Der Mond schaut schon nervös.',
@@ -668,7 +670,7 @@ const SPACE_BG = new THREE.Color('#05061a');
 spaceScene.background = SPACE_BG.clone();
 spaceScene.add(new THREE.HemisphereLight('#dfe8ff', '#33255a', 1.4));
 { const l = new THREE.DirectionalLight('#fff3df', 2.6); l.position.set(0.6, 0.7, 0.4); spaceScene.add(l); }
-const backdrop = new THREE.Group(); spaceScene.add(backdrop);   // Sterne, Nebel, Erde, Mond – wandern mit der Kamera mit
+const backdrop = new THREE.Group(); spaceScene.add(backdrop);   // Sterne und Nebel – wandern mit der Kamera mit
 const srnd = mulberry32(777);
 function glowTex(stops) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 256;
@@ -681,6 +683,21 @@ function planetTex(kind) {
   const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
   const blob = (x, y, r) => { for (const ox of [-W, 0, W]) { g.beginPath(); g.arc(x + ox, y, r, 0, 7); g.fill(); } };
+  // weiche Streifen von Pol zu Pol plus feine Wolkenfäden (Gasriesen)
+  const bands = (cols, n, streaks) => {
+    const gr = g.createLinearGradient(0, 0, 0, H);
+    for (let i = 0; i <= n; i++) gr.addColorStop(clamp(i / n + (srnd() - 0.5) * 0.02, 0, 1), cols[(srnd() * cols.length) | 0]);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < streaks; i++) {
+      g.fillStyle = srnd() < 0.5 ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)';
+      g.beginPath(); g.ellipse(srnd() * W, srnd() * H, 50 + srnd() * 150, 2 + srnd() * 7, 0, 0, 7); g.fill();
+    }
+  };
+  const craters = (base, dark, light, n) => {
+    g.fillStyle = base; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 2;
+    for (let i = 0; i < n; i++) { g.fillStyle = srnd() < 0.5 ? dark : light; const x = srnd() * W, y = srnd() * H, r = 4 + srnd() * 28; blob(x, y, r); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); }
+  };
   if (kind === 'earth') {
     g.fillStyle = '#1d64c8'; g.fillRect(0, 0, W, H);
     for (let i = 0; i < 24; i++) {
@@ -693,10 +710,47 @@ function planetTex(kind) {
     g.fillStyle = '#f2f6ff'; g.fillRect(0, 0, W, 24); g.fillRect(0, H - 24, W, 24);
     g.fillStyle = 'rgba(255,255,255,0.5)';
     for (let i = 0; i < 70; i++) { g.beginPath(); g.ellipse(srnd() * W, srnd() * H, 30 + srnd() * 70, 6 + srnd() * 12, 0, 0, 7); g.fill(); }
-  } else {
-    g.fillStyle = '#a7a6a2'; g.fillRect(0, 0, W, H);
-    g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 2;
-    for (let i = 0; i < 160; i++) { g.fillStyle = srnd() < 0.5 ? '#8e8d89' : '#bdbcb7'; const x = srnd() * W, y = srnd() * H, rr2 = 4 + srnd() * 28; blob(x, y, rr2); g.beginPath(); g.arc(x, y, rr2, 0, 7); g.stroke(); }
+  } else if (kind === 'moon') craters('#a7a6a2', '#8e8d89', '#bdbcb7', 160);
+  else if (kind === 'mercury') craters('#8d8782', '#6f6a66', '#aaa39c', 220);
+  else if (kind === 'venus') {
+    bands(['#ead08a', '#dcae62', '#f4e2ac', '#c98f4c'], 16, 120);
+    g.fillStyle = 'rgba(255,240,200,0.14)';
+    for (let i = 0; i < 40; i++) blob(srnd() * W, srnd() * H, 20 + srnd() * 50);
+  } else if (kind === 'mars') {
+    g.fillStyle = '#b5532d'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#7d3b22'; for (let i = 0; i < 46; i++) blob(srnd() * W, H * (0.2 + srnd() * 0.6), 10 + srnd() * 44);
+    g.fillStyle = '#d58f5d'; for (let i = 0; i < 34; i++) blob(srnd() * W, H * (0.15 + srnd() * 0.7), 8 + srnd() * 30);
+    g.fillStyle = '#f4f1ec'; g.fillRect(0, 0, W, 18); g.fillRect(0, H - 18, W, 18);
+    for (let i = 0; i < 20; i++) { blob(srnd() * W, 18 + srnd() * 12, 10 + srnd() * 14); blob(srnd() * W, H - 18 - srnd() * 12, 10 + srnd() * 14); }
+  } else if (kind === 'jupiter') {
+    bands(['#d9b68c', '#b9855c', '#f0e2ca', '#c99b6b', '#8e5b3c', '#f4ead8'], 28, 220);
+    g.fillStyle = '#b4452c'; g.beginPath(); g.ellipse(W * 0.3, H * 0.6, 84, 40, 0, 0, 7); g.fill();
+    g.fillStyle = '#d97a58'; g.beginPath(); g.ellipse(W * 0.3, H * 0.6, 58, 24, 0, 0, 7); g.fill();
+    g.fillStyle = '#9d3a25'; g.beginPath(); g.ellipse(W * 0.3, H * 0.6, 26, 10, 0, 0, 7); g.fill();
+  } else if (kind === 'saturn') bands(['#ead9a6', '#dcc590', '#f4e8c4', '#c9ac76', '#e3d0a0'], 20, 140);
+  else if (kind === 'uranus') bands(['#a8e8ef', '#8fdce6', '#b9f0f4', '#7ad0dc'], 8, 60);
+  else if (kind === 'neptune') {
+    bands(['#2b4fd2', '#3b63e6', '#223f9e', '#4d78f2'], 14, 100);
+    g.fillStyle = '#1a2d78'; g.beginPath(); g.ellipse(W * 0.6, H * 0.55, 60, 28, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.35)'; for (let i = 0; i < 10; i++) { g.beginPath(); g.ellipse(srnd() * W, H * (0.3 + srnd() * 0.4), 40 + srnd() * 60, 3 + srnd() * 4, 0, 0, 7); g.fill(); }
+  } else if (kind === 'sun') {
+    g.fillStyle = '#ffb427'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 520; i++) { g.fillStyle = srnd() < 0.5 ? 'rgba(255,110,20,0.35)' : 'rgba(255,240,150,0.35)'; blob(srnd() * W, srnd() * H, 6 + srnd() * 30); }
+  }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function ringTex() {
+  const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'), r0 = S / 2 * (1.3 / 2.3);
+  g.lineWidth = 1.7;
+  for (let r = r0; r < S / 2; r += 1) {
+    const t = (r - r0) / (S / 2 - r0);
+    let a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * 38 + Math.sin(t * 9) * 2));
+    if (t < 0.1) a *= t / 0.1;
+    if (t > 0.58 && t < 0.66) a *= 0.08;
+    if (t > 0.93) a *= (1 - t) / 0.07;
+    g.strokeStyle = `rgba(${226 + (t * 40 | 0)},${206 + (t * 30 | 0)},150,${a})`;
+    g.beginPath(); g.arc(S / 2, S / 2, r, 0, 7); g.stroke();
   }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
@@ -718,12 +772,51 @@ for (const [x, y, z, sz, c] of [[0, -6500, -2500, 9000, '150,80,255'], [4200, -5
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex([[0, `rgba(${c},0.5)`], [0.5, `rgba(${c},0.16)`], [1, `rgba(${c},0)`]]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
   sp.position.set(x, y, z); sp.scale.setScalar(sz); backdrop.add(sp);
 }
-const EARTH_POS = new THREE.Vector3(-1500, -3200, -3000), MOON_POS = new THREE.Vector3(2300, -1700, -4300);
-const earth = new THREE.Mesh(new THREE.SphereGeometry(1900, 48, 32), new THREE.MeshLambertMaterial({ map: planetTex('earth') }));
-earth.position.copy(EARTH_POS); backdrop.add(earth);
-earth.add(new THREE.Mesh(new THREE.SphereGeometry(1990, 48, 32), new THREE.MeshBasicMaterial({ color: '#6cc4ff', transparent: true, opacity: 0.2, side: THREE.BackSide, depthWrite: false })));
-const moon = new THREE.Mesh(new THREE.SphereGeometry(430, 32, 24), new THREE.MeshLambertMaterial({ map: planetTex('moon') }));
-moon.position.copy(MOON_POS); backdrop.add(moon);
+// Sonnensystem: alle Himmelskörper liegen unter der Flugebene, du fliegst von oben darüber
+const PLANET_DEFS = [
+  { id: 'earth',   name: 'Erde',    tag: 'Zuhause. Dein Magen vermisst es.',     tex: 'earth',   R: 900,  x: -300,  z: -400,  tilt: -0.93, col: '#3a82e8', spin: 0.010 },
+  { id: 'moon',    name: 'Mond',    tag: 'Kein Käse, nur Krater.',               tex: 'moon',    R: 170,  orbit: 'earth', od: 1700, oa: 0.9, os: 0.022, tilt: -0.9, col: '#c4c2bb', spin: 0.010 },
+  { id: 'mercury', name: 'Merkur',  tag: 'Viel zu klein für dich.',              tex: 'mercury', R: 90,   x: 1900,  z: 900,   tilt: -0.9,  col: '#a09a94', spin: 0.020 },
+  { id: 'venus',   name: 'Venus',   tag: 'Heißer als jeder Dönergrill.',         tex: 'venus',   R: 260,  x: -2200, z: 1500,  tilt: -0.9,  col: '#e8c27a', spin: -0.006 },
+  { id: 'mars',    name: 'Mars',    tag: 'So rot wie Ketchup.',                  tex: 'mars',    R: 200,  x: 2200,  z: -1100, tilt: -0.9,  col: '#c4623a', spin: 0.012 },
+  { id: 'jupiter', name: 'Jupiter', tag: 'Der Fetteste hier. Du holst auf.',     tex: 'jupiter', R: 1000, x: -2800, z: -2600, tilt: -0.93, col: '#d3a679', spin: 0.020 },
+  { id: 'saturn',  name: 'Saturn',  tag: 'Hat seinen Hula-Hoop-Reifen dabei.',   tex: 'saturn',  R: 800,  x: 2700,  z: -3200, tilt: -0.38, col: '#e6d29c', spin: 0.018, rings: true },
+  { id: 'uranus',  name: 'Uranus',  tag: 'Ein Eisriese.',                        tex: 'uranus',  R: 420,  x: -3600, z: 1500,  tilt: -0.9,  col: '#8fdce6', spin: 0.012 },
+  { id: 'neptune', name: 'Neptun',  tag: 'Ganz weit draußen.',                   tex: 'neptune', R: 400,  x: 600,   z: 3400,  tilt: -0.9,  col: '#3f66e8', spin: 0.012 },
+  { id: 'sun',     name: 'Sonne',   tag: 'Zu heiß zum Mampfen.',                 tex: 'sun',     R: 600,  x: 3000,  z: 2600,  tilt: -0.9,  col: '#ffb02a', spin: 0.004, sun: true },
+];
+const SPACE_LIM = 5200;
+const PLANETS = PLANET_DEFS.map(d => {
+  const holder = new THREE.Group(), tiltG = new THREE.Group();
+  tiltG.rotation.set(d.tilt, 0, 0.25); holder.add(tiltG);
+  const tex = planetTex(d.tex);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(d.R, 56, 36), d.sun ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshLambertMaterial({ map: tex }));
+  tiltG.add(mesh);
+  if (d.id === 'earth') mesh.add(new THREE.Mesh(new THREE.SphereGeometry(d.R * 1.05, 48, 32), new THREE.MeshBasicMaterial({ color: '#6cc4ff', transparent: true, opacity: 0.2, side: THREE.BackSide, depthWrite: false })));
+  if (d.rings) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(d.R * 1.3, d.R * 2.3, 128), new THREE.MeshBasicMaterial({ map: ringTex(), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; tiltG.add(ring);
+  }
+  if (d.sun) {
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex([[0, 'rgba(255,220,120,0.9)'], [0.25, 'rgba(255,150,40,0.35)'], [1, 'rgba(255,100,0,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    gl.scale.setScalar(d.R * 6); holder.add(gl);
+  }
+  spaceScene.add(holder);
+  return { ...d, holder, mesh, pos: holder.position, y: -(d.R + 60 + d.R * 0.12), oa: d.oa || 0, oa0: d.oa || 0, hx: 0, hy: 0, hz: 0 };
+});
+const PLANET_BY_ID = Object.fromEntries(PLANETS.map(q => [q.id, q]));
+function placePlanets(reset) {
+  for (const q of PLANETS) {
+    if (reset) { q.holder.visible = true; q.holder.scale.setScalar(1); q.oa = q.oa0; }
+    if (q.orbit) { const e = PLANET_BY_ID[q.orbit]; q.pos.set(e.pos.x + Math.cos(q.oa) * q.od, q.y, e.pos.z + Math.sin(q.oa) * q.od); }
+    else q.pos.set(q.x, q.y, q.z);
+  }
+}
+placePlanets(false);
+function updatePlanets(dt) {
+  for (const q of PLANETS) q.mesh.rotation.y += q.spin * dt * 2;
+  if (endT < 0) { for (const q of PLANETS) if (q.orbit) q.oa += q.os * dt; placePlanets(false); }
+}
 const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
 bang.visible = false; spaceScene.add(bang);
 
@@ -920,7 +1013,7 @@ const eaten = { pizza: 0, doener: 0, dino: 0 };
 const pl = { x: 0, z: 0, vx: 0, vz: 0, yaw: 0, walkPh: 0, wheelA: 0, chomp: 0 };
 let curR = R_LEVEL[1];
 let started = false, playing = false, finaleT = -1, T = 0;
-let inSpace = false, endT = -1, boomed = false, overShown = false, endPuff = 1;
+let inSpace = false, endT = -1, boomed = false, overShown = false, endPuff = 1, warp = false;
 const eatQ = []; let eatCd = 0;
 
 function radiusTarget() {
@@ -1106,6 +1199,7 @@ function spaceSpot(o, init) {
   }
 }
 function updateSpace(dt) {
+  updatePlanets(dt);
   mouthPos(_mouth);
   const ending = endT >= 0, grab = playing || ending;
   const mr = magnetR(), far2 = (spaceFar() * 1.25) ** 2, sIt = itemScale(), dS = 1.3 * Math.pow(curR / R_SPACE0, 0.6);
@@ -1159,7 +1253,7 @@ function updateSpace(dt) {
 function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 function enterSpace(silent, keepPos) {
   if (inSpace) return;
-  inSpace = true; won = true; winShown = true; finaleT = 99;
+  inSpace = true; won = true; winShown = true; finaleT = 99; curPoi = null; warp = false; syncWarp();
   spaceScene.add(root); spaceScene.add(partMesh); parts.length = 0;
   if (!keepPos) { pl.x = 0; pl.z = 0; }
   pl.vx = pl.vz = 0;
@@ -1173,19 +1267,22 @@ function enterSpace(silent, keepPos) {
 }
 function exitSpace() {
   if (!inSpace) return;
-  inSpace = false;
+  inSpace = false; curPoi = null; warp = false; syncWarp();
   scene.add(root); scene.add(partMesh); parts.length = 0;
 }
 
 // ---------- Level 20: das Weltall bricht zusammen, Urknall, Spiel vorbei ----------
 function startEnding() {
   endT = 0; boomed = false; overShown = false;
+  for (const q of PLANETS) { q.hx = q.pos.x; q.hy = q.pos.y; q.hz = q.pos.z; }
+  syncWarp();
   eatQ.length = 0; pl.vx = pl.vz = 0; playing = false;
   won = true; save();
   SFX.rumble();
 }
 function hideUniverse() {
-  root.visible = false; earth.visible = false; moon.visible = false;
+  root.visible = false;
+  for (const q of PLANETS) q.holder.visible = false;
   sFoodMesh[0].visible = sFoodMesh[1].visible = false; sDinoMesh.visible = false;
 }
 function updateEnding(dt) {
@@ -1194,8 +1291,12 @@ function updateEnding(dt) {
   if (t < 3.2) {
     const k = t / 3.2, k2 = k * k;
     backdrop.rotation.y += dt * (0.15 + k2 * 4);
-    earth.position.lerpVectors(EARTH_POS, _look.set(0, -curR * 4, 0), k2); earth.scale.setScalar(1 - 0.93 * k2);
-    moon.position.lerpVectors(MOON_POS, _look.set(0, -curR * 2, 0), k2); moon.scale.setScalar(1 - 0.9 * k2);
+    const sh = 1 - 0.97 * k2;   // alle Planeten schrumpfen und rasen unter dir zusammen
+    for (const q of PLANETS) {
+      q.holder.scale.setScalar(sh);
+      q.pos.set(lerp(q.hx, pl.x, k2), lerp(q.hy, -(q.R * sh + 25), k2), lerp(q.hz, pl.z, k2));
+      q.mesh.rotation.y += dt * 6 * k2;
+    }
     stars.scale.setScalar(1 - 0.85 * k2);
     endPuff = 1 + 1.6 * k2 + Math.sin(T * 45) * 0.05 * k;
     return;
@@ -1304,8 +1405,8 @@ function banner(title, sub) {
   clearTimeout(banTimer); banTimer = setTimeout(() => b.classList.remove('show'), 3300);
 }
 let poiTimer = 0, curPoi = null;
-function showPoi(name) {
-  const el = $('poi'); el.textContent = '📍 ' + name; el.classList.add('show');
+function showPoi(name, sub) {
+  const el = $('poi'); el.textContent = '📍 ' + name + (sub ? ' · ' + sub : ''); el.classList.add('show');
   clearTimeout(poiTimer); poiTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 const slots = {};
@@ -1377,8 +1478,16 @@ function mmPaintCrushed() {
   mmCtxQueue.length = 0;
 }
 function drawRadar(cv, big) {
-  const g = cv.getContext('2d'), S = cv.width, h = S / 2, k = h / spaceFar();
+  const g = cv.getContext('2d'), S = cv.width, h = S / 2, far = spaceFar(), k = h / far;
   g.fillStyle = '#0a0d2a'; g.fillRect(0, 0, S, S);
+  // Planeten in Reichweite (am Radarrand abgeschnitten)
+  g.save(); g.beginPath(); g.arc(h, h, h, 0, 7); g.clip(); g.globalAlpha = 0.6;
+  for (const q of PLANETS) {
+    const x = h + (q.pos.x - pl.x) * k, y = h + (q.pos.z - pl.z) * k, rr = q.R * k;
+    if ((x - h) ** 2 + (y - h) ** 2 > (h + rr) ** 2) continue;
+    g.fillStyle = q.col; g.beginPath(); g.arc(x, y, rr, 0, 7); g.fill();
+  }
+  g.restore();
   g.strokeStyle = 'rgba(140,170,255,0.25)'; g.lineWidth = Math.max(1, S / 200);
   for (const q of [0.33, 0.66, 0.98]) { g.beginPath(); g.arc(h, h, q * h, 0, 7); g.stroke(); }
   const dr = Math.max(2, S / 120);
@@ -1389,13 +1498,27 @@ function drawRadar(cv, big) {
     if ((x - h) ** 2 + (y - h) ** 2 > h * h) continue;
     g.beginPath(); g.arc(x, y, dr, 0, 7); g.fill();
   }
+  // Planeten außerhalb: bunter Punkt am Rand zeigt die Richtung
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  for (const q of PLANETS) {
+    const dx = q.pos.x - pl.x, dz = q.pos.z - pl.z, d = Math.hypot(dx, dz);
+    if (d - q.R < far) continue;
+    const a = Math.atan2(dz, dx), mx = h + Math.cos(a) * h * 0.9, my = h + Math.sin(a) * h * 0.9;
+    g.beginPath(); g.arc(mx, my, Math.max(3, S / (big ? 70 : 38)), 0, 7);
+    g.fillStyle = q.col; g.fill(); g.lineWidth = Math.max(1.5, S / 260); g.strokeStyle = '#0b0c0f'; g.stroke();
+    if (big) {
+      g.font = `${Math.round(S / 50)}px Bungee, 'Arial Black', sans-serif`; g.lineWidth = Math.max(3, S / 220); g.strokeStyle = '#0b0c0f'; g.fillStyle = '#fff4de';
+      const tx = h + Math.cos(a) * h * 0.78, ty = h + Math.sin(a) * h * 0.78, txt = `${q.name} ${(d / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} km`;
+      g.strokeText(txt, tx, ty); g.fillText(txt, tx, ty);
+    }
+  }
   g.beginPath(); g.arc(h, h, Math.max(S / 40, bodyR() * k), 0, 7);
   g.fillStyle = '#e8338a'; g.fill(); g.lineWidth = Math.max(2, S / 120); g.strokeStyle = '#fff4de'; g.stroke();
   if (big) {
-    g.font = `${Math.round(S / 26)}px Bungee, 'Arial Black', sans-serif`; g.textAlign = 'center'; g.fillStyle = '#fff4de';
+    g.font = `${Math.round(S / 26)}px Bungee, 'Arial Black', sans-serif`; g.fillStyle = '#fff4de';
     g.fillText('Weltall', h, S * 0.08);
-    g.font = `800 ${Math.round(S / 40)}px Nunito, sans-serif`; g.fillStyle = '#7fe07f';
-    g.fillText('Grüne Punkte = fette Dinos', h, S * 0.95);
+    g.font = `800 ${Math.round(S / 44)}px Nunito, sans-serif`; g.fillStyle = '#7fe07f';
+    g.fillText('Grün = fette Dinos · Bunt am Rand = Planeten', h, S * 0.95);
   }
 }
 function drawMap(cv, labels) {
@@ -1448,6 +1571,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 const KEYMAP = { KeyW: 'u', ArrowUp: 'u', KeyS: 'd', ArrowDown: 'd', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r' };
 addEventListener('keydown', e => {
   audioOn();
+  if (e.key === 'Shift') { keys.shift = true; return; }
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); return; }
   if (e.target.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
   if (!playing || e.repeat && e.code === 'Space') return;
@@ -1458,7 +1582,7 @@ addEventListener('keydown', e => {
   else if (e.code === 'KeyM') toggleMap();
   else if (e.code === 'Escape' || e.code === 'KeyP') pause();
 });
-addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
+addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; if (e.key === 'Shift') keys.shift = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 for (const [t, el] of Object.entries(slots)) {
@@ -1482,6 +1606,12 @@ $('sndBtn').addEventListener('click', () => {
   $('sndBtn').setAttribute('aria-label', muted ? 'Ton an' : 'Ton aus');
 });
 $('helpBtn').addEventListener('click', pause);
+const warpOn = () => inSpace && (warp || !!keys.shift);
+function syncWarp() {
+  const b = $('warpBtn'); b.hidden = !inSpace || endT >= 0;
+  b.classList.toggle('on', warp); b.setAttribute('aria-pressed', String(warp)); b.setAttribute('aria-label', warp ? 'Warp aus' : 'Warp an');
+}
+$('warpBtn').addEventListener('click', () => { audioOn(); warp = !warp; syncWarp(); if (warp) SFX.whoosh(); });
 $('mini').addEventListener('click', toggleMap);
 $('bigmap').addEventListener('click', toggleMap);
 function toggleMap() { $('bigmap').hidden = !$('bigmap').hidden; }
@@ -1544,8 +1674,8 @@ function restore(d) {
 function resetGame() {
   exitSpace();
   endT = -1; boomed = false; overShown = false; endPuff = 1;
-  root.visible = true; earth.visible = moon.visible = true; bang.visible = false;
-  earth.position.copy(EARTH_POS); earth.scale.setScalar(1); moon.position.copy(MOON_POS); moon.scale.setScalar(1);
+  root.visible = true; bang.visible = false;
+  placePlanets(true); warp = false;
   stars.scale.setScalar(1); backdrop.rotation.set(0, 0, 0); spaceScene.background.copy(SPACE_BG);
   sFoodMesh[0].visible = sFoodMesh[1].visible = true; sDinoMesh.visible = true;
   cam.dist = 18; cam.pitch = 0.88;
@@ -1583,7 +1713,7 @@ function updateCamera(dt) {
     cam.x = pl.x; cam.z = pl.z;
   } else {
     let tDist, tPitch;
-    if (inSpace) { tDist = spaceDist() * (1 + clamp(endT - 3.2, 0, 1) * 5); tPitch = 0.95; }
+    if (inSpace) { tDist = spaceDist() * (1 + clamp(endT - 3.2, 0, 1) * 5) * (warpOn() ? 1.35 : 1); tPitch = 0.95; }
     else if (finaleT >= 0) { tDist = fitDist(); tPitch = 1.36; }
     else { tDist = (9 + curR * 13) / Math.sqrt(Math.min(1, camera.aspect * 1.25)); tPitch = lerp(0.88, 1.16, (level - 1) / 8); }
     cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(tDist), damp(finaleT >= 0 && !inSpace ? 0.9 : 2.5, dt)));
@@ -1619,7 +1749,7 @@ function update(dt) {
   ix += joy.x; iz += joy.y;
   const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
   const lockMove = !inSpace && finaleT >= 0 && finaleT < 6.5;   // Finale-Animation auf Level 10
-  const sp = lockMove ? 0 : inSpace ? 14 + curR * 4 : level >= MAP_LEVEL ? 110 : Math.min(320, 10 + 5 * curR);
+  const sp = lockMove ? 0 : inSpace ? (26 + curR * 6) * (warpOn() ? 4 : 1) : level >= MAP_LEVEL ? 110 : Math.min(320, 10 + 5 * curR);
   const acc = damp({ roll: 2.6, chair: 5, blob: 1.5, space: 2.2 }[curStage] || 9, dt);
   pl.vx += (ix * sp - pl.vx) * acc; pl.vz += (iz * sp - pl.vz) * acc;
   pl.x += pl.vx * dt; pl.z += pl.vz * dt;
@@ -1629,6 +1759,9 @@ function update(dt) {
     const lim = level >= MAP_LEVEL ? EDGE * 0.85 : EDGE - Math.min(br, 6);
     pl.x = clamp(pl.x, -lim, lim); pl.z = clamp(pl.z, -lim, lim);
     if (level <= 5) collide(br * 0.92);
+  } else {
+    const dd = Math.hypot(pl.x, pl.z);
+    if (dd > SPACE_LIM) { pl.x *= SPACE_LIM / dd; pl.z *= SPACE_LIM / dd; }
   }
   const speed = Math.hypot(pl.vx, pl.vz);
   if (speed > Math.min(0.3 * curR, 8) && curStage !== 'roll') {
@@ -1651,8 +1784,12 @@ function update(dt) {
 
   if ((poiCheck += dt) > 0.4) {
     poiCheck = 0;
-    const p = level < 8 ? poiAt(pl.x, pl.z) : null;
-    if (p !== curPoi) { curPoi = p; if (p) showPoi(p.name); }
+    let p = null;
+    if (inSpace) {
+      let best = 1.4;   // Abstand zur Planetenmitte in Planetenradien
+      for (const q of PLANETS) { const d = Math.hypot(pl.x - q.pos.x, pl.z - q.pos.z) / q.R; if (d < best) { best = d; p = q; } }
+    } else p = level < 8 ? poiAt(pl.x, pl.z) : null;
+    if (p !== curPoi) { curPoi = p; if (p) showPoi(p.name, p.tag); }
   }
   if ((saveT += dt) > 5) { saveT = 0; save(); }
   return speed;
@@ -1753,6 +1890,8 @@ window.__mampf = {
   give(t, n) { inv[t] += n; },
   get state() { return { points, level, curR, inv: { ...inv }, x: pl.x, z: pl.z, crushedCount, playing, inSpace, endT }; },
   tp(x, z) { pl.x = x; pl.z = z; },
+  get planets() { return PLANETS.map(q => ({ id: q.id, x: q.pos.x, y: q.pos.y, z: q.pos.z, R: q.R })); },
+  get warp() { return warp; },
   get info() { return { items: N, buildings: B.length, ...renderer.info.render }; },
 };
 
