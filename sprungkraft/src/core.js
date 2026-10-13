@@ -151,8 +151,8 @@ const DIFFICULTIES = [
     checkpoints: true, rescue: false, oneHit: false, score: 1.5,
     desc: 'Gegner sind schneller, Bosse brauchen 4 Treffer, kürzere Schonzeit nach Treffern. 1,5-fache Punkte.' },
   { id: 'impossible', name: 'Unmöglich', color: '#ff6b7a', lives: 1, startPower: 0, speed: 1.5, bossSpeed: 1.4, bossHp: 5, inv: 1,
-    checkpoints: false, rescue: false, oneHit: true, score: 3,
-    desc: '1 Leben, jeder Treffer ist sofort vorbei, keine Kontrollpunkte, Bosse brauchen 5 Treffer. 3-fache Punkte.' },
+    checkpoints: false, rescue: false, oneHit: true, bossExtras: true, score: 3,
+    desc: '1 Leben, jeder Treffer ist sofort vorbei, keine Kontrollpunkte. Bosse brauchen 5 Treffer und haben 2 neue Angriffe. 3-fache Punkte.' },
 ];
 let DIFF = DIFFICULTIES[1];
 {
