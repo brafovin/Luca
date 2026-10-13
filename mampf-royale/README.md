@@ -11,9 +11,9 @@ Starten: `index.html` im Browser öffnen oder den Ordner statisch ausliefern, z.
 |---|---|---|
 | 🍕 Pizza | 5.000 | |
 | 🥙 Döner | 2.000 | |
-| 🦖 Dino | 5.000 | selten: nur 26 laufen durch die Stadt, sie rennen weg, wenn du nah kommst |
+| 🦖 Dino | 5.000 | in der Stadt selten (nur 26, sie rennen weg), im Weltall schweben ganz viele |
 
-- **200.000 Punkte = 1 Level.** Level 10 (1.800.000 Punkte) ist das Ziel.
+- **200.000 Punkte = 1 Level.** Bei Level 20 (3.800.000 Punkte) ist das Spiel vorbei.
 - Das Essen liegt auf allen Straßen. Drüberlaufen → es fliegt ins **Inventar**. Gegessen wird nur aus dem Inventar.
 - Aufgegessenes Essen wächst nach ca. 1,5 Minuten an derselben Stelle nach.
 
@@ -23,7 +23,9 @@ Starten: `index.html` im Browser öffnen oder den Ordner statisch ausliefern, z.
 | 1–2 | Laufen (ab 2 watschelt man) |
 | 3–4 | So rund, dass man **rollt** |
 | 5–9 | **Rollstuhl**; ab Level 6 zerquetscht man Häuser, ab Level 7 ist man größer als ein Hochhaus |
-| 10 | Der Körper liegt über der **ganzen Map** |
+| 10–14 | Der Körper liegt über der **ganzen Map**; man schiebt sich über die Insel und saugt mit dem Mund Essen ein |
+| 15–19 | **Weltall**: über der Erde schweben Pizza, Döner und ganz viele richtig fette Dinos, die die Zunge rausstrecken |
+| 20 | Das Weltall bricht zusammen, alle Planeten explodieren, man platzt, ein neuer **Urknall** – Spiel vorbei |
 
 Die Figur wächst bei jedem Bissen ein Stück (nicht nur beim Level-Aufstieg). Oben links steht das aktuelle Gewicht.
 
@@ -38,7 +40,7 @@ Meer drumherum. Orte: Fett City (Hochhäuser in der Mitte), Pizza Plaza (viel Pi
 | Finger aufs Bild legen und ziehen | `W A S D` / Pfeiltasten | Laufen |
 | Essen im Inventar antippen (halten = weiter essen) | `1` `2` `3` | Pizza / Döner / Dino essen |
 | „Alles essen“ | `Leertaste` | Ganzes Inventar essen |
-| Minikarte antippen | `M` | Große Karte |
+| Minikarte antippen | `M` | Große Karte (im Weltall: Radar mit den Dinos) |
 | `II` | `Esc` / `P` | Pause und Regeln |
 
 Der Spielstand wird automatisch im Browser gespeichert.
