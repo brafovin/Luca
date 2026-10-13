@@ -118,10 +118,10 @@ class Player {
 
   hurt() {
     if (this.inv > 0 || this.star > 0 || this.dead || G.state !== 'play') return;
-    if (this.power > 0) {
+    if (this.power > 0 && !DIFF.oneHit) {
       this.power = this.power === 2 ? 1 : 0;
       if (this.rolling <= 0) this.setBox(this.fullW, this.fullH);
-      this.inv = 2;
+      this.inv = DIFF.inv;
       Sound.play('hurt');
       G.shake(4);
       G.popup(this.cx, this.y - 8, this.power === 1 ? 'Feuer weg!' : 'Autsch!', '#ffb4b4');
@@ -264,7 +264,7 @@ class Player {
     } else this.groundTile = 0;
 
     // Gefahren
-    if (touchesTile(this, TL.LAVA, 4)) { G.killPlayer(); return; }
+    if (touchesTile(this, TL.LAVA, 4)) { if (DIFF.rescue) G.rescuePlayer(); else G.killPlayer(); return; }
     const sx0 = Math.floor(this.x / T), sx1 = Math.floor((this.x + this.w - 1) / T);
     const sy0 = Math.floor(this.y / T), sy1 = Math.floor((this.y + this.h - 1) / T);
     for (let ty = sy0; ty <= sy1; ty++) for (let tx = sx0; tx <= sx1; tx++) {
@@ -273,7 +273,15 @@ class Player {
         if (this.inv <= 0 && this.star <= 0) { this.hurt(); if (!this.dead) this.vy = -480; }
       }
     }
-    if (this.y > G.lvl.h * T + 60) { G.killPlayer(true); return; }
+    if (this.y > G.lvl.h * T + 60) { if (DIFF.rescue) G.rescuePlayer(); else G.killPlayer(true); return; }
+
+    // Letzter sicherer Platz (für „Einfach“): fester Boden unter beiden Füßen, keine Stacheln
+    if (this.onGround && !this.riding && this.rolling <= 0 && this.inv <= 0) {
+      const fy = Math.floor((this.y + this.h + 1) / T);
+      if (solidAt(Math.floor((this.x - 4) / T), fy) && solidAt(Math.floor((this.x + this.w + 4) / T), fy) && !touchesTile(this, TL.SPIKES)) {
+        this.safe = { x: this.x, bottom: this.y + this.h };
+      }
+    }
 
     // Feuerball
     if (this.fireReq) {
@@ -674,14 +682,15 @@ class BossBase extends Enemy {
     this.kind = kind; this.name = name;
     const a = opts.arena || [0, G.lvl.w - 1];
     this.arena = [a[0] * T, (a[1] + 1) * T];
-    this.hp = 3; this.maxHp = 3;
+    this.hp = DIFF.bossHp; this.maxHp = DIFF.bossHp;
     this.awake = false; this.state = 'sleep'; this.t = 0;
     this.rollKill = false; this.fireKill = false; this.starKill = false; this.shellKill = true; this.rollHit = false;
     this.fireHits = 0; this.look = 0; this.squash = 0; this.score = 5000; this.dir = -1; this.hitWall = 0;
     this.groundY = G.lvl.gy * T;
   }
   get cx() { return this.x + this.w / 2; }
-  get rage() { return this.maxHp - this.hp; } // 0, 1, 2 – wird mit jedem Treffer wilder
+  // 0 (frisch) bis 2 (letzter Treffer) – wird mit jedem Treffer wilder, unabhängig von der Trefferzahl
+  get rage() { return this.maxHp > 1 ? ((this.maxHp - this.hp) / (this.maxHp - 1)) * 2 : 0; }
   get mid() { return (this.arena[0] + this.arena[1]) / 2; }
 
   update(dt) {
@@ -761,7 +770,7 @@ class SlimeBoss extends BossBase {
   }
   land() {
     this.state = 'wait';
-    this.t = 0.35 + this.hp * 0.28;
+    this.t = 0.35 + (3 - this.rage) * 0.28;
     this.squash = 0.55;
     this.jumps++;
     this.landFx(8);
@@ -790,7 +799,7 @@ class MoleBoss extends BossBase {
         this.hide = Math.min(1, this.hide + dt * 2);
         this.ghost = this.hide > 0.5;
         if (Math.random() < 0.5) this.dirt(2);
-        if (this.t <= 0) { this.state = 'under'; this.hide = 1; this.ghost = true; this.t = 0.9 + this.hp * 0.35; }
+        if (this.t <= 0) { this.state = 'under'; this.hide = 1; this.ghost = true; this.t = 0.9 + (3 - this.rage) * 0.35; }
         break;
       case 'under': {
         const sp = (150 + this.rage * 70) * dt;
@@ -914,7 +923,7 @@ class ScorpionBoss extends BossBase {
     this.fall(dt);
   }
   shoot() {
-    const n = 3 + this.rage;
+    const n = 3 + Math.round(this.rage);
     const tipX = this.cx + this.dir * 10, tipY = this.y - 26;
     for (let i = 0; i < n; i++) {
       G.enemies.push(new Shot('stinger', tipX, tipY, this.dir * (140 + i * 85), -560 + i * 30, { grav: 1100 }));
@@ -937,7 +946,7 @@ class YetiBoss extends BossBase {
         this.vx = approach(this.vx, this.dir * (70 + this.rage * 25), 500 * dt);
         if (this.t <= 0) {
           this.cycle++;
-          if (this.cycle % 2) { this.state = 'throw'; this.t = 0.55; this.throws = 1 + this.rage; }
+          if (this.cycle % 2) { this.state = 'throw'; this.t = 0.55; this.throws = 1 + Math.round(this.rage); }
           else { this.state = 'crouch'; this.t = 0.4; }
         }
         break;
@@ -975,7 +984,7 @@ class YetiBoss extends BossBase {
     Sound.play('kick');
   }
   icicles(p) {
-    const n = 3 + this.rage;
+    const n = 3 + Math.round(this.rage);
     const top = Math.max(0, G.cam.y) + 20;
     const used = [];
     for (let i = 0; i < n; i++) {
@@ -1004,7 +1013,7 @@ class DragonBoss extends BossBase {
       case 'idle':
         this.vx = approach(this.vx, 0, 1500 * dt);
         this.headDip = approach(this.headDip, 0, dt * 5);
-        if (this.t <= 0) { this.state = 'breathe'; this.shots = 3 + this.rage; this.t = 0.5; this.high = Math.random() < 0.5; }
+        if (this.t <= 0) { this.state = 'breathe'; this.shots = 3 + Math.round(this.rage); this.t = 0.5; this.high = Math.random() < 0.5; }
         break;
       case 'breathe':
         this.vx = 0;

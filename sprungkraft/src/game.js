@@ -14,7 +14,7 @@ const G = {
   cam: { x: 0, y: 0, w: 960, h: 540 }, look: 0, shakeT: 0, shakeMag: 0,
   score: 0, coinCount: 0, lives: 3, levelTime: 0, levelCoins: 0, time: 0,
   cp: null, runGems: new Set(),
-  save: Object.assign({ unlocked: 1, gems: {}, best: 0 }, store.get('sk_save', {})),
+  save: Object.assign({ unlocked: 1, gems: {}, best: 0, cleared: {} }, store.get('sk_save', {})),
 };
 
 const canvas = document.getElementById('game');
@@ -57,7 +57,7 @@ G.splash = (x, y) => {
 };
 G.popup = (x, y, text, color = '#ffffff') => { G.popups.push({ x, y, text: String(text), life: 0.9, color }); };
 G.shake = (m) => { G.shakeT = 0.3; G.shakeMag = Math.max(G.shakeMag, m); };
-G.addScore = (n) => { G.score += n; };
+G.addScore = (n) => { G.score += Math.round(n * DIFF.score); };
 G.after = (t, fn) => G.timers.push({ t, fn });
 
 function oneUp(x, y) {
@@ -138,7 +138,7 @@ function spawnLevel(index) {
       case 'spring': G.springs.push({ x: s.x * T + 2, y: (s.y + 1) * T - 22, w: 28, h: 22, comp: 0 }); break;
       case 'mplat': G.platforms.push(new MovingPlatform(s.x, s.y, s.w, s.opts)); break;
       case 'fplat': G.platforms.push(new FallingPlatform(s.x, s.y, s.w)); break;
-      case 'checkpoint': G.checkpoints.push({ tx: s.x, ty: s.y, x: s.x * T + T / 2, y: (s.y + 1) * T, active: !!(G.cp && G.cp.x === s.x) }); break;
+      case 'checkpoint': if (!DIFF.checkpoints) break; G.checkpoints.push({ tx: s.x, ty: s.y, x: s.x * T + T / 2, y: (s.y + 1) * T, active: !!(G.cp && G.cp.x === s.x) }); break;
       case 'cannon': G.cannons.push(new Cannon(s.x, s.y)); break;
     }
   }
@@ -149,6 +149,7 @@ function spawnLevel(index) {
   } : null;
   const sp = G.cp || L.start;
   G.player = new Player(sp.x * T + T / 2, (sp.y + 1) * T);
+  if (DIFF.startPower) { G.player.power = DIFF.startPower; G.player.setBox(G.player.fullW, G.player.fullH); }
   G.look = 0;
   clampCam(true);
 }
@@ -242,6 +243,24 @@ G.killPlayer = (fell = false) => {
   Sound.play('die');
 };
 
+// „Einfach“: Abgrund oder Lava kosten kein Leben, sondern setzen dich an den letzten sicheren Platz
+G.rescuePlayer = () => {
+  const p = G.player;
+  if (p.dead || G.state !== 'play') return;
+  const s = p.safe || { x: G.lvl.start.x * T + 5, bottom: (G.lvl.start.y + 1) * T };
+  p.rolling = 0; p.auto = null; p.riding = null;
+  p.power = p.power === 2 ? 1 : 0;
+  p.setBox(p.fullW, p.fullH);
+  p.x = s.x; p.y = s.bottom - p.h; p.vx = 0; p.vy = 0;
+  p.inv = DIFF.inv;
+  Sound.play('hurt');
+  G.popup(p.cx, p.y - 10, 'Gerettet!', '#bfe8ff');
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    G.particle({ x: p.cx, y: p.y + p.h / 2, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, life: 0.5, size: 4, color: '#bfe8ff', grav: 0 });
+  }
+};
+
 function collectItem(it) {
   const p = G.player;
   const x = p.cx, y = p.y - 6;
@@ -289,6 +308,8 @@ G.onEnteredHouse = () => {
     const gems = new Set([...savedGems(G.levelIndex), ...G.runGems]);
     G.save.gems[def.id] = [...gems].sort();
     G.save.unlocked = Math.max(G.save.unlocked, Math.min(LEVELS.length, G.levelIndex + 2));
+    G.save.cleared = G.save.cleared || {};
+    G.save.cleared[def.id] = Math.max(G.save.cleared[def.id] ?? -1, DIFFICULTIES.indexOf(DIFF));
     G.save.best = Math.max(G.save.best, G.score);
     store.set('sk_save', G.save);
     for (let i = 0; i < 5; i++) G.after(i * 0.25, () => firework(G.cam.x + G.cam.w * (0.2 + Math.random() * 0.6), G.cam.y + 80 + Math.random() * 120));
@@ -518,12 +539,13 @@ function updateCamera(dt) {
 function updateWorld(dt, withPlayer) {
   const L = G.lvl;
   for (const k in L.bumps) { L.bumps[k] -= dt; if (L.bumps[k] <= 0) delete L.bumps[k]; }
-  for (const p of G.platforms) if (!p.isPlatform || p.alive) p.update(dt);
+  // Schwierigkeit: Gegner, Geschosse, Stampfer und Kanonen laufen schneller oder langsamer
+  for (const p of G.platforms) if (!p.isPlatform || p.alive) p.update(p.isPlatform ? dt * DIFF.speed : dt);
   if (withPlayer) G.player.update(dt);
   for (const e of G.enemies) {
     if (e.isPlatform) continue;
     if (!e.alive) { e.deadUpdate(dt); continue; }
-    if (e.type === 'boss' ? e.awake || inRange(e, 0) : inRange(e)) e.update(dt);
+    if (e.type === 'boss' ? e.awake || inRange(e, 0) : inRange(e)) e.update(dt * (e.type === 'boss' ? DIFF.bossSpeed : DIFF.speed));
   }
   // Gegner drehen sich um, wenn sie sich berühren
   for (let i = 0; i < G.enemies.length; i++) {
@@ -535,7 +557,7 @@ function updateWorld(dt, withPlayer) {
       if (overlap(a, b) && sign(b.x - a.x) === sign(a.vx)) { a.vx = -a.vx; b.vx = -b.vx; }
     }
   }
-  if (withPlayer) for (const c of G.cannons) c.update(dt);
+  if (withPlayer) for (const c of G.cannons) c.update(dt * DIFF.speed);
   for (const it of G.items) it.update(dt);
   for (const f of G.fireballs) f.update(dt);
   for (const s of G.springs) s.comp = approach(s.comp, 0, dt * 4);
@@ -619,7 +641,7 @@ function startTitle() {
 }
 
 function startGame(index) {
-  G.score = 0; G.coinCount = 0; G.lives = 3;
+  G.score = 0; G.coinCount = 0; G.lives = DIFF.lives;
   startLevel(index);
 }
 
