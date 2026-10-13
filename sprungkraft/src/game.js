@@ -107,7 +107,12 @@ function spawnEnemy(s) {
     case 'bat': e = new Bat(cx(30), s.y * T + 5, s.opts); break;
     case 'lavaball': e = new Lavaball(cx(24), (G.lvl.gy + 1) * T + 8, s.opts); break;
     case 'stomper': e = new Stomper(tx * T + 2, s.y * T); G.platforms.push(e); break;
-    case 'boss': e = new Boss(tx * T + T / 2 - 48, standY(84), s.opts); G.boss = e; break;
+    case 'boss': {
+      const Cls = BOSS_TYPES[s.opts.boss] || SlimeBoss;
+      e = new Cls(tx * T + T / 2, (row + 1) * T, s.opts);
+      G.boss = e;
+      break;
+    }
   }
   if (e) G.enemies.push(e);
 }
@@ -303,7 +308,15 @@ function firework(x, y) {
 G.bossStart = (b) => {
   G.bossActive = true;
   Sound.playMusic('boss');
-  G.popup(b.x + b.w / 2, b.y - 30, 'König Matsch!', '#ff9bd2');
+  G.popup(b.cx, Math.max(b.y - 30, G.cam.y + 90), b.name + '!', '#ff9bd2');
+  // Tor hinter dem Spieler schließt sich
+  for (const g of G.lvl.gates) {
+    if (!g.closing) continue;
+    for (let y = g.y0; y <= g.y1; y++) setTile(g.x, y, TL.STONE);
+    G.dust(g.x * T + T / 2, (g.y1 + 1) * T, 8, 0);
+  }
+  Sound.play('thud');
+  G.shake(5);
 };
 
 G.bossDefeated = (b) => {
@@ -314,7 +327,10 @@ G.bossDefeated = (b) => {
   for (let i = 0; i < 40; i++) {
     G.particle({ x: b.x + Math.random() * b.w, y: b.y + Math.random() * b.h, vx: (Math.random() - 0.5) * 400, vy: -Math.random() * 500, life: 1.2, size: 5, color: i % 2 ? '#9b5ae0' : '#ffcf33', grav: 900 });
   }
-  for (const e of G.enemies) if (e.alive && e.type === 'slime') { e.kill('flip', 1); }
+  for (const e of G.enemies) {
+    if (e === b || !e.alive || e.isPlatform) continue;
+    if (e.x + e.w > b.arena[0] - T && e.x < b.arena[1] + T) e.kill('flip', 1);
+  }
   G.after(1.4, () => {
     G.bossActive = false;
     Sound.playMusic(G.lvl.music);
@@ -325,8 +341,8 @@ G.bossDefeated = (b) => {
       }
     }
     Sound.play('brick');
-    if (G.flag) { G.flag.hidden = false; G.flag.appear = 0; }
-    G.popup(G.flag ? G.flag.x : b.x, G.flag ? G.flag.top + 40 : b.y, 'Zur Flagge!', '#7dff9b');
+    if (G.flag && G.flag.hidden) { G.flag.hidden = false; G.flag.appear = 0; }
+    G.popup(b.arena[1] - 2 * T, G.lvl.gy * T - 4 * T, 'Das Tor ist offen!', '#7dff9b');
   });
 };
 
@@ -363,6 +379,12 @@ function interactions(dt) {
       const r = e.onRoll(p);
       if (r === 'kill') { comboScore(p, e); Sound.play('kick'); continue; }
       if (r === 'kick') continue;
+      if (r === 'boss') {
+        p.vx = -(sign(e.cx - p.cx) || p.face) * 240; p.vy = -460;
+        p.inv = Math.max(p.inv, 0.5);
+        G.popup(e.cx, e.y - 10, e.hp > 0 ? `${e.hp} übrig` : 'Besiegt!', '#ff9bd2');
+        continue;
+      }
     }
     e.onTouch(p);
   }
@@ -424,7 +446,7 @@ function interactions(dt) {
       const hold = Input.down('jump');
       p.vy = -PHYS.SPRING;
       p.jumpHold = hold ? PHYS.HOLD_TIME : 0;
-      p.onGround = false; p.riding = null; p.canDouble = true; p.combo = 0;
+      p.onGround = false; p.riding = null; p.canDouble = true; p.combo = 0; p.airRolls = 1;
       s.comp = 1;
       Sound.play('spring');
     }
@@ -463,7 +485,12 @@ function clampCam(snap) {
   const p = G.player, cam = G.cam, L = G.lvl;
   if (!p || !L) return;
   const maxX = Math.max(0, L.w * T - cam.w);
-  const tx = clamp(p.cx - cam.w * 0.42 + G.look, 0, maxX);
+  let tx = clamp(p.cx - cam.w * 0.42 + G.look, 0, maxX);
+  if (G.bossActive && G.boss) {
+    const a0 = G.boss.arena[0] - T, a1 = G.boss.arena[1] + T;
+    tx = a1 - a0 <= cam.w ? (a0 + a1) / 2 - cam.w / 2 : clamp(tx, a0, a1 - cam.w);
+    tx = clamp(tx, 0, maxX);
+  }
   const bottom = L.h * T + TOUCH_EXTRA;
   let ty = p.y + p.h / 2 - cam.h * (IS_TOUCH ? 0.45 : 0.55);
   ty = bottom <= cam.h ? bottom - cam.h : clamp(ty, 0, bottom - cam.h);

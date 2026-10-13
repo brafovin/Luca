@@ -77,6 +77,7 @@ const Sound = (() => {
     pause() { tone('square', 660, 660, 0.06, 0.1); tone('square', 880, 880, 0.08, 0.1, 0.07); },
     select() { tone('square', 740, 740, 0.05, 0.08); },
     shell() { tone('square', 200, 140, 0.06, 0.12); },
+    screech() { tone('sawtooth', 1500, 700, 0.35, 0.07); tone('square', 1800, 900, 0.3, 0.05, 0.05); },
   };
 
   function play(name) {

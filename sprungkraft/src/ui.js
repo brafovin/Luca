@@ -42,10 +42,12 @@ const UI = (() => {
       slime: fakeEnemy('slime', 28, 24), beetle: fakeEnemy('beetle', 28, 28), hedgehog: fakeEnemy('hedgehog', 30, 26),
       bat: fakeEnemy('bat', 30, 22, { y: 6 }), frog: fakeEnemy('frog', 28, 26), ball: fakeEnemy('ball', 26, 26, { y: 3 }),
       lavaball: fakeEnemy('lavaball', 24, 28, { baseY: 100, y: 1 }), stomper: fakeEnemy('stomper', 60, 56, { state: 'idle', x: 2, y: -26 }),
+      boss: fakeEnemy('boss', 96, 84, { kind: 'slime', x: -32, y: -54, state: 'wait', hitFlash: 0 }),
     };
     for (const k in en) {
       icons['e_' + k] = iconCanvas((g) => {
         if (k === 'stomper') { g.translate(16, 16); g.scale(0.5, 0.5); g.translate(-16, -16); }
+        if (k === 'boss') { g.translate(16, 16); g.scale(0.3, 0.3); g.translate(-16, -16); }
         Render.drawEnemy(g, en[k], 0.3);
       });
     }
@@ -73,6 +75,7 @@ const UI = (() => {
       ['ball', 'Kanonenkugel', 'Kommt aus Kanonen – drüber oder drauf.'],
       ['lavaball', 'Feuerspringer', 'Springt aus der Lava. Nicht berühren!'],
       ['stomper', 'Stampfer', 'Fällt herunter. Oben drauf kann man mitfahren.'],
+      ['boss', 'Bosse', 'Am Ende jeder Welt. Drei Treffer, dann öffnet sich das Tor zur Flagge.'],
     ];
     $('help-enemies').innerHTML = enemies.map(([i, n, d]) => `<li><img src="${icons['e_' + i]}" alt=""><span><b>${n}:</b> ${d}</span></li>`).join('');
   }
@@ -231,7 +234,10 @@ const UI = (() => {
     const b = G.boss;
     const showBoss = !!(b && G.bossActive);
     if (cache.boss !== showBoss) { cache.boss = showBoss; $('hud-boss').hidden = !showBoss; }
-    if (showBoss) $('hud-boss-bar').style.width = `${(Math.max(0, b.hp) / b.maxHp) * 100}%`;
+    if (showBoss) {
+      $('hud-boss-bar').style.width = `${(Math.max(0, b.hp) / b.maxHp) * 100}%`;
+      set('hud-boss-name', b.name);
+    }
     // Touch: Feuerknopf
     const fire = !!(p && p.power === 2);
     if (cache.fire !== fire) { cache.fire = fire; document.querySelector('.t-btn.fire').hidden = !fire; }

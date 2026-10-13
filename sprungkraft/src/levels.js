@@ -97,12 +97,27 @@ class LevelBuilder {
   checkpoint(x, y) { this.spawns.push({ kind: 'checkpoint', x, y: this.standRow(x, y) }); this.reserve(x, 1); return this; }
   cannon(x, y) { this.set(x, y, TL.CANNON); this.spawns.push({ kind: 'cannon', x, y }); this.reserve(x, 1); return this; }
   stomper(x, y = 6) { this.spawns.push({ kind: 'enemy', type: 'stomper', x, y, opts: {} }); return this; }
-  boss(x, opts = {}) { this.spawns.push({ kind: 'enemy', type: 'boss', x, y: null, opts }); return this; }
+  // Boss-Arena von x0 bis x1: links ein Tor, das sich beim Kampf schließt, rechts eines, das sich nach dem Sieg öffnet
+  bossArena(x0, x1, kind, tip) {
+    this.ground(x0 - 1, x1 + 1);
+    this.gate(x0 - 1, 2, this.gy - 1, true);
+    this.gate(x1 + 1, 2, this.gy - 1);
+    this.spawns.push({ kind: 'enemy', type: 'boss', x: x1 - 6, y: null, opts: { boss: kind, arena: [x0, x1] } });
+    this.hint(x0 - 3, tip);
+    this.checkpoint(x0 - 6);
+    this.reserve(x0, x1 - x0 + 1);
+    return this;
+  }
   flag(x, opts = {}) { this.flagSpawn = { x, y: this.standRow(x), hidden: !!opts.hidden }; this.reserve(x - 1, 3); return this; }
   house(x) { this.decor.push({ type: 'house', x, y: this.standRow(x) }); this.reserve(x - 1, 5); return this; }
   hint(x, text, touch) { this.hints.push({ x, y: this.standRow(x), text, touch }); this.reserve(x, 1); return this; }
   deco(type, x, y) { this.decor.push({ type, x, y: this.standRow(x, y) }); this.reserve(x, 1); return this; }
-  gate(x, y0, y1) { this.stone(x, y0, x, y1); this.gates.push({ x, y0, y1 }); this.reserve(x, 1); return this; }
+  gate(x, y0, y1, closing = false) {
+    if (closing) this.clear(x, y0, x, y1); else this.stone(x, y0, x, y1);
+    this.gates.push({ x, y0, y1, closing });
+    this.reserve(x, 1);
+    return this;
+  }
   reserve(x, n) { for (let i = 0; i < n; i++) this.reserved.add(x + i); }
 
   autoDecor(seed) {
@@ -139,7 +154,7 @@ class LevelBuilder {
 const LEVELS = [
   // ---------------------------------------------------------------------------------------------
   {
-    id: 1, name: 'Sonnige Wiese', theme: 'meadow', w: 200,
+    id: 1, name: 'Sonnige Wiese', theme: 'meadow', w: 236,
     build(B) {
       B.ground(0, 38);
       B.start(3);
@@ -162,6 +177,7 @@ const LEVELS = [
       B.hint(57, '↓ / S : Rollen – damit passt du durch Tunnel', 'Rollen – damit passt du durch Tunnel');
       B.ground(60, 70, 7); B.clear(60, 14, 70, 14);
       B.coins(61, 69, 14);
+      B.hint(72, '↓ in der Luft : Luftrolle mit Schub nach vorn', 'Rollen in der Luft : Luftrolle mit Schub nach vorn');
       B.q(74, 11, 'power');
       B.enemy('slime', 76);
       // Lücke 78–81
@@ -186,16 +202,17 @@ const LEVELS = [
       B.enemy('slime', 156);
       // Lücke 161–164 mit Edelstein darüber
       B.gem(162, 10);
-      B.ground(165, 199);
+      B.ground(165, 235);
       B.enemy('slime', 168);
-      B.stairs(172, 8); B.stone(180, 7, 180, 14);
-      B.flag(188);
-      B.house(192);
+      B.bossArena(178, 203, 'mole', 'Maulwurf Buddel! Spring auf ihn, wenn er auftaucht.');
+      B.stairs(208, 8); B.stone(216, 7, 216, 14);
+      B.flag(224);
+      B.house(228);
     },
   },
   // ---------------------------------------------------------------------------------------------
   {
-    id: 2, name: 'Finsterwald', theme: 'forest', w: 220,
+    id: 2, name: 'Finsterwald', theme: 'forest', w: 252,
     build(B) {
       B.ground(0, 34);
       B.start(3);
@@ -238,18 +255,19 @@ const LEVELS = [
       B.oneway(153, 156, 12); B.coins(153, 156, 11);
       B.enemy('bat', 157, 9, { range: 3 });
       // Lücke 161–164
-      B.ground(165, 219);
+      B.ground(165, 251);
       B.enemy('bat', 169, 10, { range: 3 });
       B.enemy('beetle', 173);
       B.q(176, 11, 'heart');
-      B.stairs(180, 8); B.stone(188, 7, 188, 14);
-      B.flag(196);
-      B.house(200);
+      B.bossArena(188, 213, 'bat', 'Gräfin Flatter! Spring drauf oder triff sie mit der Luftrolle.');
+      B.stairs(218, 8); B.stone(226, 7, 226, 14);
+      B.flag(234);
+      B.house(238);
     },
   },
   // ---------------------------------------------------------------------------------------------
   {
-    id: 3, name: 'Glutwüste', theme: 'desert', w: 230,
+    id: 3, name: 'Glutwüste', theme: 'desert', w: 262,
     build(B) {
       B.ground(0, 40);
       B.start(3);
@@ -292,20 +310,21 @@ const LEVELS = [
       B.enemy('hedgehog', 155);
       // Abgrund 161–166
       B.mplat(162, 12, 2, { dx: 2, speed: 50 });
-      B.ground(167, 229);
+      B.ground(167, 261);
       B.enemy('hedgehog', 172); B.enemy('hedgehog', 176);
       B.stone(180, 14, 180, 14); B.cannon(180, 13);
       B.spikes(184, 186);
       B.gem(185, 10);
       B.enemy('frog', 190);
-      B.stairs(195, 8); B.stone(203, 7, 203, 14);
-      B.flag(211);
-      B.house(215);
+      B.bossArena(200, 225, 'scorpion', 'Skorpion Skorpi! Weich den Stacheln aus und spring drauf.');
+      B.stairs(230, 8); B.stone(238, 7, 238, 14);
+      B.flag(246);
+      B.house(250);
     },
   },
   // ---------------------------------------------------------------------------------------------
   {
-    id: 4, name: 'Frostgipfel', theme: 'ice', w: 220,
+    id: 4, name: 'Frostgipfel', theme: 'ice', w: 254,
     build(B) {
       B.ground(0, 30);
       B.start(3);
@@ -352,18 +371,19 @@ const LEVELS = [
       B.q(170, 11, 'coins');
       // Abgrund 176–180 mit Bröckelplattform
       B.fplat(177, 13, 3);
-      B.ground(181, 219);
+      B.ground(181, 253);
       B.enemy('frog', 186);
-      B.stairs(192, 8); B.stone(200, 7, 200, 14);
-      B.flag(208);
-      B.house(212);
+      B.bossArena(194, 219, 'yeti', 'Yeti Frosti! Achtung vor Schneebällen und Eiszapfen.');
+      B.stairs(224, 8); B.stone(232, 7, 232, 14);
+      B.flag(240);
+      B.house(244);
     },
   },
   // ---------------------------------------------------------------------------------------------
   {
-    id: 5, name: 'Lavaburg', theme: 'castle', w: 230,
+    id: 5, name: 'Lavaburg', theme: 'castle', w: 260,
     build(B) {
-      B.stone(0, 0, 229, 1); // Decke
+      B.stone(0, 0, B.w - 1, 1); // Decke
       B.ground(0, 24);
       B.start(3);
       B.q(8, 11, 'power'); B.q(10, 11, 'magnet');
@@ -414,20 +434,21 @@ const LEVELS = [
       B.enemy('lavaball', 162, null, { height: 5 });
       B.enemy('lavaball', 167, null, { height: 5, delay: 0.8 });
       B.gem(165, 8);
-      B.ground(169, 229);
+      B.ground(169, 259);
       B.enemy('hedgehog', 173);
       B.stone(177, 14, 177, 14); B.cannon(177, 13);
       B.enemy('frog', 181);
       B.stomper(185);
       B.q(189, 11, 'heart');
-      B.stairs(195, 8); B.stone(203, 7, 203, 14);
-      B.flag(211);
-      B.house(215);
+      B.bossArena(198, 223, 'dragon', 'Drache Glutzahn! Hohes Feuer: drunter durchrollen, tiefes: drüberspringen.');
+      B.stairs(228, 8); B.stone(236, 7, 236, 14);
+      B.flag(244);
+      B.house(248);
     },
   },
   // ---------------------------------------------------------------------------------------------
   {
-    id: 6, name: 'Wolkenschloss', theme: 'sky', music: 'sky', w: 210,
+    id: 6, name: 'Wolkenschloss', theme: 'sky', music: 'sky', w: 214,
     build(B) {
       B.ground(0, 20);
       B.start(3);
@@ -466,12 +487,10 @@ const LEVELS = [
       B.enemy('hedgehog', 147); B.enemy('frog', 151); B.enemy('beetle', 155);
       B.checkpoint(158);
       // Lücke 161–164, dann die Arena von König Matsch
-      B.ground(165, 209);
-      B.hint(167, 'Achtung: König Matsch! 3× auf den Kopf springen.');
-      B.boss(186, { arena: [165, 202] });
-      B.gate(203, 2, 14);
-      B.flag(197, { hidden: true });
-      B.house(206);
+      B.ground(165, 213);
+      B.bossArena(176, 201, 'slime', 'König Matsch! Dreimal auf den Kopf springen.');
+      B.flag(205);
+      B.house(209);
     },
   },
 ];
