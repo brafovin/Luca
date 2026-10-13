@@ -34,7 +34,7 @@ class Player {
     this.vx = 0; this.vy = 0; this.face = 1;
     this.onGround = false; this.groundTile = 0;
     this.coyote = 0; this.jumpBuf = 0; this.jumpHold = 0; this.canDouble = false;
-    this.rolling = 0; this.rollCD = 0; this.rollAngle = 0; this.airRolls = 1;
+    this.rolling = 0; this.rollMin = 0; this.rollCD = 0; this.rollAngle = 0; this.airRolls = 1;
     this.rollBuf = 0; this.fireReq = false;
     this.inv = 0; this.star = 0; this.feather = 0; this.magnet = 0; this.boots = 0; this.fireCD = 0;
     this.riding = null; this.walkPhase = 0; this.squash = 0; this.blinkSeed = Math.random() * 3;
@@ -65,7 +65,8 @@ class Player {
     if (air) {
       // Luftrolle: Kugel bleibt auf Körpermitte, kurzer Schub nach vorn und ein kleiner Hüpfer
       this.airRolls--;
-      this.rolling = PHYS.AIR_ROLL_TIME;
+      this.rolling = 1;
+      this.rollMin = PHYS.AIR_ROLL_TIME;
       const up = (oldH - this.h) / 2;
       if (boxFree(this.x, this.y - up, this.w, this.h)) this.y -= up;
       this.vx = this.face * Math.max(Math.abs(this.vx), sp * 0.95);
@@ -76,7 +77,8 @@ class Player {
         G.particle({ x: this.cx, y: this.y + this.h / 2, vx: Math.cos(a) * 120 - this.face * 60, vy: Math.sin(a) * 120, life: 0.3, size: 3, color: '#ffffff', grav: 0, shape: 'star' });
       }
     } else {
-      this.rolling = PHYS.ROLL_TIME;
+      this.rolling = 1;
+      this.rollMin = PHYS.ROLL_TIME;
       this.vx = this.face * Math.max(Math.abs(this.vx), sp);
       G.dust(this.cx, this.y + this.h, 6, -this.face);
     }
@@ -179,14 +181,20 @@ class Player {
     const maxSp = (run ? PHYS.RUN : PHYS.WALK) * boost;
 
     if (this.rolling > 0) {
-      this.rolling -= dt;
+      // Rollen dauert, solange die Rollen-Taste gedrückt bleibt (ein kurzer Tipp gibt eine kurze Rolle)
+      this.rollMin -= dt;
       const stuck = !this.canStand();
-      if (stuck && dir !== 0) this.face = dir;
-      const target = this.face * PHYS.ROLL * (this.boots > 0 ? 1.2 : 1);
-      if (this.onGround) this.vx = approach(this.vx, stuck ? target : this.vx, (ice ? 300 : 1200) * dt);
-      if (this.rolling <= 0) {
+      const sp = PHYS.ROLL * (this.boots > 0 ? 1.2 : 1);
+      if (dir !== 0 && dir !== this.face) {
+        // Lenken: abbremsen und in die andere Richtung weiterrollen
+        this.vx = approach(this.vx, dir * sp, (this.onGround ? (ice ? 500 : 1500) : 500) * dt);
+        if (sign(this.vx) === dir) this.face = dir;
+      } else if (this.onGround) {
+        this.vx = approach(this.vx, this.face * sp, (ice ? 300 : 900) * dt);
+      }
+      if (!Input.down('roll') && this.rollMin <= 0) {
         if (!stuck) this.endRoll();
-        else { this.rolling = 0.05; if (Math.abs(this.vx) < 160) this.vx = this.face * 160; }
+        else if (Math.abs(this.vx) < 160) this.vx = this.face * 160;
       }
     } else if (dir !== 0) {
       this.face = dir;
@@ -229,8 +237,13 @@ class Player {
     }
     this.vy = Math.min(this.vy + g * dt, PHYS.MAX_FALL);
 
-    // Bewegen
-    if (moveX(this, this.vx * dt)) this.vx = 0;
+    // Bewegen (die Rollkugel prallt von Wänden ab)
+    if (moveX(this, this.vx * dt)) {
+      if (this.rolling > 0 && Math.abs(this.vx) > 150) {
+        this.vx = -this.vx * 0.5; this.face = -this.face;
+        Sound.play('bump');
+      } else this.vx = 0;
+    }
     const wasGround = this.onGround;
     const vyBefore = this.vy;
     this.onGround = false;
@@ -629,7 +642,11 @@ class Stomper extends Enemy {
 }
 
 // ---- Geschosse der Bosse ------------------------------------------------------------
-const SHOT_SIZE = { stinger: [16, 16], snowball: [22, 22], icicle: [18, 30], flame: [34, 20] };
+const SHOT_SIZE = {
+  stinger: [16, 16], snowball: [22, 22], icicle: [18, 30], flame: [34, 20],
+  // nur auf „Unmöglich“:
+  rock: [16, 16], wave: [26, 18], sonic: [26, 26], puddle: [40, 8], bigsnow: [48, 48], ember: [16, 16], geyser: [28, 110], goo: [18, 18],
+};
 
 class Shot extends Enemy {
   // x, y = Mittelpunkt
@@ -637,9 +654,10 @@ class Shot extends Enemy {
     const [w, h] = SHOT_SIZE[kind] || [16, 16];
     super('shot', x - w / 2, y - h / 2, w, h);
     this.kind = kind; this.vx = vx; this.vy = vy;
-    this.grav = opts.grav || 0; this.warn = opts.warn || 0; this.life = 6;
+    this.grav = opts.grav || 0; this.warn = opts.warn || 0; this.life = opts.life || 6;
+    this.puddle = !!opts.puddle; this.rot = 0;
     this.stompable = false; this.spiky = true; this.rollKill = false; this.shellKill = false;
-    this.fireKill = kind === 'snowball' || kind === 'stinger';
+    this.fireKill = kind === 'snowball' || kind === 'stinger' || kind === 'rock' || kind === 'goo';
     this.dir = sign(vx) || 1;
     this.ghost = this.warn > 0;
   }
@@ -653,6 +671,7 @@ class Shot extends Enemy {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     if (this.vx) this.dir = sign(this.vx);
+    this.rot += (this.vx * dt) / 24;
     this.life -= dt;
     if (this.life <= 0 || this.y > G.lvl.h * T + 40) { this.remove = true; return; }
     const cx = this.x + this.w / 2;
@@ -666,7 +685,13 @@ class Shot extends Enemy {
     if (!this.alive) return;
     this.alive = false;
     this.remove = true;
-    const col = { stinger: '#7ed957', snowball: '#ffffff', icicle: '#bfe8ff', flame: '#ff8a2a' }[this.kind];
+    const col = { stinger: '#7ed957', snowball: '#ffffff', icicle: '#bfe8ff', flame: '#ff8a2a', rock: '#7e5130', wave: '#a8703f',
+      sonic: '#ff5fa2', bigsnow: '#ffffff', ember: '#ff8a2a', goo: '#9b5ae0', puddle: '#7ed957', geyser: '#ff8a2a' }[this.kind];
+    // Giftstachel hinterlässt am Boden eine Pfütze
+    if (this.puddle) {
+      const tx = Math.floor((this.x + this.w / 2) / T), ty = Math.floor((this.y + this.h / 2) / T);
+      if (solidAt(tx, ty) && !solidAt(tx, ty - 1)) G.enemies.push(new Shot('puddle', this.x + this.w / 2, ty * T - 4, 0, 0, { life: 3.5 }));
+    }
     for (let i = 0; i < 8; i++) {
       G.particle({ x: this.x + this.w / 2, y: this.y + this.h / 2, vx: (Math.random() - 0.5) * 220, vy: -Math.random() * 220, life: 0.5, size: 3 + Math.random() * 2, color: col, grav: 900, shape: this.kind === 'icicle' ? 'sq' : 'c' });
     }
@@ -692,6 +717,18 @@ class BossBase extends Enemy {
   // 0 (frisch) bis 2 (letzter Treffer) – wird mit jedem Treffer wilder, unabhängig von der Trefferzahl
   get rage() { return this.maxHp > 1 ? ((this.maxHp - this.hp) / (this.maxHp - 1)) * 2 : 0; }
   get mid() { return (this.arena[0] + this.arena[1]) / 2; }
+  get extra() { return !!DIFF.bossExtras; } // „Unmöglich“: zwei zusätzliche Angriffe
+  waves(speed = 260) {
+    for (const s of [-1, 1]) G.enemies.push(new Shot('wave', this.cx + s * (this.w / 2 + 6), this.groundY - 9, s * speed, 0));
+  }
+  randomArenaX(avoid, gap = 90) {
+    let x = this.mid;
+    for (let k = 0; k < 14; k++) {
+      x = this.arena[0] + 40 + Math.random() * (this.arena[1] - this.arena[0] - 80);
+      if (avoid.every((u) => Math.abs(u - x) > gap)) break;
+    }
+    return x;
+  }
 
   update(dt) {
     const p = G.player;
@@ -756,9 +793,30 @@ class SlimeBoss extends BossBase {
   constructor(cx, bottom, opts) { super('slime', cx, bottom, 96, 84, opts, 'König Matsch'); this.jumps = 0; }
   start() { this.state = 'wait'; this.t = 1.0; }
   think(dt, p) {
+    // Mega-Sprung (nur „Unmöglich“): aus dem Bild, folgt dem Spieler, Schatten warnt, dann Aufschlag
+    if (this.state === 'sky') {
+      this.vy += 900 * dt; this.y += this.vy * dt;
+      if (this.y + this.h < G.cam.y - 60) { this.state = 'hang'; this.t = 0.9; this.ghost = true; this.vy = 0; }
+      return;
+    }
+    if (this.state === 'hang') {
+      this.x = clamp(approach(this.x, p.cx - this.w / 2, 700 * dt), this.arena[0], this.arena[1] - this.w);
+      if (this.t <= 0) { this.state = 'slam'; this.ghost = false; this.vy = 1100; this.vx = 0; }
+      return;
+    }
+    if (this.state === 'slam') {
+      this.vy = 1100;
+      if (this.fall(dt, 0)) { this.land(); this.landFx(14); this.waves(320); }
+      return;
+    }
     if (this.onGround) {
       this.vx = approach(this.vx, 0, 1800 * dt);
       if (this.t < 0.3) this.squash = Math.max(this.squash, 0.3);
+      if (this.t <= 0 && !p.dead && this.extra && this.jumps % 3 === 2) {
+        this.state = 'sky'; this.vy = -1500; this.vx = 0; this.onGround = false; this.squash = -0.5;
+        Sound.play('spring');
+        return;
+      }
       if (this.t <= 0 && !p.dead) {
         this.vx = clamp((p.cx - this.cx) * 1.15, -320, 320);
         this.vy = -(680 + this.rage * 70);
@@ -774,6 +832,12 @@ class SlimeBoss extends BossBase {
     this.squash = 0.55;
     this.jumps++;
     this.landFx(8);
+    if (this.extra) {
+      for (let i = 0; i < 4; i++) {
+        const s = i < 2 ? -1 : 1, k = i % 2;
+        G.enemies.push(new Shot('goo', this.cx, this.y + 20, s * (150 + k * 170), -620 + k * 80, { grav: 1100 }));
+      }
+    }
     const slimes = G.enemies.filter((e) => e.type === 'slime' && e.alive).length;
     if (this.jumps % 2 === 0 && slimes < 3) {
       const d = G.player.cx < this.cx ? -1 : 1;
@@ -814,6 +878,9 @@ class MoleBoss extends BossBase {
           this.state = 'pop'; this.hide = 0; this.ghost = false;
           this.vy = -640; this.onGround = false; this.squash = -0.3;
           this.dirt(14); Sound.play('brick'); G.shake(4);
+          if (this.extra) {
+            for (let i = 0; i < 4; i++) G.enemies.push(new Shot('rock', this.cx, this.y + 10, (i - 1.5) * 150, -620 - Math.abs(i - 1.5) * 40, { grav: 1100 }));
+          }
         }
         break;
     }
@@ -821,6 +888,7 @@ class MoleBoss extends BossBase {
     if (this.state !== 'under' && this.state !== 'warn') {
       if (this.fall(dt) && this.state === 'pop') {
         this.state = 'stand'; this.t = 1.5 - this.rage * 0.25; this.squash = 0.4; this.landFx(4);
+        if (this.extra) this.waves();
       }
     }
   }
@@ -849,7 +917,7 @@ class BatBoss extends BossBase {
         const tx = clamp(p.cx - this.w / 2 + Math.sin(G.time * 1.3) * 140, this.arena[0], this.arena[1] - this.w);
         this.x = approach(this.x, tx, (170 + this.rage * 40) * dt);
         this.y = approach(this.y, this.homeY + Math.sin(G.time * 3) * 14, 160 * dt);
-        if (this.t <= 0) { this.state = 'aim'; this.t = 0.5; this.tx = p.cx; Sound.play('screech'); }
+        if (this.t <= 0) { this.state = 'aim'; this.t = 0.5; this.tx = p.cx; Sound.play('screech'); if (this.extra) this.sonic(p); }
         break;
       }
       case 'aim':
@@ -867,7 +935,10 @@ class BatBoss extends BossBase {
         this.x = lerp(this.sx, this.ex, this.u);
         this.y = base + (low - lerp(this.sy, this.restY, 0.5)) * Math.sin(Math.PI * this.u);
         this.dir = sign(this.x - ox) || this.dir;
-        if (this.u >= 1) { this.state = 'rest'; this.t = 1.2 - this.rage * 0.2; }
+        if (this.u >= 1) {
+          if (this.extra && !this.again) { this.again = true; this.state = 'aim'; this.t = 0.3; this.tx = p.cx; Sound.play('screech'); }
+          else { this.again = false; this.state = 'rest'; this.t = 1.2 - this.rage * 0.2; }
+        }
         break;
       }
       case 'rest':
@@ -876,6 +947,13 @@ class BatBoss extends BossBase {
         break;
     }
     if (this.state !== 'swoop') this.dir = sign(p.cx - this.cx) || this.dir;
+  }
+  sonic(p) {
+    const dx = p.cx - this.cx, dy = p.y + p.h / 2 - (this.y + this.h / 2), d = Math.hypot(dx, dy) || 1;
+    for (let i = 0; i < 3; i++) {
+      const sp = 300 - i * 55;
+      G.enemies.push(new Shot('sonic', this.cx, this.y + this.h / 2, (dx / d) * sp, (dy / d) * sp, { life: 4 }));
+    }
   }
   spawnMinion() {
     if (this.rage < 1) return;
@@ -913,7 +991,15 @@ class ScorpionBoss extends BossBase {
         break;
       case 'charge':
         if (Math.random() < 0.5) G.dust(this.cx - this.dir * 40, this.y + this.h, 1, -this.dir);
-        if (this.hitWall === this.dir) { this.state = 'dazed'; this.t = 1.4; this.vx = -this.dir * 120; this.vy = -250; this.landFx(7); }
+        if (this.hitWall === this.dir) {
+          if (this.extra && !this.again) {
+            this.again = true; this.dir = -this.dir; this.vx = this.dir * (400 + this.rage * 60);
+            this.landFx(7); Sound.play('kick');
+          } else {
+            this.again = false;
+            this.state = 'dazed'; this.t = 1.4; this.vx = -this.dir * 120; this.vy = -250; this.landFx(7);
+          }
+        }
         break;
       case 'dazed':
         this.vx = approach(this.vx, 0, 600 * dt);
@@ -926,7 +1012,7 @@ class ScorpionBoss extends BossBase {
     const n = 3 + Math.round(this.rage);
     const tipX = this.cx + this.dir * 10, tipY = this.y - 26;
     for (let i = 0; i < n; i++) {
-      G.enemies.push(new Shot('stinger', tipX, tipY, this.dir * (140 + i * 85), -560 + i * 30, { grav: 1100 }));
+      G.enemies.push(new Shot('stinger', tipX, tipY, this.dir * (140 + i * 85), -560 + i * 30, { grav: 1100, puddle: this.extra }));
     }
     Sound.play('fire');
   }
@@ -956,7 +1042,14 @@ class YetiBoss extends BossBase {
         if (this.t <= 0) {
           this.throwBall(p);
           this.throws--;
-          if (this.throws > 0) this.t = 0.45; else { this.state = 'walk'; this.t = 1.6 - this.rage * 0.2; }
+          if (this.throws > 0) this.t = 0.45;
+          else {
+            this.state = 'walk'; this.t = 1.6 - this.rage * 0.2;
+            if (this.extra) {
+              G.enemies.push(new Shot('bigsnow', this.cx + this.dir * 54, this.groundY - 24, this.dir * 240, 0));
+              Sound.play('thud');
+            }
+          }
         }
         break;
       case 'crouch':
@@ -973,6 +1066,7 @@ class YetiBoss extends BossBase {
       this.state = 'walk'; this.t = 1.7; this.squash = 0.5;
       this.landFx(10);
       this.icicles(p);
+      if (this.extra) G.freezeArena(this, 4);
     }
   }
   throwBall(p) {
@@ -1036,10 +1130,24 @@ class DragonBoss extends BossBase {
         if (this.t <= 0) this.hop();
         break;
     }
+    if (this.state === 'air' && this.extra) {
+      this.emberT = (this.emberT || 0) - dt;
+      if (this.emberT <= 0) {
+        this.emberT = 0.14;
+        G.enemies.push(new Shot('ember', this.cx + (Math.random() - 0.5) * 50, this.y + this.h, (Math.random() - 0.5) * 80, 60, { grav: 900 }));
+      }
+    }
     if (this.fall(dt) && this.state === 'air') {
       this.state = 'idle'; this.t = 1.1 - this.rage * 0.2; this.squash = 0.5;
       this.landFx(10);
+      if (this.extra) this.geysers(p);
     }
+  }
+  geysers(p) {
+    const xs = [clamp(p.cx, this.arena[0] + 30, this.arena[1] - 30)];
+    for (let i = 0; i < 2; i++) xs.push(this.randomArenaX([...xs, this.cx]));
+    xs.forEach((x, i) => G.enemies.push(new Shot('geyser', x, this.groundY - 55, 0, 0, { warn: 0.8 + i * 0.12, life: 0.7 })));
+    Sound.play('cannon');
   }
   hop() {
     const target = this.cx > this.mid ? this.arena[0] + T : this.arena[1] - T - this.w;

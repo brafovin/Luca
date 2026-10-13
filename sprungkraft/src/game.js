@@ -338,6 +338,19 @@ G.bossStart = (b) => {
   }
   Sound.play('thud');
   G.shake(5);
+  if (DIFF.bossExtras) G.after(0.8, () => G.popup(b.cx, Math.max(b.y - 10, G.cam.y + 120), 'Unmöglich: 2 neue Angriffe!', '#ff6b7a'));
+};
+
+// Yeti auf „Unmöglich“: der Arenaboden friert für ein paar Sekunden zu
+G.freezeArena = (b, secs) => {
+  const ty = G.lvl.gy;
+  const x0 = Math.floor(b.arena[0] / T), x1 = Math.floor(b.arena[1] / T) - 1;
+  const changed = [];
+  for (let x = x0; x <= x1; x++) if (tileAt(x, ty) === TL.GROUND) { setTile(x, ty, TL.ICE); changed.push(x); }
+  if (!changed.length) return;
+  G.popup(b.cx, b.y - 20, 'Eisboden!', '#bfe8ff');
+  Sound.play('screech');
+  G.after(secs, () => { for (const x of changed) if (tileAt(x, ty) === TL.ICE) setTile(x, ty, TL.GROUND); });
 };
 
 G.bossDefeated = (b) => {
@@ -745,7 +758,7 @@ function render() {
   for (const g of G.gems) if (!g.taken && onScreen(g, cam)) Render.drawGemShape(ctx, g.x + 13, g.y + 13, g.id, t, g.ghost);
   for (const ef of G.effects) if (ef.type === 'popcoin') Render.drawCoinShape(ctx, ef.x, ef.y, t * 3);
   for (const it of G.items) if (it.emerge <= 0 && onScreen(it, cam)) Render.drawItem(ctx, it, t);
-  for (const e of G.enemies) if (onScreen(e, cam)) Render.drawEnemy(ctx, e, t);
+  for (const e of G.enemies) if (e.type === 'boss' || onScreen(e, cam)) Render.drawEnemy(ctx, e, t);
   if (G.player) Render.drawPlayer(ctx, G.player, t);
   for (const f of G.fireballs) Render.drawFireball(ctx, f, t);
 

@@ -16,12 +16,13 @@ greift eine Ersatzschrift).
 | `←` `→` / `A` `D` | ◀ ▶ | Stick / Steuerkreuz | Laufen |
 | `Leertaste` / `↑` / `W` | Springen | A | Springen (länger halten = höher) |
 | `Shift` / `X` halten | Rennen (an/aus) | X / LB / LT | Rennen |
-| `↓` / `S` / `C` | Rollen | B / ↓ | Rollen (am Boden und in der Luft) |
+| `↓` / `S` / `C` | Rollen | B / ↓ | Rollen – so lange du hältst (am Boden und in der Luft) |
 | `F` / `E` | Feuer | Y / RB / RT | Feuerball (mit Feuerblume) |
 | `Esc` / `P` | `II` | Start | Pause |
 | `M` | ♪ | – | Ton an/aus |
 
-**Rollen** macht dich kurz sehr schnell und klein: Du passt durch Tunnel, die nur eine Kachel hoch sind, und
+**Rollen** dauert, solange du die Taste gedrückt hältst (ein kurzer Tipp gibt eine kurze Rolle). Beim Rollen
+kannst du lenken, und an Wänden prallt die Kugel ab. Rollen macht dich sehr schnell und klein: Du passt durch Tunnel, die nur eine Kachel hoch sind, und
 rollst Schleimis, Käfer, Frösche und Fledermäuse einfach um. Springst du aus der Rolle heraus, gibt es einen
 extra weiten Sprung. In der Luft gibt es einmal pro Sprung eine **Luftrolle** mit Schub nach vorn – damit
 kommst du über breitere Lücken. Sprungfeder und Draufspringen auf Gegner laden sie wieder auf.
@@ -50,6 +51,17 @@ Arena steht ein Kontrollpunkt.
 | Drache Glutzahn | hohes und tiefes Feuer, springt dann auf die andere Seite | hohes Feuer: drunter durchrollen, tiefes: drüberspringen |
 | König Matsch | springt dir hinterher und ruft kleine Schleimis | nach der Landung draufspringen |
 
+Auf **Unmöglich** hat jeder Boss zwei zusätzliche Angriffe:
+
+| Boss | Extra 1 | Extra 2 |
+|---|---|---|
+| Maulwurf Buddel | wirft beim Auftauchen Erdbrocken | Bodenwelle nach beiden Seiten beim Landen |
+| Gräfin Flatter | Schallringe, die auf dich zufliegen | Doppel-Sturzflug ohne Pause |
+| Skorpion Skorpi | Stacheln hinterlassen Giftpfützen | rammt zweimal hintereinander |
+| Yeti Frosti | der Arenaboden friert für 4 s zu | rollt einen Riesen-Schneeball |
+| Drache Glutzahn | Glutregen während des Sprungs | Feuersäulen schießen aus dem Boden |
+| König Matsch | spuckt Schleimbälle | Mega-Sprung aus dem Bild und Landung auf dir (Schatten warnt), dann Bodenwellen |
+
 In jedem Level gibt es Kontrollpunkte und **drei versteckte Edelsteine**. Freigeschaltete Welten, gefundene
 Edelsteine und der Punkterekord werden im Browser gespeichert. Wer die Flagge weiter oben trifft, bekommt mehr
 Punkte, schnelle Spieler einen Zeitbonus.
@@ -64,6 +76,7 @@ schwerste Stufe, auf der du das Level geschafft hast.
 | Start | großer Fuchs | klein | klein | klein |
 | Tempo von Gegnern und Geschossen | 75 % | 100 % | 125 % | 150 % |
 | Boss-Treffer | 2 | 3 | 4 | 5 |
+| Boss-Angriffe | normal | normal | normal | je 2 zusätzliche |
 | Abgrund und Lava | zurück an den Rand (kostet nur das Power-up) | Leben weg | Leben weg | Leben weg |
 | Kontrollpunkte | ja | ja | ja | keine |
 | Treffer | Pilz schützt, 3 s Schonzeit | Pilz schützt, 2 s | Pilz schützt, 1,2 s | jeder Treffer ist sofort vorbei |

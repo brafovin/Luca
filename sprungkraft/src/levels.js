@@ -174,7 +174,7 @@ const LEVELS = [
       B.hint(44, 'Shift / X halten : Rennen', 'Rennen-Knopf schaltet Rennen an und aus');
       B.enemy('slime', 48); B.enemy('slime', 50);
       B.stone(53, 12, 54, 14);
-      B.hint(57, '↓ / S : Rollen – damit passt du durch Tunnel', 'Rollen – damit passt du durch Tunnel');
+      B.hint(57, '↓ / S : Rollen – gedrückt halten = weiterrollen', 'Rollen – gedrückt halten = weiterrollen');
       B.ground(60, 70, 7); B.clear(60, 14, 70, 14);
       B.coins(61, 69, 14);
       B.hint(72, '↓ in der Luft : Luftrolle mit Schub nach vorn', 'Rollen in der Luft : Luftrolle mit Schub nach vorn');
